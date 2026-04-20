@@ -271,8 +271,8 @@ export class KbStore {
       .filter((entry) => requiredPromptGroups.length === 0
         || requiredPromptGroups.includes(entry.meta.mandatory_group))
       .filter((entry) => acceptedModelClasses.length === 0
-        || acceptedModelClasses.includes(entry.meta.model_class)
-        || acceptedModelClasses.includes(entry.meta.model_classes))
+        || metadataArrayIncludes(entry.meta.model_class, acceptedModelClasses)
+        || metadataArrayIncludes(entry.meta.model_classes, acceptedModelClasses))
       .filter((entry) => metadataArrayIncludes(entry.meta.domains, domainHints))
       .filter((entry) => !targetCommand || metadataArrayIncludes(entry.meta.commands, [targetCommand]))
       .filter((entry) => !targetInterpreter || metadataArrayIncludes(entry.meta.interpreters, [targetInterpreter]));

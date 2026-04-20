@@ -29,7 +29,7 @@
         <div class="grid">
           <article class="card">
             <h3>Runtime architecture</h3>
-            <p>The implemented MRP-VM execution model, command surfaces, runtime boundaries, and hosting layer are summarized in <a href="runtime-architecture.html">Runtime Architecture</a> and specified in DS002 through DS022.</p>
+            <p>The implemented MRP-VM execution model, command surfaces, runtime boundaries, hosting layer, and model-routing strategy are summarized in <a href="runtime-architecture.html">Runtime Architecture</a> and specified in DS002 through DS023.</p>
           </article>
           <article class="card">
             <h3>Audit trail</h3>
@@ -44,8 +44,8 @@
 
       <section class="section">
         <h2>Implementation posture</h2>
-        <p>The implementation follows the Node.js <code>.mjs</code> posture defined in <a href="specsLoader.html?spec=DS001-coding-style.md">DS001</a>. The runtime tree under <code>src/</code> is intentionally modular, the hosting layer and chat UI live under <code>server/</code>, the default KUs live under <code>data/default/</code>, and the test suite mirrors subsystem boundaries under <code>tests/</code>.</p>
-        <p>Further work should extend the existing runtime rather than replacing it: tighten command semantics, expand fixtures and benchmark cases, and add live provider integrations without weakening the explicit SDK-first architecture. DS004 and DS021 remain proposal-only surfaces, while DS022 now defines the implemented server/API/chat boundary.</p>
+        <p>The implementation follows the Node.js <code>.mjs</code> posture defined in <a href="specsLoader.html?spec=DS001-coding-style.md">DS001</a>. The runtime tree under <code>src/</code> is intentionally modular, the hosting layer and chat UI live under <code>server/</code>, the default KUs live under <code>data/default/</code> in declaration-style SOP Lang, and the test suite mirrors subsystem boundaries under <code>tests/</code>.</p>
+        <p>Further work should extend the existing runtime rather than replacing it: tighten command semantics, expand fixtures and benchmark cases, and add live provider integrations without weakening the explicit SDK-first architecture. DS004 and DS021 remain proposal-only surfaces, while DS022 and DS023 now define the implemented server/API/chat and LLM-routing boundaries.</p>
       </section>
     </div>
   </main>

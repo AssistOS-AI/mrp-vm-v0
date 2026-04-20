@@ -3,7 +3,7 @@ id: DS013
 title: LLM Wrapper Interpreters
 status: implemented
 owner: runtime
-summary: Defines the provider adapter contract, profile-specific prompt governance, default KU guidance, and output modes for LLM-based interpreters.
+summary: Defines the provider adapter contract, AchillesAgentLib and LLMAgent boundary, profile-specific prompt governance, runtime routing rules, and output modes for LLM-based interpreters.
 ---
 # DS013 LLM Wrapper Interpreters
 
@@ -31,6 +31,15 @@ Every wrapper must reach a model provider only through the managed adapter. The 
 
 The adapter result must distinguish successful completion, semantic refusal, low-confidence completion, and transport or provider failure.
 
+All non-test wrapper executions must obtain provider access through `LLMAgent` from AchillesAgentLib, called only through the managed adapter. The adapter must accept runtime configuration derived from environment variables plus manual overrides. That configuration controls:
+
+1. where AchillesAgentLib is resolved from,
+2. which model is bound to each wrapper profile,
+3. which model tier and task tag are attached to each invocation,
+4. whether the repository is using the real Achilles path or an explicitly configured fake fallback.
+
+The deterministic fake adapter remains valid only for tests, fixtures, and explicit local fallback. It must not become the hidden default architecture for production-facing wrapper work.
+
 ### Profiles
 
 The required wrapper profiles are:
@@ -57,6 +66,10 @@ Every wrapper profile must also have default KUs that describe:
 4. when fallback to heavier model behavior is allowed.
 
 This keeps wrapper use aligned with DS011 rather than hidden inside adapter code.
+
+### Runtime routing and model tiers
+
+Wrapper routing must be driven by runtime configuration rather than by hardcoded model names inside interpreter implementations. DS023 defines the authoritative model-tier strategy, task tags, and profile bindings. DS013 relies on that DS for routing but remains the authority for the wrapper contract itself.
 
 ### Output modes and boundary
 
@@ -89,6 +102,11 @@ Response: Allowing proposal emission keeps the profile expressive enough for pla
 Question #3: Why are non-LLM external interpreters specified separately from the LLM-wrapper DS?
 
 Response: LLM wrappers share prompt governance, model classes, and provider access constraints that do not apply cleanly to every external interpreter. Separating the broader external-interpreter contract keeps DS013 focused.
+
+Question #4: Why does DS013 insist on `LLMAgent` through AchillesAgentLib instead of direct provider SDK usage?
+
+Response: The managed `LLMAgent` path centralizes credentials, provider transport, model routing, and task metadata in one auditable boundary. Without that boundary, every wrapper would become its own provider client and the DS-level control surface would fragment immediately.
+
 ## Conclusion
 
-LLM wrappers in MRP-VM v0 must be differentiated in role but unified in control, prompt governance, and provider access discipline.
+LLM wrappers in MRP-VM v0 must be differentiated in role but unified in control, prompt governance, runtime routing, and provider access discipline through the managed Achilles-backed adapter boundary.

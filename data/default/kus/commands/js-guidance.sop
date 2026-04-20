@@ -1,6 +1,31 @@
-ku_js_guidance = """
+@ku_js_guidance text
 Use js-eval for bounded procedural transformations.
 Prefer explicit sop.emit or return values.
 Do not assume host filesystem or network access.
-"""
-ku_js_guidance:meta = {"rev":1,"ku_type":"content","scope":"default","status":"active","title":"js guidance","summary":"Default guidance for js-eval bodies.","priority":5,"trust":"trusted","domains":["runtime","procedural"],"commands":["js-eval"],"interpreters":[],"tags":["javascript","guidance"],"input_patterns":["\\$[A-Za-z_][A-Za-z0-9_:]*","~[A-Za-z_][A-Za-z0-9_:]*"]}
+@ku_js_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "js guidance",
+  "summary": "Default guidance for js-eval bodies.",
+  "priority": 5,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "procedural"
+  ],
+  "commands": [
+    "js-eval"
+  ],
+  "interpreters": [],
+  "tags": [
+    "javascript",
+    "guidance"
+  ],
+  "input_patterns": [
+    "\\$[A-Za-z_][A-Za-z0-9_:]*",
+    "~[A-Za-z_][A-Za-z0-9_:]*"
+  ]
+}

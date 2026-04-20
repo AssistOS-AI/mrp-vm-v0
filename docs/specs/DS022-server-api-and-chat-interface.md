@@ -90,6 +90,8 @@ The compatibility layer must not expose MRP-VM's internal structure (families, e
 
 The server must serve a `/chat` endpoint that returns a self-contained HTML application. The application must be simple, pleasant, and sufficient for direct use without external tooling.
 
+The repository baseline must also expose `npm run server` as the canonical way to launch that top-level `server/` surface for local use.
+
 The chat UI must support:
 
 1. **Session management**: create a new session, select an existing session, see session identity and status.

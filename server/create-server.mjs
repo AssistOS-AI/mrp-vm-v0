@@ -61,21 +61,61 @@ async function parseRequestPayload(request) {
   return readJsonBody(request);
 }
 
+function buildConfigView(runtimeConfig, policies) {
+  return {
+    provider: runtimeConfig.llm.provider,
+    default_llm: runtimeConfig.llm.defaultModel,
+    interpreter_mappings: Object.fromEntries(
+      Object.entries(runtimeConfig.llm.profileBindings).map(([profile, binding]) => [profile, binding.model]),
+    ),
+    model_tiers: runtimeConfig.llm.modelTiers,
+    task_tags: runtimeConfig.llm.taskTags,
+    profile_bindings: runtimeConfig.llm.profileBindings,
+    policies,
+  };
+}
+
+function applyConfigPatch(runtimeConfig, policies, patch = {}) {
+  if (patch.default_llm) {
+    runtimeConfig.llm.defaultModel = patch.default_llm;
+  }
+  if (patch.interpreter_mappings) {
+    for (const [profile, model] of Object.entries(patch.interpreter_mappings)) {
+      const current = runtimeConfig.llm.profileBindings[profile] ?? { tier: 'standard', taskTag: runtimeConfig.llm.taskTags.orchestration };
+      runtimeConfig.llm.profileBindings[profile] = {
+        ...current,
+        model,
+      };
+    }
+  }
+  if (patch.model_tiers) {
+    Object.assign(runtimeConfig.llm.modelTiers, patch.model_tiers);
+  }
+  if (patch.task_tags) {
+    Object.assign(runtimeConfig.llm.taskTags, patch.task_tags);
+  }
+  if (patch.profile_bindings) {
+    for (const [profile, binding] of Object.entries(patch.profile_bindings)) {
+      runtimeConfig.llm.profileBindings[profile] = {
+        ...(runtimeConfig.llm.profileBindings[profile] ?? {}),
+        ...binding,
+      };
+    }
+  }
+  if (patch.policies) {
+    Object.assign(policies, patch.policies);
+  }
+}
+
 export function createServer(options = {}) {
-  const runtime = options.runtime ?? createRuntime(options.rootDir ?? process.cwd(), options.runtimeOptions ?? {});
-  const config = {
-    default_llm: 'plannerLLM',
-    interpreter_mappings: {
-      fastLLM: 'fastLLM',
-      deepLLM: 'deepLLM',
-      plannerLLM: 'plannerLLM',
-      writerLLM: 'writerLLM',
-      codeGeneratorLLM: 'codeGeneratorLLM',
-    },
-    policies: {
-      allow_session_ku_promotion: false,
-      enable_cross_request_analytic_memory: true,
-    },
+  const runtime = options.runtime ?? createRuntime({
+    rootDir: options.rootDir ?? process.cwd(),
+    ...(options.runtimeOptions ?? {}),
+  });
+  const policies = {
+    allow_session_ku_promotion: false,
+    enable_cross_request_analytic_memory: true,
+    ...(options.policies ?? {}),
   };
 
   const server = http.createServer(async (request, response) => {
@@ -246,7 +286,7 @@ export function createServer(options = {}) {
       }
 
       if (request.method === 'GET' && url.pathname === '/api/config') {
-        json(response, 200, config);
+        json(response, 200, buildConfigView(runtime.runtimeConfig, policies));
         return;
       }
 
@@ -255,8 +295,8 @@ export function createServer(options = {}) {
           return;
         }
         const body = await readJsonBody(request);
-        Object.assign(config, body);
-        json(response, 200, config);
+        applyConfigPatch(runtime.runtimeConfig, policies, body);
+        json(response, 200, buildConfigView(runtime.runtimeConfig, policies));
         return;
       }
 
@@ -296,6 +336,10 @@ export function createServer(options = {}) {
   });
 
   server.runtime = runtime;
-  server.config = config;
+  Object.defineProperty(server, 'config', {
+    get() {
+      return buildConfigView(runtime.runtimeConfig, policies);
+    },
+  });
   return server;
 }

@@ -3,7 +3,7 @@ id: DS011
 title: kb Command
 status: implemented
 owner: runtime
-summary: Defines SOP-backed KU files, deterministic retrieval modes, caller-profile KUs, filtering rules, overlay rules, and file-system serialization for default, global, and session knowledge.
+summary: Defines declaration-style SOP-backed KU files, deterministic retrieval modes, caller-profile KUs, filtering rules, overlay rules, and file-system serialization for default, global, and session knowledge.
 ---
 # DS011 kb Command
 
@@ -22,6 +22,17 @@ A KU is stored as one plain SOP Lang text file. KU files must not use a separate
 1. the KU public root variable is the KU identifier,
 2. KU metadata lives in `<ku_id>:meta`,
 3. supporting helper variables may exist in the same SOP module when needed.
+
+The canonical file form is declaration-style SOP Lang, not assignment syntax. The baseline serialization is:
+
+```text
+@ku_abc123 text
+Body text for the KU.
+@ku_abc123:meta json
+{"rev":1,"ku_type":"content","scope":"default","status":"active"}
+```
+
+The same convention applies to caller profiles under `data/default/callers/`, global KUs, and session KUs. Session upsert and promotion APIs must therefore read and write raw SOP Lang module text rather than a separate metadata envelope.
 
 The KU identifier must be variable-safe and stable. The baseline form is `ku_` plus a cryptographically strong lowercase hexadecimal suffix.
 

@@ -1,0 +1,22 @@
+@response writerLLM
+Numara pina la 10, si apoi fa media din 2 in dou anumere
+
+```json
+{
+  "sop_proposal": {
+    "plan": "@response executorLLM\nNumara pina la 10, si apoi fa media din doua numere\n",
+    "context": "Adjust task execution to include iterating up to 10 and calculating the average of two numbers.",
+    "fallback_instructions": "Rephrase and explicitly clarify numerical operation."
+  }
+}
+```
+
+```json
+{
+  "sop_proposal": {
+    "plan": "@response executorLLM\nNumara pina la 10, si apoi fa media din doua numere\n",
+    "context": "Clarify and execute the given task by counting to 10 and computing the average of two specified numbers.",
+    "fallback_instructions": "If clarification is needed, request the two numbers explicitly or restate the operations for validation."
+  }
+}
+```

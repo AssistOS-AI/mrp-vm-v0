@@ -1,4 +1,47 @@
-planning = """
+@planning text
 Native planning command caller profile.
-"""
-planning:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"planning","summary":"Caller profile for the native planning command.","priority":10,"trust":"canonical","domains":["runtime","planning"],"commands":["planning"],"interpreters":["plannerLLM"],"tags":["planning","bootstrap"],"input_patterns":["[A-Za-z0-9_./:-]+"],"allowed_ku_types":["prompt_asset","policy_asset","content"],"accepted_prompt_roles":["planning"],"model_classes":["cheap","medium","strong"],"mandatory_group":"planning_init_core","byte_budget":8192,"session_override_allowed":true,"llm_fallback_policy":"allowed"}
+@planning:meta json
+{
+  "rev": 1,
+  "ku_type": "caller_profile",
+  "scope": "default",
+  "status": "active",
+  "title": "planning",
+  "summary": "Caller profile for the native planning command.",
+  "priority": 10,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "planning"
+  ],
+  "commands": [
+    "planning"
+  ],
+  "interpreters": [
+    "plannerLLM"
+  ],
+  "tags": [
+    "planning",
+    "bootstrap"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ],
+  "allowed_ku_types": [
+    "prompt_asset",
+    "policy_asset",
+    "content"
+  ],
+  "accepted_prompt_roles": [
+    "planning"
+  ],
+  "model_classes": [
+    "cheap",
+    "medium",
+    "strong"
+  ],
+  "mandatory_group": "planning_init_core",
+  "byte_budget": 8192,
+  "session_override_allowed": true,
+  "llm_fallback_policy": "allowed"
+}

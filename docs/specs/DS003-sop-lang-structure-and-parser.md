@@ -3,7 +3,7 @@ id: DS003
 title: SOP Lang Structure and Parser
 status: implemented
 owner: runtime
-summary: Defines declaration-line grammar, parser outputs, declaration content versus variable content, and family-aware parsing conventions for SOP Lang.
+summary: Defines declaration-line grammar, parser outputs, declaration-style SOP module serialization, declaration content versus variable content, and family-aware parsing conventions for SOP Lang.
 ---
 # DS003 SOP Lang Structure and Parser
 
@@ -47,6 +47,26 @@ The v0 declaration-line grammar is:
 The declaration body begins immediately after the terminating newline of a valid declaration line and continues byte-for-byte until the next valid declaration line or the end of document. The parser must preserve raw body bytes exactly as submitted so that command-local parsers receive the original content.
 
 Declaration insertion is a DS002 runtime effect, not a parser mode. The parser treats newly inserted declaration text exactly like any other SOP text once the scheduler hands it a new epoch snapshot.
+
+### Declaration-style SOP modules
+
+Persistent SOP artifacts such as default KUs, caller profiles, and session overlay KUs must use the same declaration substrate rather than a separate assignment format. The canonical module entry forms are:
+
+1. `@varId text`
+2. `@varId:meta json`
+
+The body for each entry starts on the next line and runs until the next valid module declaration line or the end of file. `text` bodies are preserved byte-for-byte. `json` bodies are parsed as JSON values after body extraction, not by inventing a second line-level grammar.
+
+This means a KU file should be authored as ordinary SOP declarations such as:
+
+```text
+@ku_planning_init_core text
+Create a compact SOP Lang plan for a new session request.
+@ku_planning_init_core:meta json
+{"rev":1,"ku_type":"prompt_asset"}
+```
+
+Compatibility readers may accept legacy assignment-style module files during migration, but declaration-style module syntax is the only canonical rendered form for repository-owned artifacts.
 
 ### Parse outputs
 
@@ -95,6 +115,10 @@ Question #3: Why must `@` begin a valid new-line declaration line before it is t
 
 Response: Bodies for commands such as JavaScript or templates may legitimately contain `@` characters. Requiring new-line declaration position plus full declaration-line validity prevents accidental body text from being reclassified as graph structure.
 
+Question #4: Why do KU and caller-profile files use declaration-style SOP modules instead of `key = value` assignments?
+
+Response: The runtime is easier to reason about when plans, KUs, caller profiles, and session overlays all use one declaration substrate. A second persistent mini-language would duplicate escaping, parsing, and serialization rules for no architectural gain.
+
 ## Conclusion
 
-MRP-VM v0 needs a parser contract that is explicit enough to implement without guessing. DS003 provides that lower-level parsing and declaration-structure boundary while leaving graph semantics, family state, and epoch control to DS002.
+MRP-VM v0 needs a parser contract that is explicit enough to implement without guessing. DS003 provides that lower-level parsing and declaration-structure boundary for both executable plans and persistent SOP modules while leaving graph semantics, family state, and epoch control to DS002.

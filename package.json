@@ -1,0 +1,9 @@
+{
+  "name": "mrp-vm-v0",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node run.mjs test",
+    "server": "node server/start.mjs"
+  }
+}

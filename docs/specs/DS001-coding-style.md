@@ -3,7 +3,7 @@ id: DS001
 title: Coding Style
 status: implemented
 owner: repository
-summary: Defines source layout, module boundaries, documentation rules, and DS authoring structure for MRP-VM v0.
+summary: Defines source layout, module boundaries, SOP asset conventions, runtime configuration rules, and DS authoring structure for MRP-VM v0.
 ---
 # DS001 Coding Style
 
@@ -36,6 +36,13 @@ Tests must mirror subsystem boundaries. Parser tests, scheduler tests, command t
 
 The default repository-owned test entry point should be `run.mjs` at project root unless a later DS or implementation constraint forces a different name.
 
+When the repository stores persistent SOP assets such as KUs, caller profiles, prompt assets, or session KB overlays, those files must use declaration-style SOP Lang as the canonical authoring form. The canonical encodings are:
+
+1. `@varId text` followed by raw body text,
+2. `@varId:meta json` followed by JSON metadata text.
+
+Do not introduce a second persistent assignment syntax for `.sop` files in product-owned data. Compatibility readers may exist during migration, but repository-owned rendered output must remain declaration-style SOP Lang.
+
 Product-owned runtime data should default to this layout:
 
 1. `data/default/kus/` for bootstrap KUs and prompt assets.
@@ -48,6 +55,13 @@ Product-owned runtime data should default to this layout:
 8. `data/sessions/<sessionId>/requests/<requestId>/` for `current-plan.sop`, request state, family-state files, and final outcome artifacts.
 
 DS001 provides the repository-level summary of that layout. DS011 owns the detailed KB and caller-profile subtrees, while DS016 owns the detailed session, request, plan, and family-state layout.
+
+The root package must expose repository-owned scripts for the baseline workflows. At minimum:
+
+1. `npm run test` must invoke the repository-native test entry point,
+2. `npm run server` must launch the top-level `server/` chat and API adapter rather than any code under `src/`.
+
+AchillesAgentLib is an authorized optional dependency boundary for LLM-capable repositories, but only through the managed adapter. All non-test LLM interactions must go through `LLMAgent`, runtime configuration, and explicit profile routing rather than direct provider calls from commands, interpreters, or UI code. Runtime configuration must support both environment-derived defaults and manual overrides for paths, models, tiers, and task tags.
 
 Project documentation under `docs/` must stay product-scoped. External authoring helpers or bootstrap tooling must not receive product DS files or HTML pages inside the project documentation set, even when they are present in the repository for development use.
 
@@ -69,6 +83,14 @@ Question #1: Why does DS001 prescribe an explicit runtime, storage, and hosting 
 
 Response: The architecture already distinguishes language parsing, graph execution, session management, commands, interpreters, storage, hosting, and tests as separate concerns. Naming those areas early prevents ad hoc structure from drifting away from the DS boundaries before implementation stabilizes.
 
+Question #2: Why does DS001 forbid a separate assignment mini-language for repository-owned `.sop` assets?
+
+Response: MRP-VM already has one declaration substrate: SOP Lang. Reintroducing `key = value` files for KUs or caller profiles would split authoring rules, confuse parser obligations, and make the KB layer less inspectable. A single declaration-style syntax keeps plans, KUs, caller profiles, and session overlays aligned.
+
+Question #3: Why must AchillesAgentLib access be centralized through one managed adapter instead of being called directly from wrappers?
+
+Response: Direct provider calls would scatter credentials, routing policy, task tags, and model-tier choices across many modules. Centralizing them keeps the repository auditable and makes deterministic test fallbacks possible without changing wrapper contracts.
+
 ## Conclusion
 
-MRP-VM v0 must be implemented with small modules, explicit responsibilities, synchronized documentation, and a DS structure that records decisions and unresolved questions in a stable, auditable format.
+MRP-VM v0 must be implemented with small modules, explicit responsibilities, declaration-style SOP assets, centralized LLM routing, synchronized documentation, and a DS structure that records decisions and unresolved questions in a stable, auditable format.

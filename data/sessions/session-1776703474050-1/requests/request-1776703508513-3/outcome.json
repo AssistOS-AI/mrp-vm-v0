@@ -1,0 +1,13 @@
+{
+  "session_id": "session-1776703474050-1",
+  "request_id": "request-1776703508513-3",
+  "response": "Iată numărătoarea de la 1 la 10 și mediile calculate pentru fiecare pereche de două numere:\n\n**Numerele:**\n1, 2, 3, 4, 5, 6, 7, 8, 9, 10\n\n**Mediile (din două în două):**\n1. Media numerelor (1, 2) = **1,5**\n2. Media numerelor (3, 4) = **3,5**\n3. Media numerelor (5, 6) = **5,5**\n4. Media numerelor (7, 8) = **7,5**\n5. Media numerelor (9, 10) = **9,5**",
+  "response_variant_id": "response:v1",
+  "stop_reason": "completed",
+  "remaining_budgets": {
+    "wall_clock_ms": 30000,
+    "steps_remaining": 63,
+    "planning_remaining": 0,
+    "structural_changes_remaining": 60
+  }
+}

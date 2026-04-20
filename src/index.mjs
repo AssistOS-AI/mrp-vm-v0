@@ -10,3 +10,8 @@ export { createDeterministicTools, createLiveTools } from './utils/deterministic
 export { createRuntime, createSession, submitRequest, inspectSession, closeSession, RuntimeHost } from './sdk/runtime-host.mjs';
 export { MRPVM } from './runtime/vm.mjs';
 export { evaluateConfiguredRuntime } from './runtime/evaluation-harness.mjs';
+export { createRuntimeConfig, resolveAchillesAgentLib, resolveLlmProfile } from './config/runtime-config.mjs';
+export { ManagedLlmAdapter } from './interpreters/llm-adapter.mjs';
+export { AchillesLlmAdapter } from './interpreters/achilles-llm-adapter.mjs';
+export { FakeLlmAdapter } from './interpreters/fake-llm-adapter.mjs';
+export { ExternalInterpreterRegistry } from './interpreters/external-interpreter-registry.mjs';

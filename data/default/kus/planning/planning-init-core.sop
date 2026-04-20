@@ -1,6 +1,38 @@
-ku_planning_init_core = """
+@ku_planning_init_core text
 Create a compact SOP Lang plan for a new session request.
 Always produce at least one declaration for the request-local response family.
 Prefer deterministic native commands when the task can be solved without open-ended generation.
-"""
-ku_planning_init_core:meta = {"rev":1,"ku_type":"prompt_asset","scope":"default","status":"active","title":"planning_init_core","summary":"Bootstrap planning prompt asset for new sessions.","priority":20,"trust":"canonical","domains":["runtime","planning"],"commands":["planning"],"interpreters":["plannerLLM"],"tags":["planning","bootstrap"],"prompt_role":"planning","prompt_mode":"new_session_request","mandatory_group":"planning_init_core","model_classes":["cheap","medium","strong"],"version_policy":"locked"}
+@ku_planning_init_core:meta json
+{
+  "rev": 1,
+  "ku_type": "prompt_asset",
+  "scope": "default",
+  "status": "active",
+  "title": "planning_init_core",
+  "summary": "Bootstrap planning prompt asset for new sessions.",
+  "priority": 20,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "planning"
+  ],
+  "commands": [
+    "planning"
+  ],
+  "interpreters": [
+    "plannerLLM"
+  ],
+  "tags": [
+    "planning",
+    "bootstrap"
+  ],
+  "prompt_role": "planning",
+  "prompt_mode": "new_session_request",
+  "mandatory_group": "planning_init_core",
+  "model_classes": [
+    "cheap",
+    "medium",
+    "strong"
+  ],
+  "version_policy": "locked"
+}

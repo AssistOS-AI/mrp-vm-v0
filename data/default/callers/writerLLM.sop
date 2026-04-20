@@ -1,4 +1,42 @@
-writerLLM = """
+@writerLLM text
 External writer wrapper profile.
-"""
-writerLLM:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"writerLLM","summary":"LLM wrapper profile for fluent wording.","priority":7,"trust":"canonical","domains":["runtime","writing"],"commands":[],"interpreters":["writerLLM"],"tags":["llm","writing"],"input_patterns":["[A-Za-z0-9_./:-]+"],"allowed_ku_types":["prompt_asset","content","caller_profile"],"accepted_prompt_roles":["command_guidance"],"model_classes":["medium"],"byte_budget":4096,"session_override_allowed":true,"llm_fallback_policy":"allowed"}
+@writerLLM:meta json
+{
+  "rev": 1,
+  "ku_type": "caller_profile",
+  "scope": "default",
+  "status": "active",
+  "title": "writerLLM",
+  "summary": "LLM wrapper profile for fluent wording.",
+  "priority": 7,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "writing"
+  ],
+  "commands": [],
+  "interpreters": [
+    "writerLLM"
+  ],
+  "tags": [
+    "llm",
+    "writing"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ],
+  "allowed_ku_types": [
+    "prompt_asset",
+    "content",
+    "caller_profile"
+  ],
+  "accepted_prompt_roles": [
+    "command_guidance"
+  ],
+  "model_classes": [
+    "medium"
+  ],
+  "byte_budget": 4096,
+  "session_override_allowed": true,
+  "llm_fallback_policy": "allowed"
+}

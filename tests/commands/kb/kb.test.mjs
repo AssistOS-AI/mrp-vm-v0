@@ -19,10 +19,10 @@ test('kb retrieval uses lexical search for explicit queries and session preceden
   const sessionFile = path.join(rootDir, 'data', 'sessions', 'session-2', 'kb', 'notes.sop');
   await mkdir(path.dirname(sessionFile), { recursive: true });
   await writeFile(sessionFile, [
-    'ku_session_note = """',
+    '@ku_session_note text',
     'Alpha project note with deterministic retrieval',
-    '"""',
-    'ku_session_note:meta = {"rev":1,"ku_type":"content","scope":"session","status":"active","title":"Alpha note","summary":"Session note","priority":1,"trust":"trusted","domains":["runtime"],"commands":["kb"],"interpreters":[],"tags":["alpha"],"input_patterns":[]}',
+    '@ku_session_note:meta json',
+    '{"rev":1,"ku_type":"content","scope":"session","status":"active","title":"Alpha note","summary":"Session note","priority":1,"trust":"trusted","domains":["runtime"],"commands":["kb"],"interpreters":[],"tags":["alpha"],"input_patterns":[]}',
   ].join('\n'));
 
   const store = new KbStore(rootDir);

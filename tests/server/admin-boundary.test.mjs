@@ -35,7 +35,7 @@ test('admin-only server endpoints reject non-admin sessions and accept admin ses
       },
       body: JSON.stringify({
         file_name: 'promote-me.sop',
-        sop_text: 'ku_promote_me = "hello"\nku_promote_me:meta = {"rev":1,"ku_type":"content","scope":"session","status":"active","title":"hello","summary":"note","priority":1,"trust":"trusted","domains":["runtime"],"commands":["kb"],"interpreters":[],"tags":[],"input_patterns":[]}\n',
+        sop_text: '@ku_promote_me text\nhello\n@ku_promote_me:meta json\n{"rev":1,"ku_type":"content","scope":"session","status":"active","title":"hello","summary":"note","priority":1,"trust":"trusted","domains":["runtime"],"commands":["kb"],"interpreters":[],"tags":[],"input_patterns":[]}\n',
       }),
     });
 

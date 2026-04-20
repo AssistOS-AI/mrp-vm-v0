@@ -10,14 +10,23 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 
 1. `docs/specs/DS000-vision.md`
 2. `docs/specs/DS001-coding-style.md`
-3. `docs/index.html`
-4. `docs/runtime-architecture.html`
-5. `docs/specsLoader.html?spec=matrix.md`
+3. `docs/specs/DS013-llm-wrapper-interpreters.md`
+4. `docs/specs/DS023-model-tier-and-routing-strategy.md`
+5. `docs/index.html`
+6. `docs/runtime-architecture.html`
+7. `docs/specsLoader.html?spec=matrix.md`
+
+## Current Skill Catalog
+
+- `gamp_specs`: repository/spec/documentation normalization skill for the DS-first layout.
+- `achilles_specs`: AchillesAgentLib integration skill for runtime config, LLMAgent routing, and coding-style additions.
 
 ## Repository Rules
 
 - The DS specifications under `docs/specs/` are the source of truth for planned MRP-VM behavior.
 - `DS001-coding-style.md` is the coding-style authority for module structure, file layout, documentation updates, and test organization.
+- Repository-owned `.sop` files must use declaration-style SOP Lang as the canonical authoring form; do not introduce a second assignment mini-language for persistent KU or caller-profile assets.
+- AchillesAgentLib is an authorized optional integration boundary for LLM provider access, but every non-test LLM call must still go through the managed adapter described by DS013 and DS023.
 - All persistent documentation, specifications, and code comments must be written in English.
 - When source code changes alter behavior, interfaces, architecture, workflows, or constraints, update both the HTML documentation and the DS specifications in the same change set.
 - DS numbering must remain contiguous with no gaps.
@@ -32,6 +41,7 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 - Treat the normalized concrete-variable output contract as the authoritative interpreter result model.
 - Treat direct SOP declaration insertion as the authoritative structural-effect contract.
 - Require native commands and external interpreters to publish default KU guidance for their preferred input shapes and fallback behavior.
+- Require non-test LLM wrappers to obtain provider access only through the managed adapter and `LLMAgent`, configured by runtime config plus explicit overrides.
 
 ## Key Paths
 
@@ -40,5 +50,7 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 - Specs entry point: `docs/specsLoader.html?spec=matrix.md`
 - Specs directory: `docs/specs/`
 - Server adapter and chat UI: `server/`
+- Server startup entry point: `server/start.mjs`
+- NPM scripts: `package.json`
 - Documentation verification scripts: `scripts/`
 - File-size helper: `fileSizesCheck.sh`

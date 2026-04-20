@@ -1,0 +1,13 @@
+{
+  "session_id": "session-1776703474050-1",
+  "request_id": "request-1776703632430-5",
+  "user_text": "inmulteste 1000000001 cu 123456789",
+  "file_descriptors": [],
+  "budgets": {
+    "wall_clock_ms": 30000,
+    "steps_remaining": 64,
+    "planning_remaining": 4,
+    "structural_changes_remaining": 64
+  },
+  "is_admin": false
+}

@@ -1,4 +1,44 @@
-credibility = """
+@credibility text
 Native credibility caller profile.
-"""
-credibility:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"credibility","summary":"Caller profile for family-level candidate comparison.","priority":8,"trust":"canonical","domains":["runtime","evaluation"],"commands":["credibility"],"interpreters":["deepLLM"],"tags":["comparison","scoring"],"input_patterns":["[A-Za-z0-9_./:-]+"],"allowed_ku_types":["content","policy_asset","caller_profile"],"accepted_prompt_roles":["command_guidance"],"model_classes":["strong"],"byte_budget":4096,"session_override_allowed":true,"llm_fallback_policy":"allowed"}
+@credibility:meta json
+{
+  "rev": 1,
+  "ku_type": "caller_profile",
+  "scope": "default",
+  "status": "active",
+  "title": "credibility",
+  "summary": "Caller profile for family-level candidate comparison.",
+  "priority": 8,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "evaluation"
+  ],
+  "commands": [
+    "credibility"
+  ],
+  "interpreters": [
+    "deepLLM"
+  ],
+  "tags": [
+    "comparison",
+    "scoring"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ],
+  "allowed_ku_types": [
+    "content",
+    "policy_asset",
+    "caller_profile"
+  ],
+  "accepted_prompt_roles": [
+    "command_guidance"
+  ],
+  "model_classes": [
+    "strong"
+  ],
+  "byte_budget": 4096,
+  "session_override_allowed": true,
+  "llm_fallback_policy": "allowed"
+}

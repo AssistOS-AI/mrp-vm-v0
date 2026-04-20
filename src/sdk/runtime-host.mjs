@@ -1,10 +1,19 @@
 import { createDeterministicTools, createLiveTools } from '../utils/deterministic.mjs';
 import { MRPVM } from '../runtime/vm.mjs';
+import { createRuntimeConfig } from '../config/runtime-config.mjs';
 
 export class RuntimeHost {
   constructor(rootDir, options = {}) {
     this.rootDir = rootDir;
-    this.options = options;
+    this.runtimeConfig = options.runtimeConfig ?? createRuntimeConfig({
+      baseDir: rootDir,
+      env: options.env,
+      manualOverrides: options.manualOverrides,
+    });
+    this.options = {
+      ...options,
+      runtimeConfig: this.runtimeConfig,
+    };
     this.tools = options.deterministic ? createDeterministicTools(options.deterministic) : createLiveTools();
     this.sessions = new Map();
   }
@@ -79,8 +88,12 @@ export class RuntimeHost {
   }
 }
 
-export function createRuntime(rootDir, options = {}) {
-  return new RuntimeHost(rootDir, options);
+export function createRuntime(rootDirOrConfig, options = {}) {
+  if (typeof rootDirOrConfig === 'string' || rootDirOrConfig instanceof URL) {
+    return new RuntimeHost(String(rootDirOrConfig), options);
+  }
+  const config = rootDirOrConfig ?? {};
+  return new RuntimeHost(config.rootDir ?? config.baseDir ?? process.cwd(), config);
 }
 
 export async function createSession(runtime, sessionConfig = {}) {

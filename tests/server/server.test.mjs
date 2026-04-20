@@ -86,7 +86,7 @@ test('server exposes native session and request APIs plus /chat', async () => {
       },
       body: JSON.stringify({
         file_name: 'session-note.sop',
-        sop_text: 'ku_session_note = "hello"\nku_session_note:meta = {"rev":1,"ku_type":"content","scope":"session","status":"active","title":"hello","summary":"note","priority":1,"trust":"trusted","domains":["runtime"],"commands":["kb"],"interpreters":[],"tags":[],"input_patterns":[]}\n',
+        sop_text: '@ku_session_note text\nhello\n@ku_session_note:meta json\n{"rev":1,"ku_type":"content","scope":"session","status":"active","title":"hello","summary":"note","priority":1,"trust":"trusted","domains":["runtime"],"commands":["kb"],"interpreters":[],"tags":[],"input_patterns":[]}\n',
       }),
     });
     assert.equal(sessionKuUpsert.status, 201);
@@ -97,7 +97,9 @@ test('server exposes native session and request APIs plus /chat', async () => {
     assert.ok(sessionKus.items.some((item) => item.ku_id === 'ku_session_note'));
 
     const config = await fetch(`${baseUrl}/api/config`).then((response) => response.json());
-    assert.equal(config.default_llm, 'plannerLLM');
+    assert.equal(config.default_llm, 'write');
+    assert.equal(config.provider, 'fake');
+    assert.equal(config.interpreter_mappings.plannerLLM, 'plan');
 
     const completion = await fetch(`${baseUrl}/v1/chat/completions`, {
       method: 'POST',

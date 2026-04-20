@@ -20,7 +20,7 @@
       <section class="section">
         <h2>Architectural identity</h2>
         <p>MRP-VM v0 is specified as a runtime for local interpretive regimes rather than as a monolithic prompt wrapper. Tasks enter as natural language requests plus bounded context, then become a graph of SOP Lang declarations. Execution is mediated through native commands, external interpreters, family-based state, and auditable trace records.</p>
-        <p>The runtime-facing DS set lives in <a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> through <a href="specsLoader.html?spec=DS022-server-api-and-chat-interface.md">DS022</a>. These files define the implementation contract, and the repository now includes the corresponding runtime source tree, server adapter, default KUs, and tests.</p>
+        <p>The runtime-facing DS set lives in <a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> through <a href="specsLoader.html?spec=DS023-model-tier-and-routing-strategy.md">DS023</a>. These files define the implementation contract, and the repository now includes the corresponding runtime source tree, server adapter, declaration-style default KUs, and tests.</p>
       </section>
 
       <section class="section">
@@ -39,11 +39,15 @@
           </article>
           <article class="card">
             <h3>Knowledge and evaluation</h3>
-            <p><a href="specsLoader.html?spec=DS005-context-injection-and-pruning.md">DS005</a>, <a href="specsLoader.html?spec=DS011-kb-command.md">DS011</a>, <a href="specsLoader.html?spec=DS012-credibility.md">DS012</a>, <a href="specsLoader.html?spec=DS017-error-and-refusal-model.md">DS017</a>, and <a href="specsLoader.html?spec=DS019-evaluation-strategy.md">DS019</a> define bounded context, prompt assets, independent candidate comparison, normalized failure handling, and evaluation strategy.</p>
+            <p><a href="specsLoader.html?spec=DS005-context-injection-and-pruning.md">DS005</a>, <a href="specsLoader.html?spec=DS011-kb-command.md">DS011</a>, <a href="specsLoader.html?spec=DS012-credibility.md">DS012</a>, <a href="specsLoader.html?spec=DS017-error-and-refusal-model.md">DS017</a>, and <a href="specsLoader.html?spec=DS019-evaluation-strategy.md">DS019</a> define bounded context, declaration-style prompt assets, independent candidate comparison, normalized failure handling, and evaluation strategy.</p>
           </article>
           <article class="card">
             <h3>Hosting and chat</h3>
             <p><a href="specsLoader.html?spec=DS018-server-and-admin-model.md">DS018</a> and <a href="specsLoader.html?spec=DS022-server-api-and-chat-interface.md">DS022</a> define the top-level <code>server/</code> adapter, SDK entry points, native APIs, SSE trace streaming, admin boundaries, and the self-contained <code>/chat</code> interface.</p>
+          </article>
+          <article class="card">
+            <h3>LLM routing</h3>
+            <p><a href="specsLoader.html?spec=DS013-llm-wrapper-interpreters.md">DS013</a> and <a href="specsLoader.html?spec=DS023-model-tier-and-routing-strategy.md">DS023</a> define the Achilles-backed adapter boundary, `LLMAgent` usage, model tiers, task tags, and profile-specific routing for wrapper interpreters.</p>
           </article>
         </div>
       </section>
@@ -85,7 +89,7 @@
 
       <section class="section">
         <h2>Current implementation boundary</h2>
-        <p>The repository now contains the runtime tree under <code>src/</code>, the top-level server and chat adapter under <code>server/</code>, the default-KU assets under <code>data/default/</code>, and a modular native test suite under <code>tests/</code>. The next engineering phase is hardening: richer fixtures, broader evaluation corpora, and live-provider integrations that preserve the current DS-aligned architecture.</p>
+        <p>The repository now contains the runtime tree under <code>src/</code>, the top-level server and chat adapter under <code>server/</code>, the declaration-style default-KU assets under <code>data/default/</code>, and a modular native test suite under <code>tests/</code>. The next engineering phase is hardening: richer fixtures, broader evaluation corpora, and live-provider integrations that preserve the current DS-aligned architecture.</p>
       </section>
     </div>
   </main>

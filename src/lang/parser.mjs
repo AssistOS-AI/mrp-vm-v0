@@ -61,6 +61,39 @@ function isValidDeclarationLine(line) {
   }
 }
 
+function parseModuleDeclarationLine(line, lineNumber) {
+  const match = /^@([A-Za-z_][A-Za-z0-9_:-]*)\s+([A-Za-z_][A-Za-z0-9_-]*)$/.exec(line.trim());
+  if (!match) {
+    throw createParseError(lineNumber, 1, 'invalid_module_declaration_line', 'Malformed SOP module declaration line.', line);
+  }
+
+  const variableId = assertVariableIdentifier(match[1]);
+  const encoding = assertCommandIdentifier(match[2]);
+  if (encoding !== 'text' && encoding !== 'json') {
+    throw createParseError(
+      lineNumber,
+      1,
+      'unsupported_module_encoding',
+      `Unsupported SOP module encoding: ${encoding}.`,
+      line,
+    );
+  }
+
+  return {
+    variableId,
+    encoding,
+  };
+}
+
+function isValidModuleDeclarationLine(line) {
+  try {
+    parseModuleDeclarationLine(line, 1);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function parsePlan(source) {
   const text = String(source ?? '');
   const lines = text.split('\n');
@@ -138,8 +171,7 @@ export function parsePlan(source) {
   };
 }
 
-export function parseSopModule(source) {
-  const text = String(source ?? '');
+function parseLegacySopModule(text) {
   const lines = text.split('\n');
   const entries = new Map();
   let index = 0;
@@ -214,18 +246,83 @@ export function parseSopModule(source) {
   return entries;
 }
 
+function parseDeclarationSopModule(text) {
+  const lines = text.split('\n');
+  const entries = new Map();
+  let index = 0;
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const line = rawLine.trim();
+
+    if (!line || line.startsWith('#')) {
+      index += 1;
+      continue;
+    }
+
+    if (!rawLine.startsWith('@')) {
+      throw new Error(`Invalid SOP module declaration on line ${index + 1}: ${rawLine}`);
+    }
+
+    const declaration = parseModuleDeclarationLine(rawLine, index + 1);
+    let bodyEndIndex = lines.length;
+    for (let scanIndex = index + 1; scanIndex < lines.length; scanIndex += 1) {
+      const candidateLine = lines[scanIndex];
+      if (candidateLine.startsWith('@') && isValidModuleDeclarationLine(candidateLine)) {
+        bodyEndIndex = scanIndex;
+        break;
+      }
+    }
+
+    let value;
+    const body = lines.slice(index + 1, bodyEndIndex).join('\n');
+    if (declaration.encoding === 'json') {
+      try {
+        value = JSON.parse(body.trim() || 'null');
+      } catch (error) {
+        throw new Error(`Invalid SOP JSON value for ${declaration.variableId}: ${error.message}`);
+      }
+    } else {
+      value = body;
+    }
+
+    entries.set(declaration.variableId, value);
+    index = bodyEndIndex;
+  }
+
+  return entries;
+}
+
+export function parseSopModule(source) {
+  const text = String(source ?? '');
+  const firstMeaningfulLine = text.split('\n').find((line) => {
+    const trimmed = line.trim();
+    return trimmed && !trimmed.startsWith('#');
+  });
+
+  if (!firstMeaningfulLine) {
+    return new Map();
+  }
+
+  if (firstMeaningfulLine.startsWith('@')) {
+    return parseDeclarationSopModule(text);
+  }
+
+  return parseLegacySopModule(text);
+}
+
 export function renderSopModule(entries) {
   const lines = [];
   for (const [key, value] of entries) {
     if (!isFamilyIdentifier(key.split(':')[0])) {
       assertVariableIdentifier(key);
     }
-    if (typeof value === 'string' && value.includes('\n')) {
-      lines.push(`${key} = """`);
-      lines.push(value);
-      lines.push('"""');
+    const encoding = typeof value === 'string' ? 'text' : 'json';
+    lines.push(`@${key} ${encoding}`);
+    if (encoding === 'text') {
+      lines.push(...String(value).split('\n'));
     } else {
-      lines.push(`${key} = ${JSON.stringify(value)}`);
+      lines.push(JSON.stringify(value, null, 2));
     }
   }
   return `${lines.join('\n')}\n`;

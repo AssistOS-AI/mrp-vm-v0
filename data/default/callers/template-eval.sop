@@ -1,4 +1,40 @@
-template-eval = """
+@template-eval text
 Native template-eval caller profile.
-"""
-template-eval:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"template-eval","summary":"Caller profile for deterministic template rendering.","priority":8,"trust":"canonical","domains":["runtime","templates"],"commands":["template-eval"],"interpreters":[],"tags":["templates","rendering"],"input_patterns":["\\{\\{.+?\\}\\}"],"allowed_ku_types":["template_asset","content","caller_profile"],"accepted_prompt_roles":["command_guidance"],"model_classes":[],"byte_budget":4096,"session_override_allowed":true,"llm_fallback_policy":"disallowed"}
+@template-eval:meta json
+{
+  "rev": 1,
+  "ku_type": "caller_profile",
+  "scope": "default",
+  "status": "active",
+  "title": "template-eval",
+  "summary": "Caller profile for deterministic template rendering.",
+  "priority": 8,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "templates"
+  ],
+  "commands": [
+    "template-eval"
+  ],
+  "interpreters": [],
+  "tags": [
+    "templates",
+    "rendering"
+  ],
+  "input_patterns": [
+    "\\{\\{.+?\\}\\}"
+  ],
+  "allowed_ku_types": [
+    "template_asset",
+    "content",
+    "caller_profile"
+  ],
+  "accepted_prompt_roles": [
+    "command_guidance"
+  ],
+  "model_classes": [],
+  "byte_budget": 4096,
+  "session_override_allowed": true,
+  "llm_fallback_policy": "disallowed"
+}

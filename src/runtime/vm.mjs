@@ -19,7 +19,9 @@ import { executeAnalyticMemory } from '../commands/analytic-memory.mjs';
 import { executeKbCommand } from '../commands/kb.mjs';
 import { executeCredibilityCommand, resolvePluralFamily } from '../commands/credibility.mjs';
 import { ExternalInterpreterRegistry } from '../interpreters/external-interpreter-registry.mjs';
+import { AchillesLlmAdapter } from '../interpreters/achilles-llm-adapter.mjs';
 import { FakeLlmAdapter } from '../interpreters/fake-llm-adapter.mjs';
+import { createRuntimeConfig, resolveLlmProfile } from '../config/runtime-config.mjs';
 
 function cloneBudgets(budgets = {}) {
   return {
@@ -42,18 +44,24 @@ function buildDefaultCommandRegistry() {
   return registry;
 }
 
-function buildDefaultExternalRegistry() {
+function buildDefaultExternalRegistry(options = {}) {
+  const runtimeConfig = options.runtimeConfig;
+  const llmAdapter = options.llmAdapter
+    ?? (runtimeConfig?.llm?.provider === 'fake'
+      ? new FakeLlmAdapter()
+      : new AchillesLlmAdapter(runtimeConfig));
   const registry = new ExternalInterpreterRegistry({
-    llmAdapter: new FakeLlmAdapter(),
+    llmAdapter,
   });
 
   for (const profile of ['fastLLM', 'deepLLM', 'codeGeneratorLLM', 'writerLLM', 'plannerLLM']) {
+    const binding = resolveLlmProfile(runtimeConfig, profile);
     registry.register({
       name: profile,
       purpose: profile,
       input_contract: ['context_package', 'instruction'],
       output_shapes: profile === 'plannerLLM' ? ['sop_proposal'] : ['plain_value'],
-      cost_class: profile === 'deepLLM' ? 'expensive' : 'cheap',
+      cost_class: binding.tier === 'premium' ? 'expensive' : binding.tier === 'fast' ? 'cheap' : 'normal',
       can_insert_declarations: profile === 'plannerLLM',
       can_refuse: true,
       uses_llm_adapter: true,
@@ -75,13 +83,21 @@ export class MRPVM {
   constructor(rootDir, options = {}) {
     this.rootDir = rootDir;
     this.tools = options.deterministic ? createDeterministicTools(options.deterministic) : createLiveTools();
+    this.runtimeConfig = options.runtimeConfig ?? createRuntimeConfig({
+      baseDir: rootDir,
+      env: options.env,
+      manualOverrides: options.manualOverrides,
+    });
     this.sessionManager = new SessionManager(rootDir, this.tools);
     this.requestManager = new RequestManager(rootDir);
     this.kbStore = new KbStore(rootDir);
     this.traceStore = new TraceStore(rootDir);
     this.analyticStore = new AnalyticStore(rootDir);
     this.commandRegistry = options.commandRegistry ?? buildDefaultCommandRegistry();
-    this.externalInterpreters = options.externalInterpreters ?? buildDefaultExternalRegistry();
+    this.externalInterpreters = options.externalInterpreters ?? buildDefaultExternalRegistry({
+      runtimeConfig: this.runtimeConfig,
+      llmAdapter: options.llmAdapter,
+    });
     this.eventEmitter = new EventEmitter();
     this.sessionId = options.sessionId ?? null;
     this.policyProfile = options.policyProfile ?? 'default';
@@ -237,17 +253,19 @@ export class MRPVM {
     const callerName = node.declaration.commands?.[0] ?? 'planning';
     const targetCommand = this.commandRegistry.has(callerName) ? callerName : null;
     const targetInterpreter = this.externalInterpreters.has(callerName) ? callerName : null;
+    const callerProfile = this.kbStore.findCallerProfile(request.kbSnapshot, callerName);
 
     const kbResult = this.kbStore.retrieve(request.kbSnapshot, {
       callerName,
       retrievalMode: targetCommand ? 'automatic_native_command' : 'automatic_external_interpreter',
-      desiredKuTypes: ['content', 'prompt_asset', 'policy_asset', 'template_asset', 'caller_profile'],
+      desiredKuTypes: callerProfile?.meta.allowed_ku_types ?? ['content', 'prompt_asset', 'policy_asset', 'template_asset', 'caller_profile'],
+      acceptedModelClasses: callerProfile?.meta.model_classes ?? [],
       requestText: request.requestText,
       bodyText: bodyOverride ?? node.declaration.body,
       targetCommand,
       targetInterpreter,
-      byteBudget: 8_192,
-      sessionOverrideAllowed: true,
+      byteBudget: callerProfile?.meta.byte_budget ?? 8_192,
+      sessionOverrideAllowed: callerProfile?.meta.session_override_allowed ?? true,
     });
 
     const contextPackage = buildContextPackage({
@@ -359,6 +377,8 @@ export class MRPVM {
         body: context.body,
         targetFamily: context.targetFamily,
         contextPackage: context.contextPackage,
+        promptAssets: context.kbResult.selected.filter((entry) => entry.meta.ku_type === 'prompt_asset'),
+        modelClass: context.kbResult.callerProfile?.meta.model_classes?.[0] ?? 'medium',
       });
     }
 
@@ -451,233 +471,283 @@ export class MRPVM {
 
   async executeRequest(requestId, input) {
     const sessionId = this.sessionId ?? input.sessionId ?? this.tools.createId('session');
-    const existingSession = await this.sessionManager.loadSession(sessionId);
-    await this.bootstrapSession(sessionId, input.policyProfile ?? this.policyProfile ?? 'default', input.isAdmin ?? this.isAdmin);
-    await this.analyticStore.load(sessionId);
-    this.resetRequestState();
-    this.sessionId = sessionId;
-
-    const request = {
-      requestText: input.requestText,
-      files: input.files ?? [],
-      budgets: cloneBudgets(input.budgets),
-      planText: '',
-      planningNotes: [],
-      sessionSummary: existingSession ?? {},
-      kbSnapshot: await this.kbStore.snapshotForRequest(sessionId),
-    };
-
-    this.requestRecords.set(requestId, {
-      request_id: requestId,
-      session_id: sessionId,
-      status: 'planning',
-      outcome: null,
-      plan_snapshot: '',
-      family_state: [],
-      request_text: request.requestText,
-      created_at: this.tools.now(),
-    });
-
-    await this.sessionManager.createRequest(sessionId, requestId, {
-      session_id: sessionId,
-      request_id: requestId,
-      user_text: request.requestText,
-      file_descriptors: request.files,
-      budgets: request.budgets,
-      is_admin: this.isAdmin,
-    });
-
-    await this.emitTrace(sessionId, 'planning_triggered', {
-      session_id: sessionId,
-      request_id: requestId,
-      mode: existingSession ? 'continuing_session_request' : 'new_session_request',
-      trigger_reason: existingSession ? 'continuing_session_request' : 'new_session_request',
-      blocked_region_summary: [],
-    });
-    await this.emitTrace(sessionId, 'request_started', {
-      session_id: sessionId,
-      request_id: requestId,
-      request_metadata: {
-        file_count: request.files.length,
-        is_admin: this.isAdmin,
-      },
-      trigger: existingSession ? 'continuing_session_request' : 'new_session_request',
-      budgets: request.budgets,
-      initial_mode: existingSession ? 'continuing_session_request' : 'new_session_request',
-    });
-
-    request.budgets.planning_remaining -= 1;
-    const planningNode = {
-      id: 'bootstrap-planning',
-      targetFamily: 'response',
-      declaration: {
-        commands: ['planning'],
-        body: request.requestText,
-      },
-      dependencies: [],
-    };
-    const planningContext = await this.buildInvocationContext(planningNode, request, sessionId, requestId, 0, request.requestText);
-    planningContext.mode = existingSession ? 'continuing_session_request' : 'new_session_request';
-    const planningEffects = await executePlanning(planningContext);
-    if (planningEffects.failure) {
-      throw new Error(planningEffects.failure.message);
-    }
-    request.planText = planningEffects.declarationInsertions.map((entry) => entry.text).join('\n\n');
-    if (!request.planText.includes('@response')) {
-      request.planText = `@response writerLLM\n${request.requestText}\n`;
-    }
-    this.requestRecords.get(requestId).plan_snapshot = request.planText;
-    await this.emitTrace(sessionId, 'planning_stopped', {
-      session_id: sessionId,
-      request_id: requestId,
-      outcome: 'accepted',
-      accepted_actions: ['initial_plan'],
-      rejected_actions: [],
-    });
-
+    let request = null;
     let epochNumber = 1;
-    while (request.budgets.steps_remaining > 0 && request.budgets.structural_changes_remaining > 0) {
-      await this.openEpoch(sessionId, requestId, request, epochNumber);
-      for (const node of this.currentGraph.nodes) {
-        this.stateStore.markDeclarationPending(node.targetFamily);
-      }
 
-      const readyNodes = this.findReadyNodes(request);
-      if (readyNodes.length === 0) {
-        const repaired = await this.maybeRepair(request, sessionId, requestId);
-        if (!repaired) {
+    try {
+      const existingSession = await this.sessionManager.loadSession(sessionId);
+      await this.bootstrapSession(sessionId, input.policyProfile ?? this.policyProfile ?? 'default', input.isAdmin ?? this.isAdmin);
+      await this.analyticStore.load(sessionId);
+      this.resetRequestState();
+      this.sessionId = sessionId;
+
+      request = {
+        requestText: input.requestText,
+        files: input.files ?? [],
+        budgets: cloneBudgets(input.budgets),
+        planText: '',
+        planningNotes: [],
+        sessionSummary: existingSession ?? {},
+        kbSnapshot: await this.kbStore.snapshotForRequest(sessionId),
+      };
+
+      this.requestRecords.set(requestId, {
+        request_id: requestId,
+        session_id: sessionId,
+        status: 'planning',
+        outcome: null,
+        plan_snapshot: '',
+        family_state: [],
+        request_text: request.requestText,
+        created_at: this.tools.now(),
+      });
+
+      await this.sessionManager.createRequest(sessionId, requestId, {
+        session_id: sessionId,
+        request_id: requestId,
+        user_text: request.requestText,
+        file_descriptors: request.files,
+        budgets: request.budgets,
+        is_admin: this.isAdmin,
+      });
+
+      await this.emitTrace(sessionId, 'planning_triggered', {
+        session_id: sessionId,
+        request_id: requestId,
+        mode: existingSession ? 'continuing_session_request' : 'new_session_request',
+        trigger_reason: existingSession ? 'continuing_session_request' : 'new_session_request',
+        blocked_region_summary: [],
+      });
+      await this.emitTrace(sessionId, 'request_started', {
+        session_id: sessionId,
+        request_id: requestId,
+        request_metadata: {
+          file_count: request.files.length,
+          is_admin: this.isAdmin,
+        },
+        trigger: existingSession ? 'continuing_session_request' : 'new_session_request',
+        budgets: request.budgets,
+        initial_mode: existingSession ? 'continuing_session_request' : 'new_session_request',
+      });
+
+      request.budgets.planning_remaining -= 1;
+      const planningNode = {
+        id: 'bootstrap-planning',
+        targetFamily: 'response',
+        declaration: {
+          commands: ['planning'],
+          body: request.requestText,
+        },
+        dependencies: [],
+      };
+      const planningContext = await this.buildInvocationContext(planningNode, request, sessionId, requestId, 0, request.requestText);
+      planningContext.mode = existingSession ? 'continuing_session_request' : 'new_session_request';
+      const planningEffects = await executePlanning(planningContext);
+      if (planningEffects.failure) {
+        throw new Error(planningEffects.failure.message);
+      }
+      request.planText = planningEffects.declarationInsertions.map((entry) => entry.text).join('\n\n');
+      if (!request.planText.includes('@response')) {
+        request.planText = `@response writerLLM\n${request.requestText}\n`;
+      }
+      this.requestRecords.get(requestId).plan_snapshot = request.planText;
+      await this.emitTrace(sessionId, 'planning_stopped', {
+        session_id: sessionId,
+        request_id: requestId,
+        outcome: 'accepted',
+        accepted_actions: ['initial_plan'],
+        rejected_actions: [],
+      });
+
+      while (request.budgets.steps_remaining > 0 && request.budgets.structural_changes_remaining > 0) {
+        await this.openEpoch(sessionId, requestId, request, epochNumber);
+        for (const node of this.currentGraph.nodes) {
+          this.stateStore.markDeclarationPending(node.targetFamily);
+        }
+
+        const readyNodes = this.findReadyNodes(request);
+        if (readyNodes.length === 0) {
+          const repaired = await this.maybeRepair(request, sessionId, requestId);
+          if (!repaired) {
+            break;
+          }
+          epochNumber += 1;
+          request.budgets.structural_changes_remaining -= 1;
+          continue;
+        }
+
+        let structuralChange = false;
+        for (const node of readyNodes) {
+          request.budgets.steps_remaining -= 1;
+          const effects = await this.executeNode(node, request, sessionId, requestId, epochNumber);
+          this.applyEffects(effects, {
+            sessionId,
+            requestId,
+            epochNumber,
+            source: node.targetFamily,
+          });
+
+          if (effects.emittedVariants.length > 0) {
+            await this.emitTrace(sessionId, 'variant_emitted', {
+              session_id: sessionId,
+              request_id: requestId,
+              epoch_id: epochNumber,
+              emitted_ids: effects.emittedVariants.map((entry) => entry.familyId),
+              family_ids: effects.emittedVariants.map((entry) => entry.familyId),
+              source_component: node.declaration.commands.join(','),
+            });
+          }
+
+          if (effects.metadataUpdates.length > 0) {
+            await this.emitTrace(sessionId, 'metadata_updated', {
+              session_id: sessionId,
+              request_id: requestId,
+              epoch_id: epochNumber,
+              target_ids: effects.metadataUpdates.map((entry) => entry.targetId),
+              changed_keys: effects.metadataUpdates.flatMap((entry) => Object.keys(entry.patch)),
+              structural_impact: true,
+            });
+          }
+
+          if (effects.failure) {
+            await this.emitTrace(sessionId, 'failure_recorded', {
+              session_id: sessionId,
+              request_id: requestId,
+              epoch_id: epochNumber,
+              failure_kind: effects.failure.kind,
+              affected_scope: effects.failure.familyId ?? node.targetFamily,
+              repairable_flag: effects.failure.repairable,
+              originating_component: effects.failure.origin,
+            });
+          }
+
+          if (effects.declarationInsertions.length > 0) {
+            request.planText = `${request.planText.trim()}\n\n${effects.declarationInsertions.map((entry) => entry.text.trim()).join('\n\n')}\n`;
+            await this.emitTrace(sessionId, 'declarations_inserted', {
+              session_id: sessionId,
+              request_id: requestId,
+              epoch_id: epochNumber,
+              inserted_declaration_hash: effects.declarationInsertions.map((entry) => entry.text.length),
+              insertion_source: node.declaration.commands.join(','),
+              new_declaration_ids: [],
+            });
+          }
+
+          structuralChange = structuralChange || hasStructuralEffects(effects);
+        }
+
+        if (this.pendingAnalyticCheckpoint) {
+          await this.emitTrace(sessionId, 'analytic_memory_updated', {
+            session_id: sessionId,
+            request_id: requestId,
+            epoch_id: epochNumber,
+            updated_keys: this.pendingAnalyticCheckpoint.snapshot.map((entry) => entry.key),
+            scope: 'session',
+            export_flag: true,
+            checkpoint_hash: this.pendingAnalyticCheckpoint.hash,
+          });
+          this.pendingAnalyticCheckpoint = null;
+        }
+
+        await this.persistState(sessionId, requestId);
+        this.requestRecords.get(requestId).family_state = this.stateStore.listFamilies();
+        this.requestRecords.get(requestId).plan_snapshot = request.planText;
+        this.requestRecords.get(requestId).status = structuralChange ? 'executing' : 'stopped';
+
+        if (!structuralChange) {
           break;
         }
-        epochNumber += 1;
         request.budgets.structural_changes_remaining -= 1;
-        continue;
+        epochNumber += 1;
       }
 
-      let structuralChange = false;
-      for (const node of readyNodes) {
-        request.budgets.steps_remaining -= 1;
-        const effects = await this.executeNode(node, request, sessionId, requestId, epochNumber);
-        this.applyEffects(effects, {
-          sessionId,
-          requestId,
-          epochNumber,
-          source: node.targetFamily,
-        });
+      const responseVariant = await this.stateStore.resolveRepresentative('response', {
+        sessionId,
+        requestId,
+        epochNumber,
+        reason: 'Resolve final response',
+      });
 
-        if (effects.emittedVariants.length > 0) {
-          await this.emitTrace(sessionId, 'variant_emitted', {
-            session_id: sessionId,
-            request_id: requestId,
-            epoch_id: epochNumber,
-            emitted_ids: effects.emittedVariants.map((entry) => entry.familyId),
-            family_ids: effects.emittedVariants.map((entry) => entry.familyId),
-            source_component: node.declaration.commands.join(','),
-          });
-        }
+      const outcome = {
+        session_id: sessionId,
+        request_id: requestId,
+        response: responseVariant?.value ?? null,
+        response_variant_id: responseVariant?.id ?? null,
+        stop_reason: responseVariant ? 'completed' : 'unknown_outcome',
+        remaining_budgets: request.budgets,
+      };
 
-        if (effects.metadataUpdates.length > 0) {
-          await this.emitTrace(sessionId, 'metadata_updated', {
-            session_id: sessionId,
-            request_id: requestId,
-            epoch_id: epochNumber,
-            target_ids: effects.metadataUpdates.map((entry) => entry.targetId),
-            changed_keys: effects.metadataUpdates.flatMap((entry) => Object.keys(entry.patch)),
-            structural_impact: true,
-          });
-        }
-
-        if (effects.failure) {
-          await this.emitTrace(sessionId, 'failure_recorded', {
-            session_id: sessionId,
-            request_id: requestId,
-            epoch_id: epochNumber,
-            failure_kind: effects.failure.kind,
-            affected_scope: effects.failure.familyId ?? node.targetFamily,
-            repairable_flag: effects.failure.repairable,
-            originating_component: effects.failure.origin,
-          });
-        }
-
-        if (effects.declarationInsertions.length > 0) {
-          request.planText = `${request.planText.trim()}\n\n${effects.declarationInsertions.map((entry) => entry.text.trim()).join('\n\n')}\n`;
-          await this.emitTrace(sessionId, 'declarations_inserted', {
-            session_id: sessionId,
-            request_id: requestId,
-            epoch_id: epochNumber,
-            inserted_declaration_hash: effects.declarationInsertions.map((entry) => entry.text.length),
-            insertion_source: node.declaration.commands.join(','),
-            new_declaration_ids: [],
-          });
-        }
-
-        structuralChange = structuralChange || hasStructuralEffects(effects);
-      }
-
-      if (this.pendingAnalyticCheckpoint) {
-        await this.emitTrace(sessionId, 'analytic_memory_updated', {
-          session_id: sessionId,
-          request_id: requestId,
-          epoch_id: epochNumber,
-          updated_keys: this.pendingAnalyticCheckpoint.snapshot.map((entry) => entry.key),
-          scope: 'session',
-          export_flag: true,
-          checkpoint_hash: this.pendingAnalyticCheckpoint.hash,
-        });
-        this.pendingAnalyticCheckpoint = null;
-      }
-
-      await this.persistState(sessionId, requestId);
-      this.requestRecords.get(requestId).family_state = this.stateStore.listFamilies();
-      this.requestRecords.get(requestId).plan_snapshot = request.planText;
-      this.requestRecords.get(requestId).status = structuralChange ? 'executing' : 'stopped';
-
-      if (!structuralChange) {
-        break;
-      }
-      request.budgets.structural_changes_remaining -= 1;
-      epochNumber += 1;
+      await this.sessionManager.persistOutcome(sessionId, requestId, outcome);
+      await this.sessionManager.appendRequestSummary(sessionId, {
+        request_id: requestId,
+        created_at: this.tools.now(),
+        response: outcome.response,
+        stop_reason: outcome.stop_reason,
+        request_text: request.requestText,
+      });
+      await this.emitTrace(sessionId, 'request_stopped', {
+        session_id: sessionId,
+        request_id: requestId,
+        final_outcome: outcome.stop_reason,
+        stop_reason: outcome.stop_reason,
+        remaining_blocked_regions: [],
+      });
+      this.requestRecords.set(requestId, {
+        ...this.requestRecords.get(requestId),
+        status: 'stopped',
+        outcome,
+        family_state: this.stateStore.listFamilies(),
+        plan_snapshot: request.planText,
+        completed_at: this.tools.now(),
+      });
+      return outcome;
+    } catch (error) {
+      await this.bootstrapSession(sessionId, input.policyProfile ?? this.policyProfile ?? 'default', input.isAdmin ?? this.isAdmin);
+      const outcome = {
+        session_id: sessionId,
+        request_id: requestId,
+        response: null,
+        response_variant_id: null,
+        stop_reason: error.code === 'ACTIVE_REQUEST' ? 'active_request' : 'execution_error',
+        remaining_budgets: request?.budgets ?? cloneBudgets(input.budgets),
+        error: {
+          code: error.code ?? 'EXECUTION_ERROR',
+          message: error.message,
+        },
+      };
+      await this.sessionManager.persistOutcome(sessionId, requestId, outcome);
+      await this.sessionManager.appendRequestSummary(sessionId, {
+        request_id: requestId,
+        created_at: this.tools.now(),
+        response: null,
+        stop_reason: outcome.stop_reason,
+        request_text: input.requestText,
+      });
+      await this.emitTrace(sessionId, 'request_stopped', {
+        session_id: sessionId,
+        request_id: requestId,
+        final_outcome: outcome.stop_reason,
+        stop_reason: outcome.stop_reason,
+        remaining_blocked_regions: [],
+        error_message: error.message,
+      });
+      const existingRecord = this.requestRecords.get(requestId) ?? {
+        request_id: requestId,
+        session_id: sessionId,
+        request_text: input.requestText,
+        created_at: this.tools.now(),
+      };
+      this.requestRecords.set(requestId, {
+        ...existingRecord,
+        status: 'stopped',
+        outcome,
+        family_state: this.stateStore.listFamilies(),
+        plan_snapshot: request?.planText ?? existingRecord.plan_snapshot ?? '',
+        completed_at: this.tools.now(),
+        error_message: error.message,
+      });
+      return outcome;
     }
-
-    const responseVariant = await this.stateStore.resolveRepresentative('response', {
-      sessionId,
-      requestId,
-      epochNumber,
-      reason: 'Resolve final response',
-    });
-
-    const outcome = {
-      session_id: sessionId,
-      request_id: requestId,
-      response: responseVariant?.value ?? null,
-      response_variant_id: responseVariant?.id ?? null,
-      stop_reason: responseVariant ? 'completed' : 'unknown_outcome',
-      remaining_budgets: request.budgets,
-    };
-
-    await this.sessionManager.persistOutcome(sessionId, requestId, outcome);
-    await this.sessionManager.appendRequestSummary(sessionId, {
-      request_id: requestId,
-      created_at: this.tools.now(),
-      response: outcome.response,
-      stop_reason: outcome.stop_reason,
-      request_text: request.requestText,
-    });
-    await this.emitTrace(sessionId, 'request_stopped', {
-      session_id: sessionId,
-      request_id: requestId,
-      final_outcome: outcome.stop_reason,
-      stop_reason: outcome.stop_reason,
-      remaining_blocked_regions: [],
-    });
-    this.requestRecords.set(requestId, {
-      ...this.requestRecords.get(requestId),
-      status: 'stopped',
-      outcome,
-      family_state: this.stateStore.listFamilies(),
-      plan_snapshot: request.planText,
-      completed_at: this.tools.now(),
-    });
-    return outcome;
   }
 
   async startRequest(input) {
@@ -791,6 +861,10 @@ export class MRPVM {
   }
 }
 
-export function createRuntime(rootDir, options = {}) {
-  return new MRPVM(rootDir, options);
+export function createRuntime(rootDirOrConfig, options = {}) {
+  if (typeof rootDirOrConfig === 'string' || rootDirOrConfig instanceof URL) {
+    return new MRPVM(String(rootDirOrConfig), options);
+  }
+  const config = rootDirOrConfig ?? {};
+  return new MRPVM(config.rootDir ?? config.baseDir ?? process.cwd(), config);
 }

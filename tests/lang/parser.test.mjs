@@ -20,7 +20,21 @@ test('parsePlan preserves bodies and references', () => {
   assert.equal(parsed.declarations[1].body, '{{default final "none"}}\n');
 });
 
-test('parseSopModule reads triple-quoted values and metadata', () => {
+test('parseSopModule reads declaration-style SOP module entries', () => {
+  const source = [
+    '@ku_sample text',
+    'Hello',
+    'World',
+    '@ku_sample:meta json',
+    '{"rev":1,"ku_type":"content"}',
+  ].join('\n');
+
+  const entries = parseSopModule(source);
+  assert.equal(entries.get('ku_sample'), 'Hello\nWorld');
+  assert.deepEqual(entries.get('ku_sample:meta'), { rev: 1, ku_type: 'content' });
+});
+
+test('parseSopModule keeps legacy assignment syntax readable during migration', () => {
   const source = [
     'ku_sample = """',
     'Hello',

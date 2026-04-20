@@ -1,4 +1,44 @@
-plannerLLM = """
+@plannerLLM text
 External planner wrapper profile.
-"""
-plannerLLM:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"plannerLLM","summary":"LLM wrapper profile for planning proposals.","priority":9,"trust":"canonical","domains":["runtime","planning"],"commands":[],"interpreters":["plannerLLM"],"tags":["llm","planning"],"input_patterns":["[A-Za-z0-9_./:-]+"],"allowed_ku_types":["prompt_asset","policy_asset","caller_profile"],"accepted_prompt_roles":["planning"],"model_classes":["cheap","medium","strong"],"byte_budget":8192,"session_override_allowed":true,"llm_fallback_policy":"allowed"}
+@plannerLLM:meta json
+{
+  "rev": 1,
+  "ku_type": "caller_profile",
+  "scope": "default",
+  "status": "active",
+  "title": "plannerLLM",
+  "summary": "LLM wrapper profile for planning proposals.",
+  "priority": 9,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "planning"
+  ],
+  "commands": [],
+  "interpreters": [
+    "plannerLLM"
+  ],
+  "tags": [
+    "llm",
+    "planning"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ],
+  "allowed_ku_types": [
+    "prompt_asset",
+    "policy_asset",
+    "caller_profile"
+  ],
+  "accepted_prompt_roles": [
+    "planning"
+  ],
+  "model_classes": [
+    "cheap",
+    "medium",
+    "strong"
+  ],
+  "byte_budget": 8192,
+  "session_override_allowed": true,
+  "llm_fallback_policy": "allowed"
+}

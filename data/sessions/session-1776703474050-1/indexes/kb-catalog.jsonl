@@ -1,0 +1,18 @@
+{"kuId":"analytic-memory","scope":"default","rev":1,"ku_type":"caller_profile","title":"analytic-memory","summary":"Caller profile for structured analytic state updates."}
+{"kuId":"codeGeneratorLLM","scope":"default","rev":1,"ku_type":"caller_profile","title":"codeGeneratorLLM","summary":"Code-oriented wrapper profile."}
+{"kuId":"credibility","scope":"default","rev":1,"ku_type":"caller_profile","title":"credibility","summary":"Caller profile for family-level candidate comparison."}
+{"kuId":"deepLLM","scope":"default","rev":1,"ku_type":"caller_profile","title":"deepLLM","summary":"Strong reasoning wrapper profile."}
+{"kuId":"fastLLM","scope":"default","rev":1,"ku_type":"caller_profile","title":"fastLLM","summary":"Cheap extraction and lightweight synthesis wrapper."}
+{"kuId":"js-eval","scope":"default","rev":1,"ku_type":"caller_profile","title":"js-eval","summary":"Caller profile for deterministic JavaScript evaluation."}
+{"kuId":"kb","scope":"default","rev":1,"ku_type":"caller_profile","title":"kb","summary":"Caller profile for explicit knowledge search and retrieval."}
+{"kuId":"logic-eval","scope":"default","rev":1,"ku_type":"caller_profile","title":"logic-eval","summary":"Caller profile for bounded declarative reasoning."}
+{"kuId":"plannerLLM","scope":"default","rev":1,"ku_type":"caller_profile","title":"plannerLLM","summary":"LLM wrapper profile for planning proposals."}
+{"kuId":"planning","scope":"default","rev":1,"ku_type":"caller_profile","title":"planning","summary":"Caller profile for the native planning command."}
+{"kuId":"template-eval","scope":"default","rev":1,"ku_type":"caller_profile","title":"template-eval","summary":"Caller profile for deterministic template rendering."}
+{"kuId":"writerLLM","scope":"default","rev":1,"ku_type":"caller_profile","title":"writerLLM","summary":"LLM wrapper profile for fluent wording."}
+{"kuId":"ku_js_guidance","scope":"default","rev":1,"ku_type":"content","title":"js guidance","summary":"Default guidance for js-eval bodies."}
+{"kuId":"ku_logic_guidance","scope":"default","rev":1,"ku_type":"content","title":"logic guidance","summary":"Default guidance for logic-eval rule bodies."}
+{"kuId":"ku_template_guidance","scope":"default","rev":1,"ku_type":"content","title":"template guidance","summary":"Default guidance for template-eval bodies."}
+{"kuId":"ku_planning_continue_core","scope":"default","rev":1,"ku_type":"prompt_asset","title":"planning_continue_core","summary":"Bootstrap planning prompt asset for continuing sessions."}
+{"kuId":"ku_planning_init_core","scope":"default","rev":1,"ku_type":"prompt_asset","title":"planning_init_core","summary":"Bootstrap planning prompt asset for new sessions."}
+{"kuId":"ku_planning_repair_core","scope":"default","rev":1,"ku_type":"prompt_asset","title":"planning_repair_core","summary":"Bootstrap planning prompt asset for repair planning."}
