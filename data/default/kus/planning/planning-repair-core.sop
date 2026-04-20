@@ -1,0 +1,6 @@
+ku_planning_repair_core = """
+Repair the blocked region with the smallest possible SOP Lang change.
+Prefer rerouting, narrower context, or missing-evidence declarations over large rewrites.
+Always preserve one request-local response family.
+"""
+ku_planning_repair_core:meta = {"rev":1,"ku_type":"prompt_asset","scope":"default","status":"active","title":"planning_repair_core","summary":"Bootstrap planning prompt asset for repair planning.","priority":20,"trust":"canonical","domains":["runtime","planning"],"commands":["planning"],"interpreters":["plannerLLM"],"tags":["planning","repair"],"prompt_role":"planning","prompt_mode":"error_triggered_repair","mandatory_group":"planning_repair_core","model_classes":["cheap","medium","strong"],"version_policy":"locked"}

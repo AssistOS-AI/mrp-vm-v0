@@ -1,0 +1,6 @@
+ku_planning_continue_core = """
+Create a compact SOP Lang plan for a new request in an existing session.
+Use prior session outcomes only when they help the current request.
+Always keep the response family request-local.
+"""
+ku_planning_continue_core:meta = {"rev":1,"ku_type":"prompt_asset","scope":"default","status":"active","title":"planning_continue_core","summary":"Bootstrap planning prompt asset for continuing sessions.","priority":20,"trust":"canonical","domains":["runtime","planning"],"commands":["planning"],"interpreters":["plannerLLM"],"tags":["planning","continuation"],"prompt_role":"planning","prompt_mode":"continuing_session_request","mandatory_group":"planning_continue_core","model_classes":["cheap","medium","strong"],"version_policy":"locked"}

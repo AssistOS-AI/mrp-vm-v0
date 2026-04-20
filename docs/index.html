@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MRP-VM v0 Documentation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div data-include="partials/header.html"></div>
+  <main class="page">
+    <div class="page__panel">
+      <section class="hero">
+        <p class="kicker">Repository overview</p>
+        <h1>MRP-VM v0 Documentation</h1>
+        <p class="lede">This repository now contains the implemented MRP-VM v0 runtime together with the normative DS set, the HTML documentation shell, default KU assets, and verification scripts.</p>
+      </section>
+
+      <section class="section">
+        <h2>Current repository role</h2>
+        <p>The repository now ships the MRP-VM runtime under <code>src/</code>, the optional server and chat adapter under top-level <code>server/</code>, organized tests under <code>tests/</code>, and the architectural specification suite that remains the implementation contract.</p>
+        <div class="callout">
+          <strong>Source of truth:</strong> the implementation-facing rules live in <a href="specsLoader.html?spec=matrix.md">the DS matrix</a>, with <a href="specsLoader.html?spec=DS001-coding-style.md">DS001-coding-style.md</a> as the coding-style authority.
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Documentation surfaces</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>Runtime architecture</h3>
+            <p>The implemented MRP-VM execution model, command surfaces, runtime boundaries, and hosting layer are summarized in <a href="runtime-architecture.html">Runtime Architecture</a> and specified in DS002 through DS022.</p>
+          </article>
+          <article class="card">
+            <h3>Audit trail</h3>
+            <p>Architectural decisions and unresolved design choices now live directly inside each DS file under the <strong>Decisions &amp; Questions</strong> section so implementation review stays local to the affected subsystem.</p>
+          </article>
+          <article class="card">
+            <h3>Implementation scope</h3>
+            <p>The documented scope is strictly MRP-VM v0: SOP Lang, state families, native commands, wrapper interpreters, trace, test seams, and implementation constraints.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Implementation posture</h2>
+        <p>The implementation follows the Node.js <code>.mjs</code> posture defined in <a href="specsLoader.html?spec=DS001-coding-style.md">DS001</a>. The runtime tree under <code>src/</code> is intentionally modular, the hosting layer and chat UI live under <code>server/</code>, the default KUs live under <code>data/default/</code>, and the test suite mirrors subsystem boundaries under <code>tests/</code>.</p>
+        <p>Further work should extend the existing runtime rather than replacing it: tighten command semantics, expand fixtures and benchmark cases, and add live provider integrations without weakening the explicit SDK-first architecture. DS004 and DS021 remain proposal-only surfaces, while DS022 now defines the implemented server/API/chat boundary.</p>
+      </section>
+    </div>
+  </main>
+  <div data-include="partials/footer.html"></div>
+  <script src="partials-loader.js"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "id": "basic-request",
+  "request": "Provide a concise answer.",
+  "expected_response_prefix": "writerLLM:"
+}

@@ -1,0 +1,4 @@
+analytic-memory = """
+Native analytic-memory caller profile.
+"""
+analytic-memory:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"analytic-memory","summary":"Caller profile for structured analytic state updates.","priority":8,"trust":"canonical","domains":["runtime","analytics"],"commands":["analytic-memory"],"interpreters":[],"tags":["analytics","aggregation"],"input_patterns":["(store|append|merge|derive|rollup|export)\\s+"],"allowed_ku_types":["content","policy_asset","caller_profile"],"accepted_prompt_roles":["command_guidance"],"model_classes":[],"byte_budget":4096,"session_override_allowed":true,"llm_fallback_policy":"allowed"}

@@ -1,0 +1,4 @@
+logic-eval = """
+Native logic-eval caller profile.
+"""
+logic-eval:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"logic-eval","summary":"Caller profile for bounded declarative reasoning.","priority":8,"trust":"canonical","domains":["runtime","logic"],"commands":["logic-eval"],"interpreters":[],"tags":["logic","rules"],"input_patterns":["when\\s+.+","then\\s+.+","exists\\s+[A-Za-z_][A-Za-z0-9_]*"],"allowed_ku_types":["content","policy_asset","caller_profile"],"accepted_prompt_roles":["command_guidance"],"model_classes":[],"byte_budget":4096,"session_override_allowed":true,"llm_fallback_policy":"disallowed"}

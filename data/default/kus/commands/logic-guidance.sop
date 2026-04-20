@@ -1,0 +1,5 @@
+ku_logic_guidance = """
+Use logic-eval for small deterministic checks.
+Write explicit when/then rules and avoid pseudo-code.
+"""
+ku_logic_guidance:meta = {"rev":1,"ku_type":"content","scope":"default","status":"active","title":"logic guidance","summary":"Default guidance for logic-eval rule bodies.","priority":5,"trust":"trusted","domains":["runtime","logic"],"commands":["logic-eval"],"interpreters":[],"tags":["logic","guidance"],"input_patterns":["when\\s+.+","then\\s+.+"]}

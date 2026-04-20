@@ -1,0 +1,4 @@
+fastLLM = """
+External fast wrapper profile.
+"""
+fastLLM:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"fastLLM","summary":"Cheap extraction and lightweight synthesis wrapper.","priority":6,"trust":"canonical","domains":["runtime","wrappers"],"commands":[],"interpreters":["fastLLM"],"tags":["llm","fast"],"input_patterns":["[A-Za-z0-9_./:-]+"],"allowed_ku_types":["prompt_asset","content","caller_profile"],"accepted_prompt_roles":["command_guidance"],"model_classes":["cheap"],"byte_budget":4096,"session_override_allowed":true,"llm_fallback_policy":"allowed"}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MRP-VM v0 Documentation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div data-include="partials/header.html"></div>
+  <main class="page">
+    <div class="page__panel">
+      <nav class="breadcrumbs"><a href="index.html">Home</a> / Runtime Architecture</nav>
+      <section class="hero">
+        <p class="kicker">Implemented runtime</p>
+        <h1>MRP-VM v0 runtime architecture</h1>
+        <p class="lede">MRP-VM v0 is now implemented as a bounded execution machine with explicit planning, explicit state, explicit knowledge injection, and independent credibility assessment.</p>
+      </section>
+
+      <section class="section">
+        <h2>Architectural identity</h2>
+        <p>MRP-VM v0 is specified as a runtime for local interpretive regimes rather than as a monolithic prompt wrapper. Tasks enter as natural language requests plus bounded context, then become a graph of SOP Lang declarations. Execution is mediated through native commands, external interpreters, family-based state, and auditable trace records.</p>
+        <p>The runtime-facing DS set lives in <a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> through <a href="specsLoader.html?spec=DS022-server-api-and-chat-interface.md">DS022</a>. These files define the implementation contract, and the repository now includes the corresponding runtime source tree, server adapter, default KUs, and tests.</p>
+      </section>
+
+      <section class="section">
+        <h2>Execution surfaces</h2>
+        <div class="figure">
+          <img src="assets/architecture-overview.svg" alt="MRP-VM runtime overview diagram">
+        </div>
+        <div class="grid">
+          <article class="card">
+            <h3>Planning and control</h3>
+            <p><a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a>, <a href="specsLoader.html?spec=DS003-sop-lang-structure-and-parser.md">DS003</a>, <a href="specsLoader.html?spec=DS006-planning-and-replanning.md">DS006</a>, and <a href="specsLoader.html?spec=DS016-request-bootstrapping-and-session-lifecycle.md">DS016</a> define graph compilation, topological execution, request entry, plan bootstrapping, epochs, and bounded repair behavior.</p>
+          </article>
+          <article class="card">
+            <h3>State and commands</h3>
+            <p><a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> defines families, variants, representative resolution, and declaration insertion; <a href="specsLoader.html?spec=DS007-js-eval.md">DS007</a> through <a href="specsLoader.html?spec=DS012-credibility.md">DS012</a> define native command contracts.</p>
+          </article>
+          <article class="card">
+            <h3>Knowledge and evaluation</h3>
+            <p><a href="specsLoader.html?spec=DS005-context-injection-and-pruning.md">DS005</a>, <a href="specsLoader.html?spec=DS011-kb-command.md">DS011</a>, <a href="specsLoader.html?spec=DS012-credibility.md">DS012</a>, <a href="specsLoader.html?spec=DS017-error-and-refusal-model.md">DS017</a>, and <a href="specsLoader.html?spec=DS019-evaluation-strategy.md">DS019</a> define bounded context, prompt assets, independent candidate comparison, normalized failure handling, and evaluation strategy.</p>
+          </article>
+          <article class="card">
+            <h3>Hosting and chat</h3>
+            <p><a href="specsLoader.html?spec=DS018-server-and-admin-model.md">DS018</a> and <a href="specsLoader.html?spec=DS022-server-api-and-chat-interface.md">DS022</a> define the top-level <code>server/</code> adapter, SDK entry points, native APIs, SSE trace streaming, admin boundaries, and the self-contained <code>/chat</code> interface.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Proposal-only surfaces</h2>
+        <p><a href="specsLoader.html?spec=DS004-security-and-capability-profiles.md">DS004</a> and <a href="specsLoader.html?spec=DS021-smt-interpreter-proposal.md">DS021</a> are intentionally marked as proposal-only surfaces. They reserve architectural direction without being treated as immediate implementation baseline.</p>
+      </section>
+
+      <section class="section">
+        <h2>Implementation-ready decisions already fixed</h2>
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th>Surface</th>
+              <th>Consolidated rule</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Interpreter outputs</td>
+              <td>Commands return ordered lists of concrete variables plus metadata, not opaque result envelopes.</td>
+            </tr>
+            <tr>
+              <td>Knowledge retrieval</td>
+              <td>Ordinary <code>kb</code> retrieval is symbolic and deterministic; LLMs are reserved for induction and maintenance tasks.</td>
+            </tr>
+            <tr>
+              <td>Memory naming</td>
+              <td><code>analytic-memory</code> is the canonical aggregation surface for v0.</td>
+            </tr>
+            <tr>
+              <td>Planning guidance</td>
+              <td>Planning prompt guidance must come from KU-managed prompt assets rather than from large hardcoded prompt bodies.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Current implementation boundary</h2>
+        <p>The repository now contains the runtime tree under <code>src/</code>, the top-level server and chat adapter under <code>server/</code>, the default-KU assets under <code>data/default/</code>, and a modular native test suite under <code>tests/</code>. The next engineering phase is hardening: richer fixtures, broader evaluation corpora, and live-provider integrations that preserve the current DS-aligned architecture.</p>
+      </section>
+    </div>
+  </main>
+  <div data-include="partials/footer.html"></div>
+  <script src="partials-loader.js"></script>
+</body>
+</html>

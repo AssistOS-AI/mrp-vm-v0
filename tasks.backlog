@@ -1,0 +1,72 @@
+[
+  {
+    "description": "__decl e o abstractizare inutilă care complică fără să aducă valoare reală.\nCe face __decl acum:\nComanda emite __decl:v1 cu valoarea @result js-eval\\ncod → schedulerul extrage textul SOP → îl bagă în graf → închide epoca.\nCe ar trebui să facă:\nComanda returnează direct declarații SOP (@result js-eval\\ncod). Faptul că rezultatul conține linii @ e semnalul de rewrite. Punct.\nCe pierde __decl-ul:\n- __decl:vN:meta cu status, priority, reason — toate astea pot fi purtate în structura de rezultat a comenzii, nu într-o familie paralelă\n- Buffering-ul — se poate face la nivel de rezultat, nu prin append la o familie\n- Traceability — e deja rezolvat de trace events (rewrite_inserted)\nCe câștigi dacă elimini __decl:\n- Un concept în minus de explicat, implementat, testat\n- Nu mai ai \"rewrite mechanics\" ca capitol separat în DS002\n- Nu mai ai __decl:vN:meta schema\n- Nu mai ai ambiguitatea \"când se integrează rewrite-ul\" — e instant: rezultatul cu @ = rewrite\nSingurul lucru care rămâne de definit: cum arată rezultatul unei comenzi care cere rewrite. Răspunsul e deja în DS002:71 — \"accepted runtime effects must ultimately be expressed as emitted concrete variants, metadata updates, withdrawals, or __decl rewrites.\" Înlocuiești __decl rewrites cu new SOP declarations și ai același contract, mai simplu.\nFixeaza prin DS-uri ca sa nu mai fie nic un __decl ciudat pe nicaieri",
+    "options": [],
+    "resolution": "Fixeaza prin DS-uri ca sa nu mai fie nic un __decl ciudat pe nicaieri"
+  },
+  {
+    "description": "in DS002 daca tot vorbimd e core semantics, ar trebui sa fie mai mult  despre sortarea toplogica , chestiile de acolo cu $x si ~x trebuie mutata in js-eval, nu au nici o legatura cu core semantics,esunt parituclare pentru  js-eval. Daca logic-eval  sau alte interpretoare pot folosi intra-0devar sintaxa ~x sa fie dar, scurata semnificatic DS002 sa fie doar chestii relevante",
+    "options": [],
+    "resolution": "fix it as described"
+  },
+  {
+    "description": "DS003 trebuie si el elgat mai clar cu DS002, si sa fie clar ca evaluarea SOP Lang se face prin a complila toate declaratiiel de SOP Lang intr-un graph, si ca din sortarea toplogica rezulta  potentialul de a rula mai multe comenzi in paralel. Practic, mai simplu: avem dependnte dintre comenzi datorita sintaxei ~x si $y, sortarea toplogica trebuie sa ordoneze evaluarea.  Daca apar rescrieri, atunci se schimba epoca.",
+    "options": [],
+    "resolution": "Consoledieaza DS003 in DS002 ca sa fie mai clar, elimina DS003 si promovam alt DSin locul gol ramas."
+  },
+  {
+    "description": "marcheaza DS004 ca nefiind planificat pentru implementare, doa ro propunere, e exagerat oricum pe moment, trebuie revizuit",
+    "options": [],
+    "resolution": "marcheaza DS004 ca nefiind planificat pentru implementare, doa ro propunere, e exagerat oricum pe moment, trebuie revizuit"
+  },
+  {
+    "description": "DS005 e prea abstract, trebie facuta legatura cu kb, si explicat  modul cum toate comenzile si interpretoarele primesc context, explicat concptul de KU",
+    "options": [],
+    "resolution": "Fa legatura clara cu celalte cocnepte si DS-uri relevante. Sa fie clar ca innterreptoarele si comenzile primesc coenptul ca si text markdown , in sectiunile descrise acolo. Nu inteleg ce e cu is-pruned sau prned_items_count, orice pruinign e facuta de kb . Clarifica cum functioneaa cu adevarat legatura cu comanda interna kb ce e automat apelata  inainte de exeuctia comenzii pentru a trimite un context mai bun. Pruningul nu apartine acestui DS,e parte din DS_ul kb-ului daca mai decide el sa faca vreun pruning,e nonsens ce e aici"
+  },
+  {
+    "description": "Sa fie mai clar in DS006 ca se folosesc LLM-uri pentru planning, sa fie clar ca contextul dat si indicatiiel difera in functie de sdiul inc are e sesiunea (o cerere si sesiune e noua, o cerere noua intr-o sesiune existenta, o reparare a planificarii in caz de failure de executie) Cele 3 situatii sunt destul de  diferite , chiar daca implic aplaning. cind se apeleaza comanda de plan trebuie sa fie clar din input (context) care e cazul. Sa specifici mai clare in cor context ca rezultatul fiecarei cerei de la utilizator trebuie sa ajunga intr-o singura variabila SOP Lang per fiecare request, nu exista un respose global al sesiunii dar trebuie o conventie ca responsurile sa fie clare",
+    "options": [],
+    "resolution": "Fix"
+  },
+  {
+    "description": "Verifica in toate DS-urile invariantii globali ai functionarii MRP-VM: 1. toate comenzile si intepretoarele externe chiar sunt  intepretoare de text natural, si etreaba fiecrei comenzi sau intepretor cum traduc aceste cereri in NL intr-o form ape care o opot folosi, expresii regulate sunt indicate, LLM ca fallback cind nu intelege ce a primit.  2. Fa clar ca fiecare intepretor extern si fiecare ocomanda trebuie sa aiba KU-uri default care desciru inputull ce prefera ca input ca sa poata sa cietasca rapid parametrii cu expresii regulate sa evita folosirea LLM-urilor, dar si ca sa fie clar pentru planning ce sa puna in  textul declaratiei comenzii mai la inceput",
+    "options": [],
+    "resolution": "fix"
+  },
+  {
+    "description": "in DS011 ar trebuie sa fie mai clar specificat cum se folsoeste  BM25 sau alte thenici si cind, practic pe comanda interna de planning si pentru comanda interna kb, avem probabl suficiente metadata ca sa nu folsoesti decit metadatele si sa fii rapid, dar totusi daca comanda e explciita si contine text in input, trebuie sa cauti mai mult si sa adaugi mai multe",
+    "options": [],
+    "resolution": "in DS011 ar trebuie sa fie mai clar specificat cum se folsoeste  BM25 sau alte thenici si cind, practic pe comanda interna de planning si pentru comanda interna kb, avem probabl suficiente metadata ca sa nu folsoesti decit metadatele si sa fii rapid, dar totusi daca comanda e explciita si contine text in input, trebuie sa cauti mai mult si sa adaugi mai multe . Vezi ca nu ar trebui sa ai in KU files header si SOP lang, trebuie sa ai doar SOP Lang, s-a strecutat o greseala de intpretare sau cerinte contradictorii. tot ce e in KU files sunt doar delcaratii de SOP Lang variables, si de asta ai :meta ca s adeclari chiar si metadate lkegate de variabile, fixeaza in toate DS_uriel daca exista eroarea asta"
+  },
+  {
+    "description": "in DS012  fa mai clar ac ain final credibility va folosi LLM-uri sau vreo procedura din JU-uriel considerate relevante pentru a decide scoruri si a salva socuri in metadatele variabilelor . deci practic poate intra ca un mod de evaluare agentica, sa forteze rescrierea de noi variabile de SOP Lang inainte de a da mai departe drumul la executie, deci astae foarte improtant ca credibility desi by default se apeleaza singur, cind descopera ca are nevoie de o procedura mai mare poate decide sa fac ao noua epoca de executie, de asta credibility trebuie apelat mai ales in js-eval inainte de orice, sa se decida ce e cu variabilele referentiate in cod, specifica foarte clar asta, si de fapt in orice loc inc are apare $x sau ~x credibility trebuie sa fie apelat, desigur ca de obicei variabilele au o singura valaore, sau se poate decide din epioca si euristici care e versiunea corecta de variabile, si sa se elimine cu totul verisunile considerate nerelevante, dar daca totusi din sintxa & am mai multe variante, trebuie luate foarte in serios  evaluarea si sa ajunga la rescrierile de care zic",
+    "options": [],
+    "resolution": "fix"
+  },
+  {
+    "description": "in DS016 permitem sa introducem SOP Lang direct, nu e cazul, nu interzicem nimic, dar nici nua vem vruen suport special pentru asta",
+    "options": [],
+    "resolution": "fix"
+  },
+  {
+    "description": "in DS017 ar trebui sa fie clar variabilele pot avea ca valoare o eroare, dat fiidn ca au meta infroamtii, trebuie s afie clar ca sunt intr-o stare de neinitlizata (nu s-au calculat inca) sau ca sunt in eroare, si valaorea va contine tipul de eroare. asta ar trebui sa ajute planningul sa ia decizii cind trebuie sa incerce sa repare planingul icnercidn sa salveze executia. Mai amentioneaza in acest DS si cum trebuie sa se comprote sistemul cidn nu reuseste sa recupereze meta-rational din eroare, cind a icnercat tot ce i-a permis bugetul. Fa ca mesajele de eroare si modul de furnizare sa depdinda de KU-uri deci sa nu fie hardodat prea tare in cod",
+    "options": [],
+    "resolution": "fix"
+  },
+  {
+    "description": "Muta te rog DS018 ca fiin DS003, dupa ce ai comprimat ce ai in DS003 in DS002, coform taskurilor . Sa faci foarte clara diferentierea dintre delcration content (tu ii zici header, dar mi se  pare ciudat) sa nu apara header niciaeri, ai variable  declration content pentru ce se declara efectiv cind se planifica, ai variable content (ce se obtine din evaluare ) si ai variable meta  pentru ce e atasat ca metadate (de exemplu provenienta, scoruti de credibilitate, etc) . Tot in acest noi DS003 care inlocuieste DS018 ar trebui sa explici mult mai clar ca fiecare variabila e intr-o familie de variabile si ca au mai multe versiuni posibile, fa legatura cu comanda creibility fara sa intri in toate detaliilele",
+    "options": [],
+    "resolution": "fix"
+  },
+  {
+    "description": "DIn reviweul meu asupra DS-urimilor nu aam vazut prea multe detalii despre cum se serialzieaza KU-urilor (cele default, cele din  KB-ul global, si cele din sesiune - ar trebui in DS011 sa fie mai clar si explicit cum se serialzieaza fiecare. La fel si cum se serialieaza istoricul sesiunii si planul curent. Acolo avem un cache de kb ce contine artefacte pentru sesiune dar e cam vag si neclar, fa foarte concret, explcia convetnia , ce fel de fisiere. In general sunt fsier e text,  dar vezi ca la plan ai si planul in SOP Lang si starea curenta a variabielor (eventual cu mai multe versiuni) trebuie sa le faci usor de icnarcat si eficient de manipulat. fa foldere separate, ierahic as cu pas, totul bine definit si clar",
+    "options": [],
+    "resolution": "fix"
+  },
+  {
+    "description": "in DS021 sa faci clar ca aceste metadate si declaratii despre capabilitatile comenzilor interne si ale intepretoarelor trebuie sa fie declarate in KU-uri default din data, fara alte complicatii",
+    "options": [],
+    "resolution": "Fixeaza taskul si mai adauga si un nou DS pentru SMT, ca o propunere, nu ca ceva ce implementam , marcheaza-l asa"
+  }
+]

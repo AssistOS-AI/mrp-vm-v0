@@ -1,0 +1,4 @@
+kb = """
+Native kb caller profile.
+"""
+kb:meta = {"rev":1,"ku_type":"caller_profile","scope":"default","status":"active","title":"kb","summary":"Caller profile for explicit knowledge search and retrieval.","priority":8,"trust":"canonical","domains":["runtime","knowledge"],"commands":["kb"],"interpreters":[],"tags":["knowledge","retrieval"],"input_patterns":["[A-Za-z0-9_./:-]+"],"allowed_ku_types":["content","prompt_asset","template_asset","policy_asset","caller_profile"],"accepted_prompt_roles":["planning","command_guidance"],"model_classes":[],"byte_budget":4096,"session_override_allowed":true,"llm_fallback_policy":"disallowed"}

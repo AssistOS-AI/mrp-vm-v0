@@ -1,0 +1,5 @@
+ku_template_guidance = """
+Use template-eval when the output should be deterministic and sectioned.
+Prefer placeholders, if blocks, and each blocks over free-form generation.
+"""
+ku_template_guidance:meta = {"rev":1,"ku_type":"content","scope":"default","status":"active","title":"template guidance","summary":"Default guidance for template-eval bodies.","priority":5,"trust":"trusted","domains":["runtime","templates"],"commands":["template-eval"],"interpreters":[],"tags":["template","guidance"],"input_patterns":["\\{\\{.+?\\}\\}"]}

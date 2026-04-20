@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">MRP-VM runtime overview</title>
+  <desc id="desc">A compact diagram showing requests entering planning, then flowing through native commands, knowledge and memory, credibility, and trace.</desc>
+  <rect width="960" height="420" fill="#f8fbff"/>
+  <g font-family="Inter, Segoe UI, sans-serif" fill="#142033">
+    <rect x="40" y="150" width="150" height="90" rx="18" fill="#e8f0ff" stroke="#2d5baf"/>
+    <text x="115" y="185" text-anchor="middle" font-size="24" font-weight="700">Request</text>
+    <text x="115" y="215" text-anchor="middle" font-size="16">NL task, files,</text>
+    <text x="115" y="236" text-anchor="middle" font-size="16">session context</text>
+
+    <rect x="240" y="70" width="180" height="100" rx="18" fill="#ffffff" stroke="#2d5baf"/>
+    <text x="330" y="110" text-anchor="middle" font-size="24" font-weight="700">Planning</text>
+    <text x="330" y="137" text-anchor="middle" font-size="16">initial graph,</text>
+    <text x="330" y="158" text-anchor="middle" font-size="16">repair, redirection</text>
+
+    <rect x="240" y="240" width="180" height="110" rx="18" fill="#ffffff" stroke="#2d5baf"/>
+    <text x="330" y="280" text-anchor="middle" font-size="24" font-weight="700">Context</text>
+    <text x="330" y="308" text-anchor="middle" font-size="16">kb prompt assets,</text>
+    <text x="330" y="329" text-anchor="middle" font-size="16">session overlay,</text>
+    <text x="330" y="350" text-anchor="middle" font-size="16">analytic memory</text>
+
+    <rect x="480" y="70" width="200" height="120" rx="18" fill="#ffffff" stroke="#2d5baf"/>
+    <text x="580" y="108" text-anchor="middle" font-size="24" font-weight="700">Native commands</text>
+    <text x="580" y="137" text-anchor="middle" font-size="16">js-eval, logic-eval,</text>
+    <text x="580" y="158" text-anchor="middle" font-size="16">template-eval, kb,</text>
+    <text x="580" y="179" text-anchor="middle" font-size="16">analytic-memory</text>
+
+    <rect x="480" y="235" width="200" height="115" rx="18" fill="#ffffff" stroke="#2d5baf"/>
+    <text x="580" y="273" text-anchor="middle" font-size="24" font-weight="700">LLM wrappers</text>
+    <text x="580" y="302" text-anchor="middle" font-size="16">fast, deep, code,</text>
+    <text x="580" y="323" text-anchor="middle" font-size="16">writer, planner</text>
+
+    <rect x="740" y="80" width="170" height="100" rx="18" fill="#ffffff" stroke="#2d5baf"/>
+    <text x="825" y="120" text-anchor="middle" font-size="24" font-weight="700">Credibility</text>
+    <text x="825" y="148" text-anchor="middle" font-size="16">ranking, pruning,</text>
+    <text x="825" y="169" text-anchor="middle" font-size="16">selection</text>
+
+    <rect x="740" y="240" width="170" height="100" rx="18" fill="#ffffff" stroke="#2d5baf"/>
+    <text x="825" y="280" text-anchor="middle" font-size="24" font-weight="700">Trace</text>
+    <text x="825" y="308" text-anchor="middle" font-size="16">events, replay,</text>
+    <text x="825" y="329" text-anchor="middle" font-size="16">diagnostics</text>
+
+    <g stroke="#2d5baf" stroke-width="3" fill="none">
+      <path d="M190 195 H240"/>
+      <path d="M330 170 V240"/>
+      <path d="M420 120 H480"/>
+      <path d="M420 295 H480"/>
+      <path d="M680 130 H740"/>
+      <path d="M680 292 H740"/>
+      <path d="M825 180 V240"/>
+    </g>
+  </g>
+</svg>
