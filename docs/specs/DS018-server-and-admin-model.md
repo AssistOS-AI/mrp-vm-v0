@@ -34,6 +34,8 @@ Executor caches must support eviction. When an executor leaves memory, the serve
 
 Admin operations such as session inspection, trace export, policy override, KU promotion, or destructive cleanup must run under explicit admin capability profiles rather than under ordinary user request capabilities. The server layer must keep admin sessions and ordinary user sessions distinguishable in trace and policy handling.
 
+At minimum, hosted sessions should persist `session_origin`, `auth_mode`, `effective_role`, and owner or key identity when applicable so audit, policy enforcement, and UI transparency do not depend on inferred state.
+
 ### Hosting surfaces
 
 The optional hosting layer may provide:
@@ -44,9 +46,11 @@ The optional hosting layer may provide:
 4. session-inspection endpoints for administrators,
 5. trace or benchmark export endpoints under admin policy.
 
-The `/chat` surface should prioritize the current request plan, the current family state, and the latest request outcome over raw transcript history. Session history may still be available, but it is secondary to the active SOP plan and variable state when users need to understand the runtime.
+The hosted UI may expose dedicated pages for chat, traceability, KB inspection, and settings, but those surfaces must still remain server-owned adapters around the SDK instead of moving hosting logic back into `src/`.
 
 The baseline hosting layer should start with one simple executor-eviction policy such as pure TTL or pure LRU. Hybrid eviction may be added later if operational evidence justifies the extra policy surface.
+
+The ordinary server startup path must detect whether a managed provider path is available and refuse to start when only the fake adapter is available. Fake-LLM execution is reserved for tests and other explicit harness-level invocations; the user-facing server entry point must not expose an environment-variable escape hatch that silently turns the server into a fake-provider deployment.
 
 ## Decisions & Questions
 

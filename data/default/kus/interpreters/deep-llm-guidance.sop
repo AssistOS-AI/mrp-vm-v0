@@ -1,0 +1,46 @@
+@ku_deep_llm_guidance text
+Choose deepLLM for language-heavy work that needs stronger reasoning, synthesis across multiple inputs, or careful judgment.
+
+Use it for:
+- non-trivial analysis across several dependencies,
+- explanation or recommendation tasks that require weighing tradeoffs,
+- ambiguous classification where shallow heuristics are risky,
+- repair or validation steps that need substantive reasoning but do not produce SOP Lang,
+- proof sketches, correctness arguments, and generalizations that depend on exact upstream results.
+
+Prefer deepLLM over fastLLM when reasoning depth matters. Prefer it over writerLLM when the main challenge is analysis rather than polish.
+
+Avoid deepLLM when:
+- the task is deterministic and should stay inspectable on a native command,
+- the job is mainly stylistic rewriting,
+- the step is code generation better suited to codeGeneratorLLM,
+- the work is planning and should route through plannerLLM.
+
+DeepLLM pairs well with deterministic computation: let native commands compute exact results, then use deepLLM to explain why those results are correct, minimal, or generalizable.
+@ku_deep_llm_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "deepLLM guidance",
+  "summary": "Use deepLLM for harder reasoning, proof-like explanation, multi-input synthesis, and nuanced analysis when shallow routing would be too weak.",
+  "priority": 9,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "wrappers"
+  ],
+  "commands": [],
+  "interpreters": [
+    "deepLLM"
+  ],
+  "tags": [
+    "llm",
+    "reasoning",
+    "guidance"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ]
+}

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const DEFAULT_TASK_TAGS = {
   bootstrap: 'project-bootstrap',
@@ -104,47 +105,68 @@ function normalizeResolutionPath(candidatePath) {
   };
 }
 
+function pickAgentClass(moduleNamespace) {
+  if (typeof moduleNamespace?.LLMAgent === 'function') {
+    return moduleNamespace.LLMAgent;
+  }
+  if (typeof moduleNamespace?.default?.LLMAgent === 'function') {
+    return moduleNamespace.default.LLMAgent;
+  }
+  if (typeof moduleNamespace?.default === 'function') {
+    return moduleNamespace.default;
+  }
+  return null;
+}
+
+function* iterateAncestorDirs(startDir) {
+  let currentDir = path.resolve(startDir);
+  while (true) {
+    yield currentDir;
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      break;
+    }
+    currentDir = parentDir;
+  }
+}
+
+function buildDirectResolutionCandidates(targetDir) {
+  return [
+    path.resolve(targetDir, 'AchillesAgentLib', 'package.json'),
+    path.resolve(targetDir, 'AchillesAgentLib'),
+    path.resolve(targetDir, 'AchillesAgentLib.mjs'),
+    path.resolve(targetDir, 'AchillesAgentLib.js'),
+    path.resolve(targetDir, 'achilles-agent-lib', 'package.json'),
+    path.resolve(targetDir, 'achilles-agent-lib'),
+    path.resolve(targetDir, 'achillesAgentLib', 'package.json'),
+    path.resolve(targetDir, 'achillesAgentLib'),
+  ];
+}
+
 export function resolveAchillesAgentLib(options = {}) {
-  const env = options.env ?? process.env;
   const manualOverrides = options.manualOverrides ?? {};
   const baseDir = path.resolve(options.baseDir ?? manualOverrides.baseDir ?? process.cwd());
-  const manualPath = options.overridePath ?? manualOverrides.achillesAgentLibPath ?? env.ACHILLES_AGENT_LIB_PATH;
-  if (manualPath) {
-    const resolvedPath = path.resolve(baseDir, manualPath);
-    const normalized = normalizeResolutionPath(resolvedPath);
-    if (!normalized) {
-      throw new Error(`Configured AchillesAgentLib path does not exist: ${resolvedPath}`);
-    }
-    return {
-      strategy: 'manual-override',
-      path: resolvedPath,
-      ...normalized,
-    };
-  }
 
-  const parentCandidates = [
-    path.resolve(baseDir, '..', 'AchillesAgentLib', 'package.json'),
-    path.resolve(baseDir, '..', 'AchillesAgentLib'),
-    path.resolve(baseDir, '..', '@achilles', 'agent-lib', 'package.json'),
-    path.resolve(baseDir, '..', '@achilles', 'agent-lib'),
-  ];
-  for (const candidate of parentCandidates) {
-    if (existsSync(candidate)) {
-      const normalized = normalizeResolutionPath(candidate);
-      if (normalized) {
-        return {
-          strategy: 'parent-directory',
-          path: candidate,
-          ...normalized,
-        };
+  for (const candidateDir of iterateAncestorDirs(baseDir)) {
+    for (const candidate of buildDirectResolutionCandidates(candidateDir)) {
+      if (existsSync(candidate)) {
+        const normalized = normalizeResolutionPath(candidate);
+        if (normalized) {
+          return {
+            strategy: candidateDir === baseDir ? 'project-root' : 'ancestor-dir',
+            path: candidate,
+            ...normalized,
+          };
+        }
       }
     }
   }
 
   const resolver = createResolver(baseDir);
-  for (const candidate of ['AchillesAgentLib/package.json', '@achilles/agent-lib/package.json']) {
+  const packageCandidates = ['AchillesAgentLib', 'achillesAgentLib', '@achilles/agent-lib', 'achilles-agent-lib'];
+  for (const candidate of packageCandidates) {
     try {
-      const packagePath = resolver.resolve(candidate);
+      const packagePath = resolver.resolve(`${candidate}/package.json`);
       return {
         strategy: 'node_modules',
         path: packagePath,
@@ -156,7 +178,169 @@ export function resolveAchillesAgentLib(options = {}) {
     }
   }
 
+  for (const candidate of packageCandidates) {
+    try {
+      const modulePath = resolver.resolve(candidate);
+      const normalized = normalizeResolutionPath(modulePath);
+      if (normalized) {
+        return {
+          strategy: 'node_modules',
+          path: modulePath,
+          ...normalized,
+        };
+      }
+    } catch {
+      // Continue through the fallback list.
+    }
+  }
+
   return null;
+}
+
+async function importAchillesAgentLib(runtimeConfig) {
+  const resolution = runtimeConfig?.dependencies?.achillesAgentLib;
+  if (!resolution?.modulePath) {
+    return null;
+  }
+  return import(pathToFileURL(resolution.modulePath).href);
+}
+
+function normalizeModelEntry(entry) {
+  const id = entry?.id ?? entry?.model ?? entry?.name ?? entry?.key ?? null;
+  if (!id) {
+    return null;
+  }
+  const name = entry?.name ?? entry?.label ?? id;
+  const tierValue = entry?.tier ?? entry?.modelTier ?? entry?.class ?? entry?.cost_class ?? 'standard';
+  const tier = ['fast', 'standard', 'premium'].includes(String(tierValue))
+    ? String(tierValue)
+    : /fast|mini|lite|small/.test(String(tierValue).toLowerCase())
+      ? 'fast'
+      : /deep|reason|max|premium|strong/.test(String(tierValue).toLowerCase())
+        ? 'premium'
+        : 'standard';
+  const tags = Array.isArray(entry?.tags)
+    ? entry.tags
+    : Array.isArray(entry?.labels)
+      ? entry.labels
+      : Array.isArray(entry?.capabilities)
+        ? entry.capabilities
+        : [];
+  return {
+    id: String(id),
+    name: String(name),
+    tier,
+    tags: tags.map((tag) => String(tag)),
+    providerKey: entry?.providerKey ?? entry?.provider_key ?? null,
+    apiKeyEnv: entry?.apiKeyEnv ?? entry?.api_key_env ?? null,
+    baseURL: entry?.baseURL ?? entry?.base_url ?? null,
+  };
+}
+
+function extractModelList(result) {
+  if (!result) {
+    return [];
+  }
+  if (Array.isArray(result)) {
+    return result;
+  }
+  if (Array.isArray(result.models)) {
+    return result.models;
+  }
+  if (Array.isArray(result.items)) {
+    return result.items;
+  }
+  return [];
+}
+
+function normalizeModelList(list) {
+  const unique = new Map();
+  for (const entry of list.map(normalizeModelEntry).filter(Boolean)) {
+    if (!unique.has(entry.id)) {
+      unique.set(entry.id, entry);
+    }
+  }
+  return [...unique.values()];
+}
+
+async function resolveModelCandidate(runCandidate) {
+  try {
+    const result = await runCandidate();
+    const list = extractModelList(result);
+    if (list.length) {
+      return normalizeModelList(list);
+    }
+  } catch {
+    // Try next candidate.
+  }
+  return [];
+}
+
+export async function listAchillesModels(runtimeConfig) {
+  const moduleNamespace = await importAchillesAgentLib(runtimeConfig);
+  if (!moduleNamespace) {
+    return [];
+  }
+
+  const moduleCandidates = [
+    () => moduleNamespace.listModels?.(),
+    () => moduleNamespace.listAvailableModels?.(),
+    () => moduleNamespace.getModels?.(),
+    () => moduleNamespace.default?.listModels?.(),
+    () => moduleNamespace.default?.listAvailableModels?.(),
+    () => moduleNamespace.default?.getModels?.(),
+  ];
+  for (const candidate of moduleCandidates) {
+    const list = await resolveModelCandidate(candidate);
+    if (list.length) {
+      return list;
+    }
+  }
+
+  const AgentClass = pickAgentClass(moduleNamespace);
+
+  if (AgentClass?.listModels) {
+    const list = await resolveModelCandidate(() => AgentClass.listModels());
+    if (list.length) {
+      return list;
+    }
+  }
+
+  if (AgentClass?.listAvailableModels) {
+    const list = await resolveModelCandidate(() => AgentClass.listAvailableModels());
+    if (list.length) {
+      return list;
+    }
+  }
+
+  if (AgentClass) {
+    try {
+      const agent = new AgentClass({});
+      const instanceCandidates = [
+        () => agent.listModels?.(),
+        () => agent.listAvailableModels?.(),
+        () => agent.invokerStrategy?.listAvailableModels?.(),
+        () => {
+          const supported = agent.getSupportedModels?.() ?? agent.invokerStrategy?.getSupportedModels?.();
+          return Array.isArray(supported) ? supported.map((name) => ({ id: name, name })) : [];
+        },
+        () => {
+          const description = agent.invokerStrategy?.describe?.();
+          return Array.isArray(description?.models) ? description.models : [];
+        },
+      ];
+      for (const candidate of instanceCandidates) {
+        const list = await resolveModelCandidate(candidate);
+        if (list.length) {
+          return list;
+        }
+      }
+    } catch {
+      // Ignore and fall through.
+    }
+  }
+
+  return [];
 }
 
 function resolveTierModel(env, manualOverrides, tierName) {
@@ -181,6 +365,10 @@ function buildProfileBindings(env, manualOverrides, modelTiers, taskTags) {
   return bindings;
 }
 
+function useFakeAdapter(manualOverrides, env) {
+  return manualOverrides.forceFakeLlm ?? (env.LLM_FAKE === '1');
+}
+
 export function createRuntimeConfig(options = {}) {
   const env = options.env ?? process.env;
   const manualOverrides = options.manualOverrides ?? {};
@@ -188,7 +376,6 @@ export function createRuntimeConfig(options = {}) {
   const dependencies = {
     achillesAgentLib: resolveAchillesAgentLib({
       baseDir,
-      env,
       manualOverrides,
     }),
   };
@@ -201,9 +388,7 @@ export function createRuntimeConfig(options = {}) {
     standard: resolveTierModel(env, manualOverrides, 'standard'),
     premium: resolveTierModel(env, manualOverrides, 'premium'),
   };
-  const provider = manualOverrides.provider
-    ?? env.LLM_PROVIDER
-    ?? (dependencies.achillesAgentLib ? 'achilles' : 'fake');
+  const adapter = useFakeAdapter(manualOverrides, env) ? 'fake' : 'managed';
 
   return {
     baseDir,
@@ -211,7 +396,7 @@ export function createRuntimeConfig(options = {}) {
     sourceDir: path.resolve(baseDir, 'src'),
     testsDir: path.resolve(baseDir, 'tests'),
     llm: {
-      provider,
+      adapter,
       agentClass: 'LLMAgent',
       apiBaseUrl: manualOverrides.apiBaseUrl ?? env.LLM_API_BASE_URL ?? null,
       defaultModel: manualOverrides.defaultModel ?? env.LLM_DEFAULT_MODEL ?? modelTiers.standard,

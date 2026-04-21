@@ -1,5 +1,8 @@
 @kb text
-Native kb caller profile.
+Use kb for explicit knowledge retrieval against the repository-backed KU catalog when the step is primarily about finding reusable guidance or content.
+Prefer it when the runtime needs to discover which prompt asset, caller profile, policy note, or reusable content should shape the next step.
+Good kb requests describe the topic, scope, and intended downstream use so the retrieved KUs can inform planning or execution transparently.
+Do not use it as a substitute for planning or for generating new prose when the task is not actually about retrieving knowledge.
 @kb:meta json
 {
   "rev": 1,
@@ -7,7 +10,7 @@ Native kb caller profile.
   "scope": "default",
   "status": "active",
   "title": "kb",
-  "summary": "Caller profile for explicit knowledge search and retrieval.",
+  "summary": "Choose kb for explicit KU search and retrieval when the step is about finding reusable guidance or content rather than executing other work.",
   "priority": 8,
   "trust": "canonical",
   "domains": [

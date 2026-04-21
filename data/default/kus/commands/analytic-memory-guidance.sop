@@ -1,0 +1,54 @@
+@ku_analytic_memory_guidance text
+Choose analytic-memory when a step is about accumulating, deriving, and exporting structured state across many observations or requests.
+
+This command is best when the runtime needs durable inspectable aggregation instead of ad-hoc prose. It is especially appropriate for session summaries, evidence ledgers, counters, grouped measurements, and compact rollups that later steps will cite.
+
+Use it for:
+- storing repeated measurements under hierarchical keys,
+- appending evidence, claims, notes, or citations into collections,
+- computing rollups, totals, averages, counts, or merged summaries,
+- exporting one compact summary family for later planning or response steps,
+- keeping session memory structured enough that later repair or explanation steps can inspect it.
+
+Good bodies look like explicit analytic operators, for example:
+- store 0.72 under chapter.3.risk
+- append "claim-a" under chapter.3.claims
+- append {"source":"paper-1","verdict":"supports"} under review.evidence
+- rollup chapter.3 using average(risk) and count(claims)
+- export chapter.3.summary as chapter3Summary
+
+Prefer analytic-memory over js-eval when the main goal is transparent accumulation semantics rather than arbitrary code.
+Analytic-memory is useful when later plan steps need a compact export that can be cited by a writer, planner repair step, or trace inspector.
+
+Avoid analytic-memory when:
+- the step is ordinary KB retrieval,
+- the task is just prose writing or argumentation,
+- the work is a one-off deterministic transformation with no persistent analytic structure,
+- the body cannot be expressed as aggregation-oriented operators.
+@ku_analytic_memory_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "analytic-memory guidance",
+  "summary": "Use analytic-memory for transparent hierarchical accumulation, evidence ledgers, rollups, and exported summaries that later plan steps can inspect and reuse.",
+  "priority": 9,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "analytics"
+  ],
+  "commands": [
+    "analytic-memory"
+  ],
+  "interpreters": [],
+  "tags": [
+    "analytics",
+    "aggregation",
+    "guidance"
+  ],
+  "input_patterns": [
+    "(store|append|merge|derive|rollup|export)\\s+"
+  ]
+}

@@ -21,12 +21,31 @@ function renderFamilyState(stateStore, familyId) {
 }
 
 function renderKnowledgeUnit(entry) {
-  return `## ${entry.meta.title || entry.kuId}\n\n${entry.content}`;
+  const appliedTo = [
+    ...(entry.meta.commands ?? []),
+    ...(entry.meta.interpreters ?? []),
+  ].filter(Boolean);
+  const summary = entry.meta.summary
+    ? `Selection summary: ${entry.meta.summary}`
+    : 'Selection summary: [missing]';
+  const scopeLine = `Scope: ${entry.scope} | Type: ${entry.meta.ku_type ?? 'content'}`;
+  const appliesLine = appliedTo.length > 0
+    ? `Applies to: ${appliedTo.join(', ')}`
+    : null;
+  return [
+    `## ${entry.meta.title || entry.kuId}`,
+    summary,
+    scopeLine,
+    appliesLine,
+    '',
+    entry.content,
+  ].filter(Boolean).join('\n');
 }
 
 export function buildContextPackage(input) {
   const {
     node,
+    requestText = '',
     resolvedDependencies,
     stateStore,
     kbResult,
@@ -63,6 +82,9 @@ export function buildContextPackage(input) {
     `Target family: ${node.targetFamily}`,
     '',
     node.declaration.body || '[empty declaration body]',
+    '',
+    '# User Request',
+    requestText || '[missing request text]',
     '',
     '# Direct Dependencies',
     directDependencySection,

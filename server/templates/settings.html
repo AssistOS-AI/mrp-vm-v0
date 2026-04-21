@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MRP-VM Settings</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-band">
+      <div class="brand"><strong>MRP-VM</strong></div>
+      <nav class="nav-links">
+        <a href="/chat">Chat</a>
+        <a href="/traceability">Traceability</a>
+        <a href="/kb-browser">KB Browser</a>
+        <a class="active" href="/settings">Settings</a>
+      </nav>
+      <div class="header-right">
+        <div id="settings-system-context" class="row wrap"></div>
+      </div>
+    </div>
+  </header>
+  <div id="page-notice" class="notice"></div>
+  <main class="page-shell page-shell--settings">
+    <section class="settings-shell card">
+      <div class="settings-page-header">
+        <div class="stack compact">
+          <div class="eyebrow">Configuration</div>
+          <h2>Server settings</h2>
+          <div id="settings-permission-message" class="muted small"></div>
+        </div>
+        <div id="settings-authority-strip" class="row wrap"></div>
+      </div>
+      <div class="tabs tabs--settings">
+        <button class="secondary tab-button active" data-tab="settings-models-tab" type="button">Models</button>
+        <button class="secondary tab-button" data-tab="settings-interpreters-tab" type="button">Interpreters</button>
+        <button class="secondary tab-button" data-tab="settings-auth-tab" type="button">Authentication</button>
+      </div>
+
+      <section id="settings-models-tab" class="tab-panel active stack">
+        <form id="model-settings" class="settings-section stack">
+          <div class="between">
+            <div class="stack compact">
+              <div class="eyebrow">Routing</div>
+              <h3>Selection and binding</h3>
+            </div>
+            <button id="save-model-settings" type="submit">Save</button>
+          </div>
+          <div class="settings-two-column">
+            <section class="inset-card stack">
+              <div class="stack compact">
+                <div class="eyebrow">Selection</div>
+                <h4>Default LLM</h4>
+              </div>
+              <label class="stack">
+                <span class="small muted">Filter by tag</span>
+                <select id="default-llm-tag-filter"></select>
+              </label>
+              <label class="stack">
+                <span class="small muted">Model</span>
+                <select id="default-llm"></select>
+              </label>
+              <div id="default-llm-tags" class="row wrap"></div>
+            </section>
+            <section class="inset-card stack">
+              <div class="stack compact">
+                <div class="eyebrow">Binding</div>
+                <h4>Interpreter bindings</h4>
+              </div>
+              <div id="profile-bindings" class="settings-binding-grid"></div>
+            </section>
+          </div>
+        </form>
+      </section>
+
+      <section id="settings-interpreters-tab" class="tab-panel stack">
+        <form id="interpreter-settings" class="settings-section stack">
+          <div class="between">
+            <div class="stack compact">
+              <div class="eyebrow">Execution</div>
+              <h3>Interpreter management</h3>
+            </div>
+            <button id="save-interpreters" type="submit">Save</button>
+          </div>
+          <div id="interpreter-list" class="stack"></div>
+        </form>
+      </section>
+
+      <section id="settings-auth-tab" class="tab-panel stack">
+        <section class="settings-section stack">
+          <div class="between">
+            <div class="stack compact">
+              <div class="eyebrow">Authority</div>
+              <h3>Authentication</h3>
+            </div>
+            <button id="refresh-auth" class="secondary" type="button">Refresh</button>
+          </div>
+
+          <div id="bootstrap-status" class="settings-auth-status"></div>
+
+          <div class="settings-two-column">
+            <section class="inset-card stack">
+              <div class="stack compact">
+                <div class="eyebrow">Access</div>
+                <h4>Use API key</h4>
+              </div>
+              <label class="stack">
+                <span class="small muted">Current key</span>
+                <input id="api-key-input" list="saved-key-options" placeholder="Paste or select an API key">
+                <datalist id="saved-key-options"></datalist>
+              </label>
+              <label class="stack">
+                <span class="small muted">Local label</span>
+                <input id="api-key-label" placeholder="Admin laptop key">
+              </label>
+              <div class="settings-inline-actions">
+                <button id="save-api-key" type="button">Use key</button>
+                <button id="remember-api-key" class="secondary" type="button">Save locally</button>
+                <button id="clear-api-key" class="secondary" type="button">Clear current</button>
+              </div>
+              <div class="muted small">If API keys already exist, normal access should always start from one of these keys. Saved browser keys appear below for quick switching.</div>
+              <div id="saved-api-keys" class="stack"></div>
+            </section>
+
+            <section class="inset-card stack">
+              <div class="stack compact">
+                <div class="eyebrow">Bootstrap</div>
+                <h4>Admin key bootstrap</h4>
+              </div>
+              <label class="stack">
+                <span class="small muted">Bootstrap label</span>
+                <input id="bootstrap-key-label" placeholder="Bootstrap admin">
+              </label>
+              <div class="settings-inline-actions">
+                <button id="bootstrap-key" type="button">Create bootstrap admin key</button>
+              </div>
+              <div class="muted small">Available only before any API key exists.</div>
+            </section>
+          </div>
+
+          <form id="api-key-form" class="inset-card stack">
+            <div class="stack compact">
+              <div class="eyebrow">Provisioning</div>
+              <h4>Create server key</h4>
+            </div>
+            <div class="settings-form-grid">
+              <label class="stack">
+                <span class="small muted">New key label</span>
+                <input id="new-key-label" placeholder="Operator user">
+              </label>
+              <label class="stack">
+                <span class="small muted">Role</span>
+                <select id="new-key-role">
+                  <option value="admin">admin</option>
+                  <option value="user">user</option>
+                </select>
+              </label>
+            </div>
+            <div class="settings-inline-actions">
+              <button id="create-key" type="submit">Create key</button>
+            </div>
+          </form>
+
+          <div class="inset-card stack">
+            <div class="between">
+              <h4>Issued API keys</h4>
+              <div id="issued-keys-summary" class="muted small"></div>
+            </div>
+            <div id="api-key-list" class="stack"></div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="/assets/settings.js"></script>
+</body>
+</html>

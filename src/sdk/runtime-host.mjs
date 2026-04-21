@@ -25,27 +25,47 @@ export class RuntimeHost {
       return existing;
     }
 
-     const probe = new MRPVM(this.rootDir, this.options);
-     const manifest = await probe.sessionManager.loadSession(sessionId);
-     const policyProfile = config.policyProfile ?? manifest?.policy_profile ?? 'default';
-     const isAdmin = config.isAdmin ?? manifest?.is_admin ?? false;
+    const probe = new MRPVM(this.rootDir, this.options);
+    const manifest = await probe.sessionManager.loadSession(sessionId);
+    const effectiveRole = config.effectiveRole ?? manifest?.effective_role ?? (config.isAdmin ?? manifest?.is_admin ? 'admin' : 'user');
+    const policyProfile = config.policyProfile ?? manifest?.policy_profile ?? 'default';
+    const isAdmin = effectiveRole === 'admin';
+    const sessionOrigin = config.sessionOrigin ?? manifest?.session_origin ?? 'client';
+    const authMode = config.authMode ?? manifest?.auth_mode ?? (isAdmin ? 'bootstrap_admin' : 'anonymous');
+    const ownerIdentity = config.ownerIdentity ?? manifest?.owner_identity ?? null;
+    const authKeyId = config.authKeyId ?? manifest?.auth_key_id ?? null;
 
     const executor = new MRPVM(this.rootDir, {
       ...this.options,
       sessionId,
       policyProfile,
       isAdmin,
+      effectiveRole,
+      sessionOrigin,
+      authMode,
+      ownerIdentity,
+      authKeyId,
     });
     await executor.initializeSession({
       sessionId,
       policyProfile,
       isAdmin,
+      effectiveRole,
+      sessionOrigin,
+      authMode,
+      ownerIdentity,
+      authKeyId,
     });
 
     const handle = {
       session_id: sessionId,
       policy_profile: policyProfile,
       is_admin: isAdmin,
+      effective_role: effectiveRole,
+      session_origin: sessionOrigin,
+      auth_mode: authMode,
+      owner_identity: ownerIdentity,
+      auth_key_id: authKeyId,
       executor,
     };
     this.sessions.set(sessionId, handle);
@@ -77,6 +97,11 @@ export class RuntimeHost {
       sessionId: handle.session_id,
       policyProfile: handle.policy_profile,
       isAdmin: handle.is_admin,
+      effectiveRole: handle.effective_role,
+      sessionOrigin: handle.session_origin,
+      authMode: handle.auth_mode,
+      ownerIdentity: handle.owner_identity,
+      authKeyId: handle.auth_key_id,
     });
   }
 
@@ -106,6 +131,11 @@ export async function submitRequest(session, requestEnvelope) {
     sessionId: session.session_id,
     policyProfile: session.policy_profile,
     isAdmin: session.is_admin,
+    effectiveRole: session.effective_role,
+    sessionOrigin: session.session_origin,
+    authMode: session.auth_mode,
+    ownerIdentity: session.owner_identity,
+    authKeyId: session.auth_key_id,
   });
   return started;
 }

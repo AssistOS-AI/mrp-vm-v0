@@ -65,6 +65,10 @@ If a required planning group is missing, planning must fail with configuration e
 
 Mode-specific prompt grouping and default-KU guidance for caller input shapes are normative requirements, not optional tuning advice.
 
+Planning retrieval must not stop at the mandatory planning prompt alone. In addition to the mode-specific prompt asset, the planning command must retrieve rich command- and interpreter-guidance KUs that help it choose the correct execution route for each sub-task. Those guidance KUs are selected metadata-first, then refined lexically against the current request and any local planning slice.
+
+Selection-facing KU summaries are part of the planning contract. A default KU summary must be detailed enough that planning can distinguish when to use `js-eval`, `logic-eval`, `template-eval`, `analytic-memory`, `kb`, `credibility`, or one of the external interpreters. Terse summaries such as "wrapper profile" or "guidance" are non-conformant because they do not give planning enough evidence to route work reliably.
+
 ### Planning outputs and graph authority
 
 Planning outputs may include:
@@ -89,6 +93,13 @@ Every planning-oriented interpreter and helper command must have default KUs tha
 3. when LLM fallback is allowed for underspecified inputs.
 
 This guidance exists both to help planning write cleaner declaration content and to keep ordinary command invocation from depending on opaque prompt guessing.
+
+For every native command and every external interpreter in the baseline catalog, the repository must provide one or more detailed default KUs. Those KUs may be caller profiles, guidance assets, or prompt assets, but taken together they must give planning enough information to decide:
+
+1. what the component is good at,
+2. what input shape it expects,
+3. what anti-patterns should be avoided,
+4. what output surface it is expected to produce.
 
 ## Decisions & Questions
 

@@ -1,5 +1,9 @@
 @analytic-memory text
-Native analytic-memory caller profile.
+Use analytic-memory for structured accumulation, rollups, derived metrics, and exportable summaries that span many observations.
+Prefer it when the task is about storing keyed facts, appending evidence, computing aggregates, or exporting a compact session-level summary for later steps.
+It is best for inspectable session memory and evidence ledgers, not for one-off narrative explanations.
+Do not use it for open-ended prose generation, arbitrary scripting, or KB retrieval.
+Good bodies look like normalized operator instructions such as store, append, derive, rollup, and export.
 @analytic-memory:meta json
 {
   "rev": 1,
@@ -7,7 +11,7 @@ Native analytic-memory caller profile.
   "scope": "default",
   "status": "active",
   "title": "analytic-memory",
-  "summary": "Caller profile for structured analytic state updates.",
+  "summary": "Choose analytic-memory for keyed accumulation, evidence ledgers, rollups, derived metrics, and compact exported summaries.",
   "priority": 8,
   "trust": "canonical",
   "domains": [

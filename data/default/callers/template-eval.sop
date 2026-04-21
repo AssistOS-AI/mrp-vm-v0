@@ -1,5 +1,8 @@
 @template-eval text
-Native template-eval caller profile.
+Use template-eval when the desired output is deterministic, sectioned, and assembled from already-known values.
+Prefer it for final response assembly, prompt assembly, and report formatting when the required sections, labels, and order are already known.
+Use $family or ${family.path} placeholders to insert values, and keep the template explicit enough that an operator can see how the final answer was assembled.
+Avoid it when the step needs open-ended prose invention or non-deterministic reasoning.
 @template-eval:meta json
 {
   "rev": 1,
@@ -7,7 +10,7 @@ Native template-eval caller profile.
   "scope": "default",
   "status": "active",
   "title": "template-eval",
-  "summary": "Caller profile for deterministic template rendering.",
+  "summary": "Choose template-eval for deterministic assembly of known values into structured output with explicit placeholders and stable section layout.",
   "priority": 8,
   "trust": "canonical",
   "domains": [
@@ -23,7 +26,8 @@ Native template-eval caller profile.
     "rendering"
   ],
   "input_patterns": [
-    "\\{\\{.+?\\}\\}"
+    "\\$[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)*",
+    "\\$\\{[A-Za-z_][A-Za-z0-9_.]*\\}"
   ],
   "allowed_ku_types": [
     "template_asset",

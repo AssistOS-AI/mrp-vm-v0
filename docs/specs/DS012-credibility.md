@@ -38,6 +38,8 @@ The command may use:
 
 All of these strategies must be trace-visible.
 
+Default KUs for `credibility` must explain when comparison should stay local, when escalation is justified, and what evidence a fair scoring pass should inspect. Their summaries must make `credibility` discoverable as the runtime's comparison mechanism rather than as a generic reasoning wrapper.
+
 If `credibility` determines that it cannot judge honestly from the current candidate set, it may:
 
 1. emit scores and withdrawals only,

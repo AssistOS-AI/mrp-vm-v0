@@ -47,8 +47,8 @@ function buildDefaultCommandRegistry() {
 function buildDefaultExternalRegistry(options = {}) {
   const runtimeConfig = options.runtimeConfig;
   const llmAdapter = options.llmAdapter
-    ?? (runtimeConfig?.llm?.provider === 'fake'
-      ? new FakeLlmAdapter()
+    ?? (options.fakeAdapterConfig || runtimeConfig?.llm?.adapter === 'fake'
+      ? new FakeLlmAdapter(options.fakeAdapterConfig)
       : new AchillesLlmAdapter(runtimeConfig));
   const registry = new ExternalInterpreterRegistry({
     llmAdapter,
@@ -67,6 +67,7 @@ function buildDefaultExternalRegistry(options = {}) {
       uses_llm_adapter: true,
       capability_profile: 'default',
       trace_requirements: ['interpreter_invoked'],
+      enabled: runtimeConfig?.interpreterStates?.[profile] ?? true,
     });
   }
 
@@ -97,11 +98,17 @@ export class MRPVM {
     this.externalInterpreters = options.externalInterpreters ?? buildDefaultExternalRegistry({
       runtimeConfig: this.runtimeConfig,
       llmAdapter: options.llmAdapter,
+      fakeAdapterConfig: options.fakeAdapterConfig,
     });
     this.eventEmitter = new EventEmitter();
     this.sessionId = options.sessionId ?? null;
     this.policyProfile = options.policyProfile ?? 'default';
     this.isAdmin = options.isAdmin ?? false;
+    this.effectiveRole = options.effectiveRole ?? (this.isAdmin ? 'admin' : 'user');
+    this.sessionOrigin = options.sessionOrigin ?? 'client';
+    this.authMode = options.authMode ?? (this.isAdmin ? 'bootstrap_admin' : 'anonymous');
+    this.ownerIdentity = options.ownerIdentity ?? null;
+    this.authKeyId = options.authKeyId ?? null;
     this.closed = false;
     this.activeRequestId = null;
     this.traceEventOrdinal = 0;
@@ -128,8 +135,21 @@ export class MRPVM {
 
     this.sessionId = config.sessionId ?? this.sessionId ?? this.tools.createId('session');
     this.policyProfile = config.policyProfile ?? this.policyProfile ?? 'default';
-    this.isAdmin = config.isAdmin ?? this.isAdmin ?? false;
-    await this.bootstrapSession(this.sessionId, this.policyProfile, this.isAdmin);
+    this.effectiveRole = config.effectiveRole ?? this.effectiveRole ?? (config.isAdmin ? 'admin' : 'user');
+    this.isAdmin = config.isAdmin ?? (this.effectiveRole === 'admin');
+    this.sessionOrigin = config.sessionOrigin ?? this.sessionOrigin ?? 'client';
+    this.authMode = config.authMode ?? this.authMode ?? (this.isAdmin ? 'bootstrap_admin' : 'anonymous');
+    this.ownerIdentity = config.ownerIdentity ?? this.ownerIdentity ?? null;
+    this.authKeyId = config.authKeyId ?? this.authKeyId ?? null;
+    await this.bootstrapSession(this.sessionId, {
+      policyProfile: this.policyProfile,
+      isAdmin: this.isAdmin,
+      effectiveRole: this.effectiveRole,
+      sessionOrigin: this.sessionOrigin,
+      authMode: this.authMode,
+      ownerIdentity: this.ownerIdentity,
+      authKeyId: this.authKeyId,
+    });
     return this.sessionManager.loadSession(this.sessionId);
   }
 
@@ -143,12 +163,27 @@ export class MRPVM {
     return output;
   }
 
-  async bootstrapSession(sessionId, policyProfile = 'default', isAdmin = false) {
+  async bootstrapSession(sessionId, sessionConfig = {}) {
     const existing = await this.sessionManager.loadSession(sessionId);
     if (existing) {
+      this.policyProfile = existing.policy_profile ?? this.policyProfile;
+      this.isAdmin = existing.is_admin ?? this.isAdmin;
+      this.effectiveRole = existing.effective_role ?? this.effectiveRole ?? (this.isAdmin ? 'admin' : 'user');
+      this.sessionOrigin = existing.session_origin ?? this.sessionOrigin;
+      this.authMode = existing.auth_mode ?? this.authMode;
+      this.ownerIdentity = existing.owner_identity ?? this.ownerIdentity;
+      this.authKeyId = existing.auth_key_id ?? this.authKeyId;
       return existing;
     }
-    return this.sessionManager.createSession(sessionId, policyProfile, isAdmin);
+    return this.sessionManager.createSession(sessionId, {
+      policyProfile: sessionConfig.policyProfile ?? this.policyProfile,
+      isAdmin: sessionConfig.isAdmin ?? this.isAdmin,
+      effectiveRole: sessionConfig.effectiveRole ?? this.effectiveRole,
+      sessionOrigin: sessionConfig.sessionOrigin ?? this.sessionOrigin,
+      authMode: sessionConfig.authMode ?? this.authMode,
+      ownerIdentity: sessionConfig.ownerIdentity ?? this.ownerIdentity,
+      authKeyId: sessionConfig.authKeyId ?? this.authKeyId,
+    });
   }
 
   applyEffects(effects, context) {
@@ -247,6 +282,18 @@ export class MRPVM {
       });
       if (resolved) {
         resolvedDependencies.set(dependency.raw, resolved);
+        if (!dependency.variantId) {
+          await this.emitTrace(sessionId, 'family_resolved', {
+            session_id: sessionId,
+            request_id: requestId,
+            epoch_id: epochNumber,
+            declaration_id: node.id,
+            target_family: node.targetFamily,
+            family_id: dependency.familyId,
+            chosen_representative: resolved.id,
+            resolution_reason: `Resolved ${dependency.raw} for ${node.targetFamily}`,
+          });
+        }
       }
     }
 
@@ -270,6 +317,7 @@ export class MRPVM {
 
     const contextPackage = buildContextPackage({
       node,
+      requestText: request.requestText,
       resolvedDependencies,
       stateStore: this.stateStore,
       kbResult,
@@ -289,6 +337,7 @@ export class MRPVM {
       epochNumber,
       contextPackage,
       kbResult,
+      resolvedDependencies,
     };
   }
 
@@ -346,6 +395,8 @@ export class MRPVM {
       context_summary: {
         byte_count: context.contextPackage.byteCount,
       },
+      target_family: context.targetFamily,
+      declaration_kind: context.node.declaration.declaration_kind,
       execution_ordinal: this.tools.nextOrdinal(),
       adapter_profile: this.commandRegistry.has(name) ? undefined : name,
       expected_output_mode: this.commandRegistry.has(name) ? undefined : 'plain_value',
@@ -355,9 +406,27 @@ export class MRPVM {
       session_id: context.sessionId,
       request_id: context.requestId,
       epoch_id: context.epochNumber,
+      declaration_id: context.node.id,
+      target_family: context.targetFamily,
       selected_items: context.contextPackage.selectedItems,
       pruned_items: context.contextPackage.prunedItems,
       byte_counts: context.contextPackage.byteCount,
+      context_markdown: context.contextPackage.markdown,
+      selected_knowledge_units: context.kbResult.selected.map((entry) => ({
+        ku_id: entry.kuId,
+        scope: entry.scope,
+        title: entry.meta.title,
+        summary: entry.meta.summary,
+        meta: entry.meta,
+        content: entry.content,
+      })),
+      resolved_dependencies: [...context.resolvedDependencies.entries()].map(([raw, variant]) => ({
+        raw,
+        target_id: variant.id,
+        family_id: variant.familyId,
+        value: variant.rendered,
+        meta: variant.meta,
+      })),
       source_tiers: [
         'Direct Dependencies',
         'Resolved Family State',
@@ -476,10 +545,25 @@ export class MRPVM {
 
     try {
       const existingSession = await this.sessionManager.loadSession(sessionId);
-      await this.bootstrapSession(sessionId, input.policyProfile ?? this.policyProfile ?? 'default', input.isAdmin ?? this.isAdmin);
+      await this.bootstrapSession(sessionId, {
+        policyProfile: input.policyProfile ?? this.policyProfile ?? 'default',
+        isAdmin: input.isAdmin ?? this.isAdmin,
+        effectiveRole: input.effectiveRole ?? this.effectiveRole ?? (input.isAdmin ? 'admin' : 'user'),
+        sessionOrigin: input.sessionOrigin ?? this.sessionOrigin ?? 'client',
+        authMode: input.authMode ?? this.authMode ?? (input.isAdmin ? 'bootstrap_admin' : 'anonymous'),
+        ownerIdentity: input.ownerIdentity ?? this.ownerIdentity ?? null,
+        authKeyId: input.authKeyId ?? this.authKeyId ?? null,
+      });
       await this.analyticStore.load(sessionId);
       this.resetRequestState();
       this.sessionId = sessionId;
+      this.policyProfile = existingSession?.policy_profile ?? input.policyProfile ?? this.policyProfile;
+      this.isAdmin = existingSession?.is_admin ?? input.isAdmin ?? this.isAdmin;
+      this.effectiveRole = existingSession?.effective_role ?? input.effectiveRole ?? this.effectiveRole ?? (this.isAdmin ? 'admin' : 'user');
+      this.sessionOrigin = existingSession?.session_origin ?? input.sessionOrigin ?? this.sessionOrigin;
+      this.authMode = existingSession?.auth_mode ?? input.authMode ?? this.authMode;
+      this.ownerIdentity = existingSession?.owner_identity ?? input.ownerIdentity ?? this.ownerIdentity;
+      this.authKeyId = existingSession?.auth_key_id ?? input.authKeyId ?? this.authKeyId;
 
       request = {
         requestText: input.requestText,
@@ -509,6 +593,11 @@ export class MRPVM {
         file_descriptors: request.files,
         budgets: request.budgets,
         is_admin: this.isAdmin,
+        effective_role: this.effectiveRole,
+        session_origin: this.sessionOrigin,
+        auth_mode: this.authMode,
+        owner_identity: this.ownerIdentity,
+        auth_key_id: this.authKeyId,
       });
 
       await this.emitTrace(sessionId, 'planning_triggered', {
@@ -524,6 +613,11 @@ export class MRPVM {
         request_metadata: {
           file_count: request.files.length,
           is_admin: this.isAdmin,
+          effective_role: this.effectiveRole,
+          session_origin: this.sessionOrigin,
+          auth_mode: this.authMode,
+          owner_identity: this.ownerIdentity,
+          auth_key_id: this.authKeyId,
         },
         trigger: existingSession ? 'continuing_session_request' : 'new_session_request',
         budgets: request.budgets,
@@ -567,6 +661,10 @@ export class MRPVM {
 
         const readyNodes = this.findReadyNodes(request);
         if (readyNodes.length === 0) {
+          const responseReady = this.stateStore.listUsableVariants('response').length > 0;
+          if (responseReady) {
+            break;
+          }
           const repaired = await this.maybeRepair(request, sessionId, requestId);
           if (!repaired) {
             break;
@@ -592,8 +690,15 @@ export class MRPVM {
               session_id: sessionId,
               request_id: requestId,
               epoch_id: epochNumber,
+              declaration_id: node.id,
+              target_family: node.targetFamily,
               emitted_ids: effects.emittedVariants.map((entry) => entry.familyId),
               family_ids: effects.emittedVariants.map((entry) => entry.familyId),
+              emitted_variants: effects.emittedVariants.map((entry) => ({
+                family_id: entry.familyId,
+                value: entry.value,
+                meta: entry.meta,
+              })),
               source_component: node.declaration.commands.join(','),
             });
           }
@@ -603,9 +708,15 @@ export class MRPVM {
               session_id: sessionId,
               request_id: requestId,
               epoch_id: epochNumber,
+              declaration_id: node.id,
+              target_family: node.targetFamily,
               target_ids: effects.metadataUpdates.map((entry) => entry.targetId),
               changed_keys: effects.metadataUpdates.flatMap((entry) => Object.keys(entry.patch)),
               structural_impact: true,
+              updates: effects.metadataUpdates.map((entry) => ({
+                target_id: entry.targetId,
+                patch: entry.patch,
+              })),
             });
           }
 
@@ -614,10 +725,13 @@ export class MRPVM {
               session_id: sessionId,
               request_id: requestId,
               epoch_id: epochNumber,
+              declaration_id: node.id,
+              target_family: node.targetFamily,
               failure_kind: effects.failure.kind,
               affected_scope: effects.failure.familyId ?? node.targetFamily,
               repairable_flag: effects.failure.repairable,
               originating_component: effects.failure.origin,
+              failure: effects.failure,
             });
           }
 
@@ -627,9 +741,12 @@ export class MRPVM {
               session_id: sessionId,
               request_id: requestId,
               epoch_id: epochNumber,
+              declaration_id: node.id,
+              target_family: node.targetFamily,
               inserted_declaration_hash: effects.declarationInsertions.map((entry) => entry.text.length),
               insertion_source: node.declaration.commands.join(','),
               new_declaration_ids: [],
+              inserted_texts: effects.declarationInsertions.map((entry) => entry.text),
             });
           }
 
@@ -654,6 +771,9 @@ export class MRPVM {
         this.requestRecords.get(requestId).plan_snapshot = request.planText;
         this.requestRecords.get(requestId).status = structuralChange ? 'executing' : 'stopped';
 
+        if (this.stateStore.listUsableVariants('response').length > 0) {
+          break;
+        }
         if (!structuralChange) {
           break;
         }
@@ -702,7 +822,15 @@ export class MRPVM {
       });
       return outcome;
     } catch (error) {
-      await this.bootstrapSession(sessionId, input.policyProfile ?? this.policyProfile ?? 'default', input.isAdmin ?? this.isAdmin);
+      await this.bootstrapSession(sessionId, {
+        policyProfile: input.policyProfile ?? this.policyProfile ?? 'default',
+        isAdmin: input.isAdmin ?? this.isAdmin,
+        effectiveRole: input.effectiveRole ?? this.effectiveRole,
+        sessionOrigin: input.sessionOrigin ?? this.sessionOrigin,
+        authMode: input.authMode ?? this.authMode,
+        ownerIdentity: input.ownerIdentity ?? this.ownerIdentity,
+        authKeyId: input.authKeyId ?? this.authKeyId,
+      });
       const outcome = {
         session_id: sessionId,
         request_id: requestId,
@@ -818,6 +946,11 @@ export class MRPVM {
       session_id: this.sessionId,
       policy_profile: manifest?.policy_profile ?? this.policyProfile,
       is_admin: manifest?.is_admin ?? this.isAdmin,
+      effective_role: manifest?.effective_role ?? this.effectiveRole ?? ((manifest?.is_admin ?? this.isAdmin) ? 'admin' : 'user'),
+      session_origin: manifest?.session_origin ?? this.sessionOrigin,
+      auth_mode: manifest?.auth_mode ?? this.authMode,
+      owner_identity: manifest?.owner_identity ?? this.ownerIdentity,
+      auth_key_id: manifest?.auth_key_id ?? this.authKeyId,
       active_request_id: manifest?.active_request_id ?? this.activeRequestId,
       epoch_counter: this.currentEpoch,
       plan_snapshot: this.currentPlanText,

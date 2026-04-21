@@ -1,0 +1,46 @@
+@ku_writer_llm_guidance text
+Choose writerLLM when the step needs polished human-facing prose assembled from already available facts, sections, or decisions.
+
+Use it for:
+- final response drafting,
+- stylistic cleanup,
+- concise narrative summaries,
+- converting structured material into fluent readable text,
+- preserving a requested answer format when the content is already known but should sound natural.
+
+Prefer writerLLM over deepLLM when the reasoning is already done and the remaining job is phrasing, tone, and readability.
+
+Avoid writerLLM when:
+- the step still needs substantial analysis,
+- the task is deterministic template filling,
+- the result should be exact code,
+- the step should remain strictly inspectable as rules or computation.
+
+When writerLLM is used after exact computation, instruct it to preserve computed states, numbers, and section ordering faithfully instead of re-solving the task from scratch.
+@ku_writer_llm_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "writerLLM guidance",
+  "summary": "Use writerLLM for polished human-facing prose when reasoning is already available and the main task is fluent but faithful expression.",
+  "priority": 8,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "wrappers"
+  ],
+  "commands": [],
+  "interpreters": [
+    "writerLLM"
+  ],
+  "tags": [
+    "llm",
+    "writing",
+    "guidance"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ]
+}

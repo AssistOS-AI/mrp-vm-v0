@@ -1,4 +1,5 @@
-export function extractReferences(body) {
+export function extractReferences(body, options = {}) {
+  const includeQuotedStrings = Boolean(options.includeQuotedStrings);
   const references = [];
   let index = 0;
   let state = 'normal';
@@ -25,7 +26,7 @@ export function extractReferences(body) {
       continue;
     }
 
-    if (state === 'single-quote' || state === 'double-quote' || state === 'template') {
+    if (!includeQuotedStrings && (state === 'single-quote' || state === 'double-quote' || state === 'template')) {
       const closing = state === 'single-quote' ? '\'' : state === 'double-quote' ? '"' : '`';
       if (char === '\\') {
         index += 2;
@@ -50,25 +51,39 @@ export function extractReferences(body) {
       continue;
     }
 
-    if (char === '\'') {
+    if (!includeQuotedStrings && char === '\'') {
       state = 'single-quote';
       index += 1;
       continue;
     }
 
-    if (char === '"') {
+    if (!includeQuotedStrings && char === '"') {
       state = 'double-quote';
       index += 1;
       continue;
     }
 
-    if (char === '`') {
+    if (!includeQuotedStrings && char === '`') {
       state = 'template';
       index += 1;
       continue;
     }
 
     if ((char === '$' || char === '~') && body[index - 1] !== '\\') {
+      if (char === '$' && next === '{') {
+        const match = /^\{([A-Za-z_][A-Za-z0-9_]*)(?::v[1-9][0-9]*)?(?:\.[A-Za-z0-9_]+)*\}/.exec(body.slice(index + 1));
+        if (match) {
+          const expression = match[1];
+          references.push({
+            kind: char,
+            familyId: expression,
+            variantId: null,
+            raw: `${char}${match[0]}`,
+          });
+          index += match[0].length + 1;
+          continue;
+        }
+      }
       const match = /^[A-Za-z_][A-Za-z0-9_]*(?::v[1-9][0-9]*)?/.exec(body.slice(index + 1));
       if (match) {
         const raw = match[0];

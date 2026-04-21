@@ -38,6 +38,10 @@ export function forbidden(response, message = 'forbidden') {
   json(response, 403, { error: 'forbidden', message });
 }
 
+export function unauthorized(response, message = 'unauthorized') {
+  json(response, 401, { error: 'unauthorized', message });
+}
+
 export async function readRequestBody(request) {
   return new Promise((resolve, reject) => {
     let body = '';

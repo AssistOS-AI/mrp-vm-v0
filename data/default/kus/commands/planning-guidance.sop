@@ -1,0 +1,53 @@
+@ku_planning_guidance text
+Choose planning when the runtime must translate an open user request into an explicit executable SOP Lang workflow.
+
+Planning is responsible for:
+- selecting commands and interpreters,
+- naming intermediate families clearly,
+- decomposing work so dependencies are explicit,
+- ensuring the graph ends in @response,
+- producing bodies that actually fit the selected execution surfaces.
+
+Planning should read retrieved KUs in two passes:
+- summary fields are routing cues that help decide which command or interpreter fits a sub-task,
+- root-body guidance explains how to write a good declaration body for that chosen surface.
+
+Good planning output:
+- creates one declaration per meaningful intermediate result,
+- keeps deterministic work on native commands where possible,
+- uses LLM interpreters only when language understanding, reasoning, prose quality, or code synthesis is genuinely needed,
+- separates exact solving from explanation or final prose when those concerns differ,
+- creates explicit dependency edges so the execution graph reads like a real workflow rather than a flat list,
+- avoids monolithic plans when the task has separable stages,
+- ensures the final response depends on the relevant prior families.
+
+For algorithmic or puzzle-like requests, prefer a graph such as: parse constraints or retrieve guidance -> compute exact result -> explain correctness/minimality -> assemble final answer. Avoid planning as a stand-in for execution. The output must be SOP Lang, not the final user answer.
+@ku_planning_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "planning guidance",
+  "summary": "Use planning to decompose an open request into an explicit SOP Lang workflow with meaningful intermediate families, explicit dependencies, and KU-guided routing.",
+  "priority": 10,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "planning"
+  ],
+  "commands": [
+    "planning"
+  ],
+  "interpreters": [
+    "plannerLLM"
+  ],
+  "tags": [
+    "planning",
+    "routing",
+    "guidance"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ]
+}

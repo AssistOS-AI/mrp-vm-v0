@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MRP-VM Chat</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-band">
+      <div class="brand"><strong>MRP-VM</strong></div>
+      <nav class="nav-links">
+        <a class="active" href="/chat">Chat</a>
+        <a href="/traceability">Traceability</a>
+        <a href="/kb-browser">KB Browser</a>
+        <a href="/settings">Settings</a>
+      </nav>
+      <div class="header-right">
+        <div class="session-selector" id="session-selector">
+          <button class="secondary session-selector-btn" id="session-selector-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <span id="session-selector-name">No session</span>
+            <span id="session-selector-status" class="session-status-indicator"></span>
+            <span class="selector-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="session-dropdown" id="session-dropdown" hidden>
+            <div class="session-dropdown-list" id="session-dropdown-list"></div>
+            <div class="session-dropdown-footer">
+              <button id="new-session" type="button">＋ New session</button>
+            </div>
+          </div>
+        </div>
+        <div id="auth-summary" class="row wrap"></div>
+      </div>
+    </div>
+  </header>
+  <div id="page-notice" class="notice"></div>
+  <main class="page-shell page-shell--chat">
+    <div class="chat-wrapper">
+      <div class="chat-surface">
+        <section id="conversation-list" class="conversation-list"></section>
+        <form id="chat-composer" class="composer">
+          <div class="composer-input-row">
+            <div class="composer-popover" id="advanced-popover">
+              <button id="advanced-toggle" class="icon-btn composer-menu-trigger" type="button" aria-expanded="false" aria-label="Open advanced options">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.4"></circle><circle cx="19" cy="12" r="1.4"></circle><circle cx="5" cy="12" r="1.4"></circle></svg>
+              </button>
+              <div id="advanced-menu" class="advanced-menu" hidden>
+                <div class="advanced-menu-panel" data-advanced-panel="root">
+                  <div class="advanced-menu-header">
+                    <div class="stack compact">
+                      <div class="advanced-menu-title">Advanced options</div>
+                      <div class="small muted">Choose a category first, then configure the action.</div>
+                    </div>
+                    <button class="icon-btn advanced-menu-close" type="button" data-advanced-close aria-label="Close advanced options">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                  <div class="advanced-menu-list">
+                    <button class="advanced-nav-btn" type="button" data-advanced-nav="insert">
+                      <span class="stack compact">
+                        <span>Insert text into input</span>
+                        <span class="small muted">Append local text files directly into the message.</span>
+                      </span>
+                      <span class="advanced-nav-arrow" aria-hidden="true">›</span>
+                    </button>
+                    <button class="advanced-nav-btn" type="button" data-advanced-nav="demo">
+                      <span class="stack compact">
+                        <span>Demo tasks</span>
+                        <span class="small muted">Load a prepared task that highlights execution features.</span>
+                      </span>
+                      <span class="advanced-nav-arrow" aria-hidden="true">›</span>
+                    </button>
+                    <button class="advanced-nav-btn" type="button" data-advanced-nav="budgets">
+                      <span class="stack compact">
+                        <span>Budgets</span>
+                        <span class="small muted">Adjust step and planning limits for the next request.</span>
+                      </span>
+                      <span class="advanced-nav-arrow" aria-hidden="true">›</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="advanced-menu-panel" data-advanced-panel="insert" hidden>
+                  <div class="advanced-menu-header">
+                    <button class="secondary advanced-menu-back" type="button" data-advanced-nav="root">Back</button>
+                    <button class="icon-btn advanced-menu-close" type="button" data-advanced-close aria-label="Close advanced options">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                  <div class="stack">
+                    <div class="advanced-menu-title">Insert text into input</div>
+                    <div class="small muted">Choose text files and their contents will be appended into the message box. There is no separate request attachment mode here.</div>
+                    <button id="text-insert-trigger" class="secondary advanced-action-btn" type="button">Choose text files</button>
+                    <input id="text-insert-input" type="file" accept=".txt,.md,.json,.csv,.js,.mjs,.ts,.tsx,.html,.css,.xml,.yaml,.yml,.log" multiple hidden>
+                  </div>
+                </div>
+                <div class="advanced-menu-panel" data-advanced-panel="demo" hidden>
+                  <div class="advanced-menu-header">
+                    <button class="secondary advanced-menu-back" type="button" data-advanced-nav="root">Back</button>
+                    <button class="icon-btn advanced-menu-close" type="button" data-advanced-close aria-label="Close advanced options">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                  <div class="stack">
+                    <div class="advanced-menu-title">Demo tasks</div>
+                    <div id="demo-task-list" class="stack compact">
+                      <button class="ghost demo-task-btn" type="button" data-demo-task="session-review">Session review workflow</button>
+                      <button class="ghost demo-task-btn" type="button" data-demo-task="logic-triage">Logic + validation triage</button>
+                      <button class="ghost demo-task-btn" type="button" data-demo-task="kb-guided-plan">KB guided planning</button>
+                      <button class="ghost demo-task-btn" type="button" data-demo-task="code-and-report">Code and report</button>
+                      <button class="ghost demo-task-btn" type="button" data-demo-task="aggregation-audit">Aggregation audit</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="advanced-menu-panel" data-advanced-panel="budgets" hidden>
+                  <div class="advanced-menu-header">
+                    <button class="secondary advanced-menu-back" type="button" data-advanced-nav="root">Back</button>
+                    <button class="icon-btn advanced-menu-close" type="button" data-advanced-close aria-label="Close advanced options">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                  <div class="stack">
+                    <div class="advanced-menu-title">Budgets</div>
+                    <div class="advanced-budget-grid">
+                      <label class="composer-meta-field">
+                        <span class="small muted">Step budget</span>
+                        <input id="step-budget" type="number" value="64">
+                      </label>
+                      <label class="composer-meta-field">
+                        <span class="small muted">Planning budget</span>
+                        <input id="planning-budget" type="number" value="4">
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <textarea id="request-input" placeholder="Type a message…" rows="1"></textarea>
+            <button id="submit-request" class="composer-send-btn" type="submit" aria-label="Send request">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </div>
+          <div id="composer-status" class="composer-status muted small"></div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <div id="auth-modal" class="modal">
+    <div class="modal-content stack auth-modal-content">
+      <div class="stack compact">
+        <div class="eyebrow">Authentication</div>
+        <h3 id="auth-modal-title">API key required</h3>
+        <div id="auth-modal-status" class="muted small"></div>
+      </div>
+      <label class="stack">
+        <span class="small muted">API key</span>
+        <input id="chat-api-key-input" list="chat-saved-key-options" placeholder="Paste or select an API key">
+        <datalist id="chat-saved-key-options"></datalist>
+      </label>
+      <label class="stack">
+        <span class="small muted">Local label</span>
+        <input id="chat-api-key-label" placeholder="User key">
+      </label>
+      <div id="chat-auth-saved-keys" class="stack"></div>
+      <div class="settings-inline-actions">
+        <button id="chat-use-api-key" type="button">Use key</button>
+        <button id="chat-remember-api-key" class="secondary" type="button">Save locally</button>
+        <button id="chat-bootstrap-key" type="button">Create bootstrap admin key</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/assets/chat.js"></script>
+</body>
+</html>

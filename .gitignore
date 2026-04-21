@@ -1,3 +1,7 @@
+#data
+data/sessions/
+data/server/
+
 # Logs
 logs
 *.log

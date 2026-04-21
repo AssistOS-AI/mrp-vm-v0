@@ -12,7 +12,7 @@ test('template-eval renders deterministic placeholders and helpers', async () =>
   const effects = await executeTemplateEval({
     runtime,
     targetFamily: 'response',
-    body: 'Title: {{report.title}}\nItems: {{join report.items ", "}}',
+    body: 'Title: $report.title\nItems: {{join report.items ", "}}',
   });
 
   assert.match(effects.emittedVariants[0].value, /Title: Hello/);

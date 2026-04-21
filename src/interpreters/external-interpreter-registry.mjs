@@ -10,6 +10,7 @@ export class ExternalInterpreterRegistry {
     this.interpreters.set(contract.name, {
       contract,
       handler,
+      enabled: contract.enabled !== false,
     });
   }
 
@@ -21,10 +22,36 @@ export class ExternalInterpreterRegistry {
     return this.interpreters.get(name)?.contract ?? null;
   }
 
+  isEnabled(name) {
+    return this.interpreters.get(name)?.enabled ?? false;
+  }
+
+  setEnabled(name, enabled) {
+    const entry = this.interpreters.get(name);
+    if (!entry) {
+      throw new Error(`Unknown external interpreter: ${name}`);
+    }
+    entry.enabled = Boolean(enabled);
+    return {
+      ...entry.contract,
+      enabled: entry.enabled,
+    };
+  }
+
+  listContracts() {
+    return [...this.interpreters.values()].map((entry) => ({
+      ...entry.contract,
+      enabled: entry.enabled,
+    }));
+  }
+
   async invoke(name, context) {
     const entry = this.interpreters.get(name);
     if (!entry) {
       throw new Error(`Unknown external interpreter: ${name}`);
+    }
+    if (!entry.enabled) {
+      throw new Error(`Interpreter ${name} is disabled.`);
     }
 
     const { contract, handler } = entry;

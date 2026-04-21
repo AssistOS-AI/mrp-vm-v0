@@ -1,0 +1,45 @@
+@ku_code_generator_llm_guidance text
+Choose codeGeneratorLLM when the step must generate or revise source code, shell snippets, or structured implementation text that depends on programming conventions.
+
+Use it for:
+- code synthesis from a precise specification,
+- patch proposals,
+- function or module skeletons,
+- short scripts or snippets where syntax fidelity matters,
+- language-aware rewrites where preserving surrounding syntax is more important than explanatory prose.
+
+Prefer codeGeneratorLLM over writerLLM when the output is executable or near-executable code. Prefer it over deepLLM when the central challenge is code production rather than abstract reasoning.
+
+Avoid codeGeneratorLLM when:
+- the task is a deterministic transformation possible in js-eval,
+- the output should be plain explanation rather than code,
+- the request is actually about planning the workflow.
+
+Good instructions should mention the language, constraints, expected output container, and whether the model must preserve existing identifiers or surrounding code contracts.
+@ku_code_generator_llm_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "codeGeneratorLLM guidance",
+  "summary": "Use codeGeneratorLLM for source-code or script generation when syntax fidelity and implementation form matter more than prose style or abstract analysis.",
+  "priority": 8,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "wrappers"
+  ],
+  "commands": [],
+  "interpreters": [
+    "codeGeneratorLLM"
+  ],
+  "tags": [
+    "llm",
+    "coding",
+    "guidance"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ]
+}

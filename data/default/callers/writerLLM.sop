@@ -1,5 +1,8 @@
 @writerLLM text
-External writer wrapper profile.
+Use writerLLM for polished user-facing prose when the substance is already known and the main need is clear, fluent wording.
+Prefer it for final explanations, summaries, and stitched answers that must read naturally while preserving the structure requested by the user.
+It should present already computed facts faithfully, not invent missing reasoning, arithmetic, or state transitions that should have been produced upstream.
+Avoid it for planning, difficult hidden reasoning, exact deterministic formatting that template-eval can handle, or code generation.
 @writerLLM:meta json
 {
   "rev": 1,
@@ -7,7 +10,7 @@ External writer wrapper profile.
   "scope": "default",
   "status": "active",
   "title": "writerLLM",
-  "summary": "LLM wrapper profile for fluent wording.",
+  "summary": "Choose writerLLM for polished user-facing prose and final answer wording once the underlying substance and structure are known.",
   "priority": 7,
   "trust": "canonical",
   "domains": [

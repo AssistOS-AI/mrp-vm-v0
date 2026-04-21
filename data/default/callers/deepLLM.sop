@@ -1,5 +1,8 @@
 @deepLLM text
-External deep wrapper profile.
+Use deepLLM for difficult reasoning, nuanced evaluation, proof-like explanation, or multi-constraint language tasks where cheap synthesis is likely to miss important structure.
+Prefer it when the task needs stronger inference, comparison, state interpretation, or generalization, but the result is still language output rather than executable code or a plan proposal.
+DeepLLM is a strong companion to deterministic steps: it can explain why a computed result is correct, justify minimality, discuss tradeoffs, or generalize a solution from exact intermediate data.
+Avoid it for trivial classification, deterministic assembly, or lightweight chat turns that fastLLM can handle more cheaply.
 @deepLLM:meta json
 {
   "rev": 1,
@@ -7,7 +10,7 @@ External deep wrapper profile.
   "scope": "default",
   "status": "active",
   "title": "deepLLM",
-  "summary": "Strong reasoning wrapper profile.",
+  "summary": "Choose deepLLM for harder reasoning, proof-like explanation, nuanced evaluation, and language tasks that need stronger inference.",
   "priority": 6,
   "trust": "canonical",
   "domains": [

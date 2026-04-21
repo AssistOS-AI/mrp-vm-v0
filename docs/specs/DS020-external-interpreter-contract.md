@@ -42,6 +42,8 @@ These contracts must not live only in code. Every external interpreter must have
 
 This keeps interpreter contracts aligned with DS011 rather than buried in adapter implementation.
 
+The repository-owned default KUs for an interpreter must be selection-ready, not merely descriptive. Their summaries must help planning distinguish one interpreter from another, and their bodies must contain actionable guidance about valid task shapes and expected outputs.
+
 ### Relation to LLM wrappers and non-LLM interpreters
 
 LLM wrappers are one specialized family of external interpreters. They must satisfy the DS020 contract and the additional DS013 rules about prompt assets, provider adapters, output modes, and token accounting.

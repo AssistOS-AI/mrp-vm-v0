@@ -41,6 +41,8 @@ The minimum operation families are `store`, `append`, `merge`, `count`, `sum`, `
 
 Default KUs for `analytic-memory` must describe the preferred instruction patterns, normalization map, and any regex- or rule-based fast path that can parse requests without LLM help. LLM assistance is allowed only when policy explicitly permits fallback to normalize ambiguous natural language into this deterministic operator set.
 
+Those KUs must be rich enough that planning can distinguish aggregation work from ordinary text generation or local scripting. Their summaries must mention the kinds of accumulation and export tasks the command is meant for, and their bodies must include concrete operator patterns instead of only naming the command.
+
 ### Execution and persistence
 
 `analytic-memory` may keep richer internal state than the SOP graph exposes. However, that state is not allowed to become invisible runtime magic. The command must persist its managed state in a request- or session-scoped store that replay can reload, and every mutation must be represented in trace through an analytic-memory update record or equivalent payload.

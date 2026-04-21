@@ -9,7 +9,12 @@ test('evaluation harness compares configured runtime instances against a baselin
   const rootDir = await createTempRuntimeRoot();
 
   const metrics = await evaluateConfiguredRuntime({
-    createRuntime: async () => new MRPVM(rootDir, { deterministic: {} }),
+    createRuntime: async () => new MRPVM(rootDir, {
+      deterministic: {},
+      manualOverrides: {
+        forceFakeLlm: true,
+      },
+    }),
     createBaseline: async (testCase) => ({
       response: `${testCase.expected_response_prefix}${testCase.request}`,
     }),

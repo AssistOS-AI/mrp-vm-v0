@@ -1,0 +1,57 @@
+@ku_credibility_guidance text
+Choose credibility when multiple variants compete for the same family and the runtime must compare them explicitly.
+
+Use it for:
+- scoring candidate variants,
+- selecting a representative fairly,
+- withdrawing weaker candidates with reasons,
+- deciding whether more evidence must be gathered before continuing.
+
+The input should make the comparison space explicit:
+- what the candidates are,
+- where they came from,
+- what criteria matter,
+- whether a tie should trigger more evidence gathering.
+
+Good credibility tasks read like evaluation or arbitration instructions, not generation requests. The command is strongest when the step already has variants and needs an inspectable decision.
+Credibility is particularly useful after multiple interpreters or strategies have produced alternative answers and the runtime needs an explicit representative before formatting the response.
+
+Typical situations:
+- two interpreters produced different answers for the same family,
+- a family contains active and partially failed candidates that must be ranked,
+- a later step depends on choosing a single representative before continuing,
+- the runtime needs explicit withdrawal or score metadata for traceability.
+
+Avoid credibility when:
+- there is only one usable candidate,
+- the step is actually about generating a new answer rather than comparing existing ones,
+- the criteria are too vague and a deeper upstream generation step is still needed.
+@ku_credibility_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "credibility guidance",
+  "summary": "Use credibility to compare competing family variants, score and withdraw them explicitly, and choose a representative before dependent steps continue.",
+  "priority": 9,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "evaluation"
+  ],
+  "commands": [
+    "credibility"
+  ],
+  "interpreters": [
+    "deepLLM"
+  ],
+  "tags": [
+    "comparison",
+    "scoring",
+    "guidance"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ]
+}

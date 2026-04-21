@@ -137,6 +137,9 @@ export function parsePlan(source) {
     const body = bodyLines.join('\n');
     const declarationId = `decl-${String(declarations.length + 1).padStart(4, '0')}`;
 
+    const includeQuotedReferences = declarationHeader.commands.length === 1
+      && declarationHeader.commands[0] === 'template-eval';
+
     declarations.push({
       declaration_id: declarationId,
       target: declarationHeader.target,
@@ -151,7 +154,7 @@ export function parsePlan(source) {
         start: lineStartOffset,
         end: lineEndOffset,
       },
-      references: extractReferences(body).map((reference) => ({
+      references: extractReferences(body, { includeQuotedStrings: includeQuotedReferences }).map((reference) => ({
         kind: reference.kind,
         family: reference.familyId,
         variant: reference.variantId,

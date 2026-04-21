@@ -1,5 +1,8 @@
 @codeGeneratorLLM text
-External code generator wrapper profile.
+Use codeGeneratorLLM when the task requires syntax-sensitive code generation, code transformation, or structured patches that must preserve programming-language constraints.
+Prefer it over writerLLM when exact syntax matters and over js-eval when code still needs to be produced rather than executed inside the runtime.
+Good inputs state the target language, environment, preserved context, forbidden changes, desired output shape, and whether the result should be a snippet, full file, or patch-like artifact.
+Avoid using it as a general planner, a vague reasoning surface, or a generic prose model.
 @codeGeneratorLLM:meta json
 {
   "rev": 1,
@@ -7,7 +10,7 @@ External code generator wrapper profile.
   "scope": "default",
   "status": "active",
   "title": "codeGeneratorLLM",
-  "summary": "Code-oriented wrapper profile.",
+  "summary": "Choose codeGeneratorLLM for syntax-sensitive code generation, transformation, and patch-like outputs rather than generic prose.",
   "priority": 6,
   "trust": "canonical",
   "domains": [

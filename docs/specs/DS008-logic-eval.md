@@ -62,6 +62,8 @@ Malformed rules must fail visibly. The runtime must not silently reinterpret an 
 
 `logic-eval` default KUs must describe its preferred CNL forms, regex-friendly patterns, and the exact action vocabulary it accepts. This keeps planning from drifting into unsupported pseudo-logic.
 
+Those KUs must also make the routing boundary explicit: when `logic-eval` is preferable to `js-eval`, when it should be avoided in favor of narrative wrappers, and what a minimally valid rule block looks like. Summaries that merely restate the command name are not sufficient for reliable planning.
+
 The predicate vocabulary remains closed in v0. Extension hooks for user-defined predicate libraries are deferred until the baseline grammar and validation path are stable.
 
 ## Decisions & Questions

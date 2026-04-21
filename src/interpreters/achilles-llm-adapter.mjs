@@ -161,7 +161,7 @@ export class AchillesLlmAdapter extends ManagedLlmAdapter {
       this.agentClassPromise = (async () => {
         const resolution = this.runtimeConfig?.dependencies?.achillesAgentLib;
         if (!resolution?.modulePath) {
-          throw new Error('AchillesAgentLib is not available. Set ACHILLES_AGENT_LIB_PATH, install the package, or switch LLM_PROVIDER to fake.');
+          throw new Error('AchillesAgentLib is not available. Install it in the project root or node_modules.');
         }
         const moduleNamespace = await import(pathToFileURL(resolution.modulePath).href);
         const AgentClass = pickAgentClass(moduleNamespace);
@@ -178,7 +178,6 @@ export class AchillesLlmAdapter extends ManagedLlmAdapter {
     const AgentClass = await this.loadAgentClass();
     const profileBinding = resolveLlmProfile(this.runtimeConfig, payload.profile);
     const request = {
-      provider: this.runtimeConfig?.llm?.provider ?? 'achilles',
       apiBaseUrl: this.runtimeConfig?.llm?.apiBaseUrl ?? null,
       profile: payload.profile,
       model: profileBinding.model,
@@ -194,7 +193,6 @@ export class AchillesLlmAdapter extends ManagedLlmAdapter {
       messages: buildMessages(payload, profileBinding),
     };
     const agent = new AgentClass({
-      provider: request.provider,
       apiBaseUrl: request.apiBaseUrl,
       model: request.model,
       modelTier: request.modelTier,

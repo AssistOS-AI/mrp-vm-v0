@@ -1,5 +1,9 @@
 @js-eval text
-Native js-eval caller profile.
+Use js-eval for bounded procedural logic, data reshaping, exact arithmetic, local search, and controlled variant updates that benefit from explicit JavaScript.
+Prefer it when the step needs loops, collections, graph traversal, shortest-path search, object manipulation, or direct state edits through ~family handles.
+It is especially appropriate for exact algorithmic sub-problems where the runtime should expose inspectable computation instead of asking an LLM to improvise steps or numeric results.
+Do not use it for plain prose generation, free-form reasoning, or tasks that can be expressed as short when/then rules or deterministic templates.
+Bodies should be real JavaScript that reads $family values and uses ~family or sop helpers for writes and structural effects.
 @js-eval:meta json
 {
   "rev": 1,
@@ -7,7 +11,7 @@ Native js-eval caller profile.
   "scope": "default",
   "status": "active",
   "title": "js-eval",
-  "summary": "Caller profile for deterministic JavaScript evaluation.",
+  "summary": "Choose js-eval for bounded procedural logic, exact computation, state-space search, data reshaping, and explicit state updates through JavaScript.",
   "priority": 8,
   "trust": "canonical",
   "domains": [

@@ -1,0 +1,45 @@
+@ku_fast_llm_guidance text
+Choose fastLLM for low-cost language work that still needs an LLM but does not require deep reasoning.
+
+Use it for:
+- short extraction from noisy text,
+- quick classification or labeling,
+- lightweight normalization into concise prose or simple structured output,
+- brief summaries where speed matters more than nuance,
+- cheap support steps that prepare material for a stronger downstream solver or writer.
+
+Prefer fastLLM over deepLLM when the question is shallow, the instruction is narrow, and errors from missing deep reasoning are unlikely.
+
+Avoid fastLLM when:
+- the step must plan a multi-step workflow,
+- the task requires difficult comparison, policy reasoning, or repair,
+- exact code or syntax discipline is critical,
+- polished final prose quality matters more than speed,
+- the task needs exact state transitions, arithmetic correctness, or proof-like justification.
+@ku_fast_llm_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "fastLLM guidance",
+  "summary": "Use fastLLM for cheap extraction, labeling, short normalization, and quick summaries when latency matters more than deep reasoning or exactness.",
+  "priority": 8,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "wrappers"
+  ],
+  "commands": [],
+  "interpreters": [
+    "fastLLM"
+  ],
+  "tags": [
+    "llm",
+    "fast",
+    "guidance"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ]
+}

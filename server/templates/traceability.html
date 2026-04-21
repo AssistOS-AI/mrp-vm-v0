@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MRP-VM Traceability</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-band">
+      <div class="brand"><strong>MRP-VM</strong></div>
+      <nav class="nav-links">
+        <a href="/chat">Chat</a>
+        <a class="active" href="/traceability">Traceability</a>
+        <a href="/kb-browser">KB Browser</a>
+        <a href="/settings">Settings</a>
+      </nav>
+      <div class="header-right">
+        <div id="trace-system-context" class="row wrap"></div>
+      </div>
+    </div>
+  </header>
+  <div id="page-notice" class="notice"></div>
+  <main class="page-shell page-shell--trace">
+    <div class="trace-page trace-page-shell">
+      <aside class="trace-timeline-panel">
+        <div class="trace-panel-header stack compact">
+          <div class="eyebrow">Traceability</div>
+          <h2 id="trace-title">Request trace</h2>
+          <div id="trace-meta" class="muted small"></div>
+        </div>
+        <div id="timeline" class="trace-timeline-list"></div>
+      </aside>
+
+      <div class="trace-workspace">
+        <div class="trace-tabs-bar">
+          <button class="tab-button active" data-tab="sop-tab" type="button">SOP Lang</button>
+          <button class="tab-button" data-tab="variables-tab" type="button">Variables</button>
+          <button class="tab-button" data-tab="graph-tab" type="button">Execution Graph</button>
+        </div>
+
+        <section id="sop-tab" class="tab-panel active">
+          <div class="between">
+            <div class="stack compact">
+              <h3>Executed SOP Lang</h3>
+            </div>
+            <button id="copy-sop" class="secondary" type="button">Copy</button>
+          </div>
+          <pre id="sop-content" class="code-panel"></pre>
+        </section>
+
+        <section id="variables-tab" class="tab-panel"></section>
+
+        <section id="graph-tab" class="tab-panel"></section>
+      </div>
+    </div>
+  </main>
+
+  <div id="node-modal" class="modal">
+    <div class="modal-content stack">
+      <div class="between">
+        <h3 id="node-modal-title">Node details</h3>
+        <button id="close-node-modal" class="secondary" type="button">Close</button>
+      </div>
+      <div id="node-modal-body" class="stack"></div>
+    </div>
+  </div>
+  <script type="module" src="/assets/traceability.js"></script>
+</body>
+</html>

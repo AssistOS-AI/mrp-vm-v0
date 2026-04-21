@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MRP-VM KB Browser</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-band">
+      <div class="brand"><strong>MRP-VM</strong></div>
+      <nav class="nav-links">
+        <a href="/chat">Chat</a>
+        <a href="/traceability">Traceability</a>
+        <a class="active" href="/kb-browser">KB Browser</a>
+        <a href="/settings">Settings</a>
+      </nav>
+      <div class="header-right">
+        <span class="muted small">Knowledge browser</span>
+      </div>
+    </div>
+  </header>
+  <div id="page-notice" class="notice"></div>
+  <main class="page-shell">
+    <section class="kb-page stack">
+      <div class="kb-summary-row" id="kb-summary"></div>
+      <div class="kb-filters">
+        <input id="kb-search" placeholder="Search KU id, title, summary, tags, commands, interpreters...">
+        <select id="kb-type">
+          <option value="">All types</option>
+          <option value="content">content</option>
+          <option value="prompt_asset">prompt_asset</option>
+          <option value="template_asset">template_asset</option>
+          <option value="policy_asset">policy_asset</option>
+          <option value="caller_profile">caller_profile</option>
+        </select>
+        <button id="kb-refresh" type="button">Refresh</button>
+      </div>
+
+      <div class="kb-browser-shell">
+        <section class="kb-tree-panel">
+          <div class="kb-panel-header">
+            <div class="stack compact">
+              <div class="eyebrow">Tree</div>
+              <h3>Knowledge units</h3>
+            </div>
+          </div>
+          <div id="kb-tree" class="kb-tree"></div>
+        </section>
+
+        <section class="kb-editor-panel">
+          <div class="kb-panel-header">
+            <div class="stack compact">
+              <div class="eyebrow">Editor</div>
+              <h3>KU editor</h3>
+              <div id="kb-permission-message" class="muted small"></div>
+            </div>
+          </div>
+          <div id="kb-details-body" class="stack compact"></div>
+          <form id="kb-editor" class="stack">
+            <div class="settings-form-grid">
+              <label class="stack">
+                <span class="small muted">Target scope</span>
+                <select id="editor-scope">
+                  <option value="session">session</option>
+                  <option value="global">global</option>
+                </select>
+              </label>
+              <label class="stack">
+                <span class="small muted">File name</span>
+                <input id="editor-file-name" placeholder="ku-guidance.sop">
+              </label>
+            </div>
+            <label class="stack">
+              <span class="small muted">SOP source</span>
+              <textarea id="editor-source"></textarea>
+            </label>
+            <div class="muted small">Use session scope for personal overrides. Global scope requires admin authority.</div>
+            <div class="settings-inline-actions">
+              <button id="save-ku" type="submit">Save</button>
+              <button id="load-default-ku" class="secondary" type="button">Default</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/assets/kb-browser.js"></script>
+</body>
+</html>

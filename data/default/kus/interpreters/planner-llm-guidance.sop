@@ -1,0 +1,48 @@
+@ku_planner_llm_guidance text
+Choose plannerLLM only for producing or repairing SOP Lang plans. Its output should be executable SOP Lang, not ordinary prose.
+
+Use it for:
+- initial decomposition of a user request,
+- continuing-session replanning,
+- repair after execution failure,
+- transforming routing knowledge into explicit declarations and dependencies,
+- splitting a complex task into deterministic, reasoning, and formatting stages that an operator can inspect.
+
+plannerLLM should consume routing KUs carefully:
+- summary text helps choose the right command or interpreter for each sub-task,
+- detailed KU bodies help shape declaration bodies so the chosen surface receives usable input,
+- planning prompt assets define mandatory structural rules such as a final @response and explicit $family dependencies.
+
+For non-trivial requests, plannerLLM should prefer a graph with concrete intermediate families instead of a single opaque step. This is especially important when the user asks for exact computation plus explanation, proof plus final prose, or a requested answer format that should be assembled explicitly.
+
+Avoid plannerLLM when the task is already execution-ready or when the required output is a normal answer to the user.
+@ku_planner_llm_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "plannerLLM guidance",
+  "summary": "Use plannerLLM only for SOP Lang planning or repair, consuming KU summaries for routing and KU bodies for declaration-shape and graph-structure guidance.",
+  "priority": 10,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "planning",
+    "wrappers"
+  ],
+  "commands": [
+    "planning"
+  ],
+  "interpreters": [
+    "plannerLLM"
+  ],
+  "tags": [
+    "llm",
+    "planning",
+    "guidance"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ]
+}

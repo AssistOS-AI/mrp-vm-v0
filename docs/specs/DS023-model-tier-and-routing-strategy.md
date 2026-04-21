@@ -3,13 +3,13 @@ id: DS023
 title: Model Tier and Routing Strategy
 status: implemented
 owner: runtime
-summary: Defines model tiers, profile bindings, task tags, runtime configuration overrides, and AchillesAgentLib resolution rules for LLM wrapper routing.
+summary: Defines model tiers, profile bindings, tag-aware model discovery, settings-facing selection controls, and AchillesAgentLib resolution rules for LLM wrapper routing.
 ---
 # DS023 Model Tier and Routing Strategy
 
 ## Introduction
 
-MRP-VM v0 needs a routing policy for LLM-backed interpreters that is explicit, inspectable, and adjustable without editing wrapper code. DS013 defines the wrapper contract. DS023 defines how wrapper profiles map to model tiers, concrete models, task tags, and runtime configuration.
+MRP-VM v0 needs a routing policy for LLM-backed interpreters that is explicit, inspectable, and adjustable without editing wrapper code. DS013 defines the wrapper contract. DS023 defines how wrapper profiles map to model tiers, concrete models, task tags, discovered model tags, and runtime configuration.
 
 ## Core Content
 
@@ -19,19 +19,20 @@ The runtime must derive LLM routing from one explicit runtime configuration obje
 
 1. repository defaults,
 2. environment variables,
-3. manual overrides supplied by the embedding host.
+3. manual overrides supplied by the embedding host,
+4. model discovery through AchillesAgentLib APIs when available.
 
 Manual overrides must win over environment-derived defaults. This is necessary for tests, local servers, and embedded hosts that need to pin routing without mutating process-wide environment state.
 
 ### AchillesAgentLib resolution
 
-The runtime may resolve AchillesAgentLib from:
+The runtime resolves AchillesAgentLib from:
 
-1. an explicit manual override path,
-2. a sibling or parent directory repository checkout,
+1. a repository-local `AchillesAgentLib/` directory,
+2. a parent-directory checkout such as `../AchillesAgentLib/` or `../achillesAgentLib/`,
 3. installed `node_modules`.
 
-If AchillesAgentLib is unavailable, the runtime may use a fake adapter only when the provider configuration explicitly allows that fallback or when deterministic tests require it. The absence of AchillesAgentLib must never be hidden behind a fake "real provider" claim.
+If AchillesAgentLib is unavailable, the runtime may use a fake adapter only when deterministic tests or explicit local overrides require it. The absence of AchillesAgentLib must never be hidden behind a fake "real" adapter claim.
 
 ### Model tiers
 
@@ -58,6 +59,29 @@ Each LLM wrapper profile must bind to a tier, a concrete model, and a task tag. 
 | `plannerLLM` | `premium` | `orchestration` |
 
 Hosts may override the concrete model per profile and may override the tier or task tag when a downstream environment needs different routing economics.
+
+### Achilles model discovery and tags
+
+When AchillesAgentLib is available, the settings surface must query it for the model catalog together with model metadata such as tier and tags. The server-facing model catalog must normalize those results into:
+
+1. a stable model `id`,
+2. a display `name`,
+3. a normalized tier,
+4. a tag list,
+5. an `is_default` marker for the currently selected default.
+
+When AchillesAgentLib is not available, the server may infer tags heuristically from configured model names so the settings page still has a usable selection surface.
+
+### Settings-facing selection behavior
+
+The settings page must expose model routing through select controls rather than through a separate read-only gallery of candidate cards. The required behavior is:
+
+1. model options show associated tags inline in their labels,
+2. model tag filters may narrow the visible options without hiding the full catalog permanently,
+3. profile bindings and default-model selection are rendered in a compact two-column grid when width allows,
+4. the UI should not dedicate a separate "candidate models" panel once the tag-aware selects already expose the catalog.
+
+The purpose of tags is routing clarity, not decorative display. If the runtime knows a model is tagged `coding`, `reasoning`, or `agentic`, that information must be visible where the user makes the selection.
 
 ### Task tags
 
@@ -87,4 +111,4 @@ Response: Two invocations may share one wrapper profile but belong to very diffe
 
 ## Conclusion
 
-MRP-VM v0 must route LLM wrapper work through explicit runtime configuration, configurable model tiers, explicit profile bindings, and routing-sensitive task tags so provider access remains inspectable and host-controlled.
+MRP-VM v0 must route LLM wrapper work through explicit runtime configuration, configurable model tiers, explicit profile bindings, routing-sensitive task tags, and tag-aware model discovery so provider access remains inspectable and host-controlled.

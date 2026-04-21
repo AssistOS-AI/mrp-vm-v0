@@ -47,13 +47,24 @@ The global source order is:
 The authoritative delivery surface is a deterministic Markdown package with stable top-level sections. The minimum section order is:
 
 1. `# Task`
-2. `# Direct Dependencies`
-3. `# Resolved Family State`
-4. `# Knowledge Units`
-5. `# Analytic Summaries`
-6. `# Planning Notes`
+2. `# User Request`
+3. `# Direct Dependencies`
+4. `# Resolved Family State`
+5. `# Knowledge Units`
+6. `# Analytic Summaries`
+7. `# Planning Notes`
 
 LLM-facing interpreters receive this Markdown package directly. Deterministic native commands may derive structured helper views from the same package, but the Markdown rendering remains the inspectable and traceable canonical form.
+
+The `# User Request` section must contain the normalized current request text for the active request. This keeps sub-tasks grounded in the original problem statement even when a declaration body only names one slice of the work.
+
+When the package includes KUs selected through DS011, the rendering must preserve three distinct surfaces for each KU:
+
+1. the human-readable title,
+2. the retrieval-facing summary,
+3. the substantive guidance body from the KU root variable.
+
+The summary is the short discriminative surface used during selection and auditing. The body is the execution-facing guidance that the receiving command or interpreter actually consumes. Packaging must not collapse those roles into one flat unlabeled text block.
 
 ### Deduplication and trace
 

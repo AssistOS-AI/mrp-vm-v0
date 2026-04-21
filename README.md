@@ -6,7 +6,7 @@ MRP-VM v0 is a dependency-free Node.js `.mjs` runtime with:
 - family-based state and trace persistence
 - native commands for planning, `js-eval`, `logic-eval`, `template-eval`, `analytic-memory`, `kb`, and `credibility`
 - declaration-style SOP Lang KU assets and caller profiles under `data/default/`
-- AchillesAgentLib-aware LLM adapter routing through `LLMAgent`, with fake-adapter fallback for deterministic tests
+- AchillesAgentLib-aware LLM adapter routing through `LLMAgent`, with fake adapters used only when tests opt in explicitly
 - optional HTTP hosting adapter and `/chat` UI under `server/`
 - Node native tests under `tests/`
 
@@ -16,10 +16,12 @@ Run the test suite with:
 node run.mjs test
 ```
 
+The real-LLM integration test runs automatically when AchillesAgentLib is resolved and credential-backed models are discovered through the library. If AchillesAgentLib is not configured, the test is skipped.
+
 Start the local server and chat UI with:
 
 ```bash
 npm run server
 ```
 
-For a real Achilles-backed LLM path, provide `ACHILLES_AGENT_LIB_PATH` or install AchillesAgentLib in a resolvable location. If no Achilles library is available, the runtime falls back to the fake adapter unless `LLM_PROVIDER=achilles` is forced explicitly.
+For a real Achilles-backed LLM path, install AchillesAgentLib in the repository root, in a parent directory, or in `node_modules` (including the common `achillesAgentLib` folder name). The server refuses to start on the fake adapter unless a test harness enables it explicitly.

@@ -1,5 +1,8 @@
 @credibility text
-Native credibility caller profile.
+Use credibility when several candidate variants exist for the same family and the runtime needs an explicit comparison rather than an accidental latest-value choice.
+Prefer it for ranking, scoring, withdrawal decisions, or deciding whether more evidence is needed before downstream execution continues.
+Its input should summarize candidates, provenance, criteria, and any evaluation hints that matter for fair comparison, so the outcome can be explained in traceability.
+Avoid using credibility to generate brand-new answers; it is for comparing existing variants.
 @credibility:meta json
 {
   "rev": 1,
@@ -7,7 +10,7 @@ Native credibility caller profile.
   "scope": "default",
   "status": "active",
   "title": "credibility",
-  "summary": "Caller profile for family-level candidate comparison.",
+  "summary": "Choose credibility for ranking competing family variants, emitting scores or withdrawals, and escalating when comparison evidence is insufficient.",
   "priority": 8,
   "trust": "canonical",
   "domains": [

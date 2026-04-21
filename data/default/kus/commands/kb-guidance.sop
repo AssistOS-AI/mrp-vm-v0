@@ -1,0 +1,49 @@
+@ku_kb_guidance text
+Choose kb when the step is explicitly about retrieving reusable knowledge units from the repository-backed catalog.
+
+Use it for:
+- searching KUs by topic or text,
+- retrieving prompt assets or guidance material,
+- returning matched knowledge as structured data for another step.
+
+Good bodies describe the knowledge need clearly:
+- what topic or term is being searched,
+- which scope matters,
+- whether the result is meant for planning, execution, or display.
+
+The kb command is appropriate when the runtime does not yet know which reusable guidance or prompt asset it needs. It should surface inspectable knowledge, not hide a downstream decision inside prose.
+In planning-heavy sessions, kb can be used to discover which command guidance, interpreter guidance, or prompt asset should shape later declarations.
+
+Prefer kb over an LLM step when the answer should come from stored project knowledge rather than fresh synthesis. Prefer it over analytic-memory when the task is retrieval, not accumulation.
+
+Avoid kb when:
+- the step already knows which computation should run,
+- the real task is prose generation,
+- session aggregation or procedural transformation would be clearer.
+@ku_kb_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "kb guidance",
+  "summary": "Use kb for explicit KU search and retrieval when the step needs stored guidance, prompt assets, or reusable planning knowledge instead of fresh computation.",
+  "priority": 9,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "knowledge"
+  ],
+  "commands": [
+    "kb"
+  ],
+  "interpreters": [],
+  "tags": [
+    "knowledge",
+    "retrieval",
+    "guidance"
+  ],
+  "input_patterns": [
+    "[A-Za-z0-9_./:-]+"
+  ]
+}

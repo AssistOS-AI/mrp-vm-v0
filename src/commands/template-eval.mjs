@@ -74,9 +74,14 @@ function renderTemplate(source, context) {
     if (helperValue !== null) {
       return helperValue;
     }
-    const value = resolvePath(expression.trim(), context);
+    throw new Error(`Unsupported template expression: ${expression}. Use $variable for simple placeholders or helpers like {{join ...}}.`);
+  });
+
+  output = output.replace(/\$\{([A-Za-z_][A-Za-z0-9_.]*)\}|\$([A-Za-z_][A-Za-z0-9_.]*)/g, (_match, braced, simple) => {
+    const path = braced ?? simple;
+    const value = resolvePath(path, context);
     if (value === undefined) {
-      throw new Error(`Missing required placeholder: ${expression}`);
+      throw new Error(`Missing required placeholder: ${path}`);
     }
     return String(value);
   });

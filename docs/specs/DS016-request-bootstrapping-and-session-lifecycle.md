@@ -17,7 +17,7 @@ This specification closes the entry-point gap between a user request and the fir
 
 A session is the long-lived runtime container for:
 
-1. session identity and policy context,
+1. session identity, policy context, and authority metadata,
 2. session-scoped KU overlay,
 3. session-scoped analytic checkpoints when policy allows them,
 4. one append-oriented session trace stream,
@@ -60,7 +60,7 @@ The baseline filesystem layout is:
 
 | Path | Meaning |
 | --- | --- |
-| `data/sessions/<sessionId>/manifest.json` | Session identity, policy profile, creation metadata, active request pointer if any |
+| `data/sessions/<sessionId>/manifest.json` | Session identity, policy profile, session origin, auth mode, effective role, owner or key identity, timestamps, and active request pointer if any |
 | `data/sessions/<sessionId>/trace/session.jsonl` | Unified session trace stream defined by DS014 |
 | `data/sessions/<sessionId>/kb/**/*.sop` | Session-scoped KU overlay files |
 | `data/sessions/<sessionId>/history/request-summaries.jsonl` | Compact summaries of completed requests |

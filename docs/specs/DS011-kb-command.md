@@ -58,6 +58,13 @@ Prompt assets additionally use metadata such as `prompt_role`, `prompt_mode`, `m
 
 Caller profiles and capability declarations for native commands and external interpreters must also be represented as default KUs rather than as hardcoded tables hidden in code.
 
+The KU root variable body is the authoritative guidance payload that becomes execution-time context when the KU is selected. The metadata `summary` field is separate: it is the short retrieval-facing description used during planning and metadata-first ranking. In v0 the repository must treat these two surfaces as first-class and distinct:
+
+1. `summary` must help the planner decide whether the KU is relevant,
+2. root body text must help the selected component act correctly once the KU is injected.
+
+Terse summaries and placeholder body text are non-conformant for repository-owned default KUs because they make selection and execution guidance equally weak.
+
 ### Bootstrap sequence
 
 The runtime must bootstrap `kb` in this order before any ordinary retrieval happens:
@@ -123,7 +130,7 @@ This means planning and ordinary pre-execution injection usually rely on metadat
 
 The filtering rules per situation are:
 
-1. `planning_bootstrap`: require `ku_type=prompt_asset`, `prompt_role=planning`, matching mode groups, and active status before any lexical work. Use lexical ranking only over the request text, request summaries, and repair notes that survive normalization.
+1. `planning_bootstrap`: require the mode-mandatory planning prompt asset first, then admit additional planning-relevant `content`, `policy_asset`, and `caller_profile` KUs that describe command and interpreter usage. Use lexical ranking over the request text, request summaries, repair notes, and command/interpreter selection cues that survive normalization.
 2. `automatic_native_command`: require caller-profile match, active status, allowed KU types, and command affinity first. Use declaration-body lexical cues only if caller-profile extraction yields meaningful fragments.
 3. `automatic_external_interpreter`: same as automatic native command, but also require compatible interpreter name or model class where relevant.
 4. `manual_component_call`: behave like automatic command/interpreter retrieval, but the explicit invocation text supplied by the caller counts as first-class lexical input even if there is no planner-produced declaration.
@@ -154,6 +161,13 @@ Before executing a native command or external interpreter, the runtime must auto
 7. preferred input patterns and LLM-fallback policy.
 
 This is how MRP-VM makes explicit that every command and external interpreter should have default guidance about the input it prefers.
+
+Repository-owned default KUs must therefore satisfy a stronger baseline than "exists in the catalog". For every shipped native command and every shipped external interpreter, the default layer must provide enough KU coverage that planning and execution can answer these questions without hidden code knowledge:
+
+1. when this component should be selected,
+2. what declaration-body shape it expects,
+3. what common mistakes should cause rerouting,
+4. what kind of result or structural effect it is supposed to produce.
 
 When both request-level text and declaration-body text exist, the retrieval policy must use both, but not with equal force:
 

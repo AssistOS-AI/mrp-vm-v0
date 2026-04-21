@@ -1,5 +1,8 @@
 @fastLLM text
-External fast wrapper profile.
+Use fastLLM for cheap short-form language work: extraction, normalization, lightweight synthesis, simple classification, and quick answers where latency matters.
+Prefer it when the step is language-heavy but shallow enough that exactness does not depend on deeper reasoning or deterministic computation.
+Good fits include small label extraction, concise rewrites, short summaries, and lightweight comparisons over already obvious evidence.
+Avoid fastLLM for planning, mathematical proof, search over state spaces, delicate policy evaluation, or answers that must preserve an exact requested structure from computed results.
 @fastLLM:meta json
 {
   "rev": 1,
@@ -7,7 +10,7 @@ External fast wrapper profile.
   "scope": "default",
   "status": "active",
   "title": "fastLLM",
-  "summary": "Cheap extraction and lightweight synthesis wrapper.",
+  "summary": "Choose fastLLM for cheap extraction, normalization, and brief synthesis when latency matters more than deep reasoning or exactness.",
   "priority": 6,
   "trust": "canonical",
   "domains": [

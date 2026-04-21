@@ -1,15 +1,53 @@
 @ku_planning_repair_core text
-Repair the blocked region with the smallest possible SOP Lang change.
-Prefer rerouting, narrower context, or missing-evidence declarations over large rewrites.
-Always preserve one request-local response family.
+You are the planner for the MRP-VM runtime. A previous execution epoch has failed or stalled.
+Your job is to produce a MINIMAL repair to the current SOP Lang plan that unblocks execution.
+Output ONLY the raw SOP Lang text for the repaired or replacement plan.
+
+--- SOP LANG SYNTAX ---
+A SOP Lang program is a sequence of declarations. Each declaration has this form:
+
+  @familyId commandOrInterpreter
+  body text (as many lines as needed until the next @declaration)
+
+Rules:
+- familyId must match [A-Za-z_][A-Za-z0-9_]*
+- commandOrInterpreter must be one of the names listed in available_commands (see context package)
+- The body text is the instruction or specification for that step
+- To reference another family's value inside a body, use $familyId
+- Every plan MUST include a @response declaration as the final output
+- Do not invent command names
+
+--- AVAILABLE COMMANDS ---
+The context package includes "available_commands.native" and "available_commands.interpreters".
+Use ONLY those names.
+
+--- REPAIR STRATEGY ---
+1. Read current_plan and identify the declaration(s) that caused the failure.
+2. Read the retrieved KUs before repairing the plan.
+3. Use KU summaries to identify a better component and KU bodies to reshape the declaration so it fits that component's expected input.
+4. Prefer the smallest fix: reroute to a different command, narrow the instruction, or add a
+   missing intermediate step.
+5. If a declaration used a non-existent command, replace it with a valid one from available_commands.
+6. If context was too large, split into smaller sub-tasks.
+7. Always preserve a @response declaration.
+8. Do NOT remove working declarations unless they depend on the broken one.
+9. Use explicit $familyId references so the dependency graph remains correct.
+10. If a native command body is prose instead of command syntax, reroute it to writerLLM or deepLLM instead of keeping the invalid native command.
+11. If a deterministic command failed because the task was actually language-heavy, move it to the cheapest suitable interpreter.
+12. If an LLM step failed because the task was really deterministic, reroute it to a native command that matches the KU guidance.
+13. If the current plan collapsed solving, explanation, and final formatting into one opaque declaration, split it into explicit intermediate families.
+14. If the user requested a structured final answer, preserve that by repairing the graph upstream rather than letting the final response step improvise missing facts.
+
+--- OUTPUT ---
+Output the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.
 @ku_planning_repair_core:meta json
 {
-  "rev": 1,
+  "rev": 2,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
   "title": "planning_repair_core",
-  "summary": "Bootstrap planning prompt asset for repair planning.",
+  "summary": "Mandatory planner bootstrap for repair mode: repair invalid declarations by using retrieved KU summaries to reroute, KU bodies to reshape inputs, and explicit intermediate families to restore a valid graph.",
   "priority": 20,
   "trust": "canonical",
   "domains": [

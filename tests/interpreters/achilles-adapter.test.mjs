@@ -7,7 +7,11 @@ import { AchillesLlmAdapter, createRuntimeConfig, resolveLlmProfile } from '../.
 
 async function createFakeAchillesModule(methodName = 'invoke') {
   const rootDir = await mkdtemp(path.join(os.tmpdir(), 'mrp-vm-achilles-'));
-  const moduleDir = path.join(rootDir, 'fake-achilles');
+  const moduleDir = path.join(rootDir, 'AchillesAgentLib');
+  return createFakeAchillesModuleAt(rootDir, moduleDir, methodName);
+}
+
+async function createFakeAchillesModuleAt(rootDir, moduleDir, methodName = 'invoke') {
   await mkdir(moduleDir, { recursive: true });
   await writeFile(path.join(moduleDir, 'index.mjs'), [
     'export class LLMAgent {',
@@ -36,13 +40,34 @@ async function createFakeAchillesModule(methodName = 'invoke') {
   };
 }
 
+async function createFakeNodeModulesAchillesModule(methodName = 'invoke') {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'mrp-vm-achilles-node-modules-'));
+  const moduleDir = path.join(rootDir, 'node_modules', 'achillesAgentLib');
+  await mkdir(moduleDir, { recursive: true });
+  await writeFile(path.join(moduleDir, 'package.json'), JSON.stringify({
+    name: 'ploinky-agent-lib',
+    type: 'module',
+    exports: {
+      '.': './index.mjs',
+      './package.json': './package.json',
+    },
+  }, null, 2), 'utf8');
+  return createFakeAchillesModuleAt(rootDir, moduleDir, methodName);
+}
+
+async function createFakeParentDirectoryAchillesModule(methodName = 'invoke') {
+  const parentDir = await mkdtemp(path.join(os.tmpdir(), 'mrp-vm-achilles-parent-'));
+  const rootDir = path.join(parentDir, 'workspace');
+  await mkdir(rootDir, { recursive: true });
+  const moduleDir = path.join(parentDir, 'AchillesAgentLib');
+  return createFakeAchillesModuleAt(rootDir, moduleDir, methodName);
+}
+
 test('createRuntimeConfig builds Achilles profile routing from manual overrides', async () => {
   const fake = await createFakeAchillesModule();
   const runtimeConfig = createRuntimeConfig({
     baseDir: fake.rootDir,
     manualOverrides: {
-      provider: 'achilles',
-      achillesAgentLibPath: './fake-achilles/index.mjs',
       modelTiers: {
         fast: 'mini-model',
         standard: 'std-model',
@@ -58,10 +83,32 @@ test('createRuntimeConfig builds Achilles profile routing from manual overrides'
     },
   });
 
-  assert.equal(runtimeConfig.llm.provider, 'achilles');
-  assert.equal(runtimeConfig.dependencies.achillesAgentLib.strategy, 'manual-override');
+  assert.equal(runtimeConfig.llm.adapter, 'managed');
+  assert.equal(runtimeConfig.dependencies.achillesAgentLib.strategy, 'project-root');
   assert.equal(resolveLlmProfile(runtimeConfig, 'plannerLLM').model, 'planner-model');
   assert.equal(resolveLlmProfile(runtimeConfig, 'fastLLM').model, 'mini-model');
+});
+
+test('createRuntimeConfig resolves achillesAgentLib from node_modules by folder name', async () => {
+  const fake = await createFakeNodeModulesAchillesModule();
+  const runtimeConfig = createRuntimeConfig({
+    baseDir: fake.rootDir,
+  });
+
+  assert.equal(runtimeConfig.llm.adapter, 'managed');
+  assert.equal(runtimeConfig.dependencies.achillesAgentLib.strategy, 'node_modules');
+  assert.match(runtimeConfig.dependencies.achillesAgentLib.modulePath, /node_modules\/achillesAgentLib\/index\.mjs$/);
+});
+
+test('createRuntimeConfig resolves AchillesAgentLib from a parent directory', async () => {
+  const fake = await createFakeParentDirectoryAchillesModule();
+  const runtimeConfig = createRuntimeConfig({
+    baseDir: fake.rootDir,
+  });
+
+  assert.equal(runtimeConfig.llm.adapter, 'managed');
+  assert.equal(runtimeConfig.dependencies.achillesAgentLib.strategy, 'ancestor-dir');
+  assert.match(runtimeConfig.dependencies.achillesAgentLib.modulePath, /AchillesAgentLib\/index\.mjs$/);
 });
 
 test('AchillesLlmAdapter invokes LLMAgent through the configured profile binding', async () => {
@@ -69,8 +116,6 @@ test('AchillesLlmAdapter invokes LLMAgent through the configured profile binding
   const runtimeConfig = createRuntimeConfig({
     baseDir: fake.rootDir,
     manualOverrides: {
-      provider: 'achilles',
-      achillesAgentLibPath: './fake-achilles/index.mjs',
       profileBindings: {
         writerLLM: {
           tier: 'standard',
@@ -101,8 +146,6 @@ test('AchillesLlmAdapter uses complete({ prompt, ... }) when the agent exposes c
   const runtimeConfig = createRuntimeConfig({
     baseDir: fake.rootDir,
     manualOverrides: {
-      provider: 'achilles',
-      achillesAgentLibPath: './fake-achilles/index.mjs',
       profileBindings: {
         writerLLM: {
           tier: 'standard',

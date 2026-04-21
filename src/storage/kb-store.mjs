@@ -39,12 +39,33 @@ function computeLexicalScore(queryTokens, entry) {
     return 0;
   }
 
-  const documentTokens = tokenize([
-    entry.content,
+  const summaryTokens = tokenize([
     entry.meta.title,
     entry.meta.summary,
-    ...(entry.meta.tags ?? []),
   ].join(' '));
+
+  const routingTokens = tokenize([
+    ...(entry.meta.commands ?? []),
+    ...(entry.meta.interpreters ?? []),
+    ...(entry.meta.tags ?? []),
+    ...(entry.meta.domains ?? []),
+  ].join(' '));
+
+  const helperTokens = tokenize((entry.helpers ?? [])
+    .map((helper) => canonicalText(helper.value))
+    .join(' '));
+
+  const bodyTokens = tokenize([
+    entry.content,
+    ...helperTokens,
+  ].join(' '));
+
+  const documentTokens = [
+    ...summaryTokens,
+    ...summaryTokens,
+    ...routingTokens,
+    ...bodyTokens,
+  ];
 
   if (documentTokens.length === 0) {
     return 0;
@@ -63,11 +84,17 @@ function computeLexicalScore(queryTokens, entry) {
     }
     const normalizedTf = termFrequency / documentTokens.length;
     score += 1.2 * normalizedTf + termFrequency;
+    if (summaryTokens.includes(token)) {
+      score += 3;
+    }
+    if (routingTokens.includes(token)) {
+      score += 2;
+    }
   }
   return score;
 }
 
-function createCatalogEntry(filePath, scope, entries) {
+function createCatalogEntry(filePath, scope, entries, sourceText) {
   const rootIds = [...entries.keys()].filter((key) => !key.includes(':'));
   if (rootIds.length === 0) {
     throw new Error(`KU file ${filePath} has no root variable.`);
@@ -101,6 +128,7 @@ function createCatalogEntry(filePath, scope, entries) {
     scope,
     content: typeof content === 'string' ? content : canonicalText(content),
     rawContent: content,
+    sourceText,
     meta,
     helpers,
   };
@@ -142,7 +170,7 @@ export class KbStore {
     for (const filePath of files) {
       const source = await readText(filePath, '');
       const parsed = parseSopModule(source);
-      entries.push(createCatalogEntry(filePath, scope, parsed));
+      entries.push(createCatalogEntry(filePath, scope, parsed, source));
     }
 
     return entries;
@@ -181,6 +209,19 @@ export class KbStore {
 
   async listGlobalKus() {
     return this.loadKuFiles(this.getGlobalKusDir(), 'global');
+  }
+
+  async upsertGlobalKu(input) {
+    const {
+      fileName,
+      sopText = null,
+      entries = null,
+    } = input;
+    await ensureDir(this.getGlobalKusDir());
+    const targetFile = path.join(this.getGlobalKusDir(), fileName);
+    const text = sopText ?? renderSopModule(entries);
+    await writeText(targetFile, text);
+    return targetFile;
   }
 
   async upsertSessionKu(sessionId, input) {
@@ -268,8 +309,15 @@ export class KbStore {
         }
         return true;
       })
-      .filter((entry) => requiredPromptGroups.length === 0
-        || requiredPromptGroups.includes(entry.meta.mandatory_group))
+      .filter((entry) => {
+        if (requiredPromptGroups.length === 0) {
+          return true;
+        }
+        if (entry.meta.ku_type !== 'prompt_asset') {
+          return true;
+        }
+        return requiredPromptGroups.includes(entry.meta.mandatory_group);
+      })
       .filter((entry) => acceptedModelClasses.length === 0
         || metadataArrayIncludes(entry.meta.model_class, acceptedModelClasses)
         || metadataArrayIncludes(entry.meta.model_classes, acceptedModelClasses))
@@ -327,7 +375,11 @@ export class KbStore {
     let usedBytes = 0;
 
     for (const item of scored) {
-      const rendered = canonicalText(item.entry.content);
+      const rendered = canonicalText([
+        item.entry.meta.title,
+        item.entry.meta.summary,
+        item.entry.content,
+      ].filter(Boolean).join('\n'));
       const size = byteLength(rendered);
       if (usedBytes + size > byteBudget && selected.length > 0) {
         pruned.push({ kuId: item.entry.kuId, reason: 'byte_budget' });

@@ -1,6 +1,31 @@
 @ku_logic_guidance text
-Use logic-eval for small deterministic checks.
-Write explicit when/then rules and avoid pseudo-code.
+Choose logic-eval when the step is a small deterministic rule block rather than a script or prose instruction.
+
+Use it for:
+- local gating conditions,
+- simple classification rules,
+- explicit scoring or withdrawal rules,
+- checks that can be written as use/when/and/or/then lines.
+
+Good bodies:
+- start with an optional use line,
+- express predicates explicitly,
+- end with concrete actions such as set, score, withdraw, patch-meta, or emit error.
+
+Choose logic-eval over js-eval when the logic is easiest to audit as declarative rules and the action space is small. This is valuable for guards, validation, and simple branching that should remain easy to inspect in traces.
+
+Typical good fits:
+- "if input is empty then emit error",
+- "if score below threshold then withdraw candidate",
+- "if all required fields exist then set approved".
+
+Use logic-eval only when the rule syntax itself is the value. If the planner is merely trying to express natural-language reasoning, route the step to deepLLM or writerLLM instead of forcing prose into logic-eval.
+
+Avoid logic-eval when:
+- the instruction is mostly narrative,
+- the step needs loops or object manipulation,
+- the task is really deterministic text assembly,
+- the body is pseudo-code rather than rule syntax.
 @ku_logic_guidance:meta json
 {
   "rev": 1,
@@ -8,8 +33,8 @@ Write explicit when/then rules and avoid pseudo-code.
   "scope": "default",
   "status": "active",
   "title": "logic guidance",
-  "summary": "Default guidance for logic-eval rule bodies.",
-  "priority": 5,
+  "summary": "Use logic-eval for short deterministic use/when/then rules, validation gates, and explicit local scoring or withdrawal decisions.",
+  "priority": 9,
   "trust": "trusted",
   "domains": [
     "runtime",

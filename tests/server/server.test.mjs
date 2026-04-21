@@ -33,7 +33,7 @@ async function waitForOutcome(baseUrl, sessionId, requestId) {
 
 test('server exposes native session and request APIs plus /chat', async () => {
   const rootDir = await createTempRuntimeRoot();
-  const server = createServer({ rootDir, runtimeOptions: { deterministic: {} } });
+  const server = createServer({ rootDir, allowFakeLlm: true, runtimeOptions: { deterministic: {} } });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
 
@@ -98,7 +98,7 @@ test('server exposes native session and request APIs plus /chat', async () => {
 
     const config = await fetch(`${baseUrl}/api/config`).then((response) => response.json());
     assert.equal(config.default_llm, 'write');
-    assert.equal(config.provider, 'fake');
+    assert.equal(config.llm_adapter, 'fake');
     assert.equal(config.interpreter_mappings.plannerLLM, 'plan');
 
     const completion = await fetch(`${baseUrl}/v1/chat/completions`, {
@@ -119,9 +119,9 @@ test('server exposes native session and request APIs plus /chat', async () => {
     assert.equal(sessionDetails.session_id, session.session_id);
 
     const chatPage = await fetch(`${baseUrl}/chat`).then((response) => response.text());
-    assert.match(chatPage, /Ask MRP-VM/);
-    assert.match(chatPage, /Plan/);
-    assert.match(chatPage, /Trace/);
+    assert.match(chatPage, /MRP-VM Chat/);
+    assert.match(chatPage, /Traceability/);
+    assert.match(chatPage, /KB Browser/);
   } finally {
     server.close();
     await once(server, 'close');

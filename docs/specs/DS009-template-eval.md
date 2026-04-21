@@ -15,18 +15,18 @@ summary: Defines the deterministic template syntax, rendering rules, default KU 
 
 ### Syntax
 
-The v0 baseline syntax is Handlebars-like and must support:
+The v0 baseline syntax aligns with SOP Lang references for simple placeholders and reserves `{{ ... }}` for template logic:
 
 | Form | Meaning |
 | --- | --- |
-| `{{ expr }}` | Placeholder expansion. |
+| `$expr` or `${expr}` | Placeholder expansion (preferred for plain values). |
 | `{{#if expr}} ... {{else}} ... {{/if}}` | Conditional rendering. |
 | `{{#each expr as item}} ... {{/each}}` | Looping over lists. |
 | `{{join expr ", "}}` | Join helper. |
 | `{{default expr "fallback"}}` | Default fallback helper. |
 | `{{formatDate expr}}`, `{{formatNumber expr}}`, `{{truncate expr 120}}` | Deterministic formatters. |
 
-`expr` may resolve against direct values, representatives, or explicit runtime handles flattened into deterministic renderable values by the command.
+`expr` resolves against direct values, representatives, or explicit runtime handles flattened into deterministic renderable values by the command. Simple value insertion must use `$expr`/`${expr}` rather than `{{expr}}`.
 
 ### Resolution rules
 
@@ -41,6 +41,8 @@ Nested structures must be traversable deterministically by dotted paths such as 
 ### Caller guidance and failure semantics
 
 `template-eval` default KUs must describe preferred template skeletons, allowed helper usage, and the standard section names it is expected to assemble from DS005 context packages. This keeps template generation predictable for planning.
+
+The KU summary must be specific enough that planning can recognize `template-eval` as a deterministic assembly surface rather than as a general prose generator. The KU body must include the expected placeholder style, control-block limits, and examples of when to hand work to `writerLLM` instead.
 
 Named templates may live either in `kb` or as local module assets, but both paths must use explicit loading rules so template provenance remains inspectable.
 

@@ -28,6 +28,8 @@ The planned implementation must target Node.js with ECMAScript modules and `.mjs
 
 Modules must follow a single dominant responsibility. Parser code must not mix with storage code. Session orchestration must not mix with HTTP hosting. Provider adapters must not mix with UI logic. When the source tree is created, a healthy top-level split will typically include `src/lang`, `src/runtime`, `src/session`, `src/commands`, `src/interpreters`, `src/storage`, `src/policies`, and `src/utils`.
 
+Server-owned HTML templates and CSS must live in server-side template or asset files under `server/`, not as inline literals inside JavaScript modules. JavaScript may orchestrate interaction logic, but it must not become the canonical storage location for repository-owned HTML or stylesheet content.
+
 All asynchronous public code must use `async` and `await`. Public APIs based on callback style or dense `.then()` chains should be avoided. The codebase should favor standard-library dependencies first and require strong justification for heavy third-party dependencies.
 
 The codebase should explicitly prefer SRP, YAGNI, and pragmatic SOLID over speculative abstraction. First implementation work should solve the documented runtime contract with small modules and narrow interfaces rather than building a generalized framework around imagined future needs.

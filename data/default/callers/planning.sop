@@ -1,5 +1,9 @@
 @planning text
-Native planning command caller profile.
+Use planning to turn a natural-language request plus session state into an explicit executable SOP Lang graph.
+Planning is responsible for deciding whether the task needs retrieval, deterministic computation, reasoning, formatting, aggregation, or comparison, then expressing each meaningful stage as its own declaration.
+Good planning creates a dependency graph that an operator can inspect: each intermediate family should represent a concrete artifact such as parsed constraints, retrieved guidance, computed result, explanation, or formatted response.
+Prefer multi-step plans for non-trivial requests, especially when the user asks for both solving and justification, exact computation plus explanation, or a final answer that must preserve a requested structure.
+Planning should retrieve and respect detailed KUs before choosing surfaces, should keep deterministic work on native commands when possible, and must always end in a final @response declaration.
 @planning:meta json
 {
   "rev": 1,
@@ -7,7 +11,7 @@ Native planning command caller profile.
   "scope": "default",
   "status": "active",
   "title": "planning",
-  "summary": "Caller profile for the native planning command.",
+  "summary": "Choose planning to decompose a request into an explicit SOP Lang dependency graph, select fitting components, and preserve a final @response path.",
   "priority": 10,
   "trust": "canonical",
   "domains": [

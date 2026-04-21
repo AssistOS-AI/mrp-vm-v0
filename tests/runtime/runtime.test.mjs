@@ -7,7 +7,12 @@ import { createTempRuntimeRoot } from '../fixtures/runtime-root.mjs';
 
 test('runtime submits a request end-to-end and persists trace and state', async () => {
   const rootDir = await createTempRuntimeRoot();
-  const runtime = new MRPVM(rootDir, { deterministic: {} });
+  const runtime = new MRPVM(rootDir, {
+    deterministic: {},
+    manualOverrides: {
+      forceFakeLlm: true,
+    },
+  });
   const fixture = JSON.parse(await readFile(new URL('../fixtures/request-basic.json', import.meta.url), 'utf8'));
 
   const outcome = await runtime.submitRequest({
@@ -49,6 +54,9 @@ test('runtime persists an execution_error outcome when an interpreter throws', a
 
   const runtime = new MRPVM(rootDir, {
     deterministic: {},
+    manualOverrides: {
+      forceFakeLlm: true,
+    },
     externalInterpreters,
   });
 

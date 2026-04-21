@@ -1,7 +1,37 @@
 @ku_js_guidance text
-Use js-eval for bounded procedural transformations.
-Prefer explicit sop.emit or return values.
-Do not assume host filesystem or network access.
+Choose js-eval when a step needs bounded procedural work rather than prose generation.
+
+Use it for:
+- arithmetic, mapping, grouping, filtering, and object reshaping,
+- explicit reads from $family values,
+- controlled writes through ~family handles,
+- small local orchestration that still needs deterministic traceable effects,
+- bounded graph traversal, search, simulation, or exact state transition generation.
+
+Prefer bodies that are real JavaScript, make the data flow obvious, and stay narrowly focused on the declared target family.
+
+Good patterns:
+- compute a derived object from one or more $families,
+- normalize a list or record,
+- update one family through ~family.set(...) or property writes,
+- emit a small structural follow-up through sop.insertDeclarations(...) when truly necessary.
+
+Choose js-eval over template-eval when computation or branching is needed before rendering. Choose it over logic-eval when the task requires arrays, object traversal, arithmetic, or procedural shaping that rule syntax would express poorly.
+
+Useful body shapes include:
+- deriving JSON-ready output from multiple dependencies,
+- sanitizing parsed file content,
+- grouping records before a final template step,
+- computing an exact answer that should not depend on an LLM,
+- generating a minimal path or sequence of states for a puzzle, scheduling, or traversal problem.
+
+Avoid js-eval when:
+- the body is plain prose,
+- the task is only a deterministic template,
+- the step is better expressed as explicit when/then rules,
+- the task really needs an LLM to interpret language.
+
+Do not assume unrestricted filesystem, process, or network access.
 @ku_js_guidance:meta json
 {
   "rev": 1,
@@ -9,8 +39,8 @@ Do not assume host filesystem or network access.
   "scope": "default",
   "status": "active",
   "title": "js guidance",
-  "summary": "Default guidance for js-eval bodies.",
-  "priority": 5,
+  "summary": "Use js-eval for bounded procedural computation, data reshaping, exact arithmetic, state-space search, and explicit state updates; avoid prose-only or rule-style bodies.",
+  "priority": 9,
   "trust": "trusted",
   "domains": [
     "runtime",

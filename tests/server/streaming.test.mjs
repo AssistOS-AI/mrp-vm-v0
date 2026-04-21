@@ -17,7 +17,7 @@ async function createSession(baseUrl) {
 
 test('SSE stream replays buffered DS014 events for a request', async () => {
   const rootDir = await createTempRuntimeRoot();
-  const server = createServer({ rootDir, runtimeOptions: { deterministic: {} } });
+  const server = createServer({ rootDir, allowFakeLlm: true, runtimeOptions: { deterministic: {} } });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
 

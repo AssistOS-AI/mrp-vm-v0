@@ -1,5 +1,8 @@
 @logic-eval text
-Native logic-eval caller profile.
+Use logic-eval for short deterministic rule sets written as explicit when/then blocks.
+Prefer it when the step is a local check, scoring rule, gating rule, or simple branch decision that can be expressed declaratively and audited line by line.
+The body must already be close to the supported rule syntax; logic-eval should never be used as a container for ordinary explanatory prose.
+Avoid it for procedural transformations, free-form prose, or vague natural-language instructions that are not already close to the supported CNL.
 @logic-eval:meta json
 {
   "rev": 1,
@@ -7,7 +10,7 @@ Native logic-eval caller profile.
   "scope": "default",
   "status": "active",
   "title": "logic-eval",
-  "summary": "Caller profile for bounded declarative reasoning.",
+  "summary": "Choose logic-eval for short deterministic when/then rules, gating checks, and explicit local decisions with auditable rule syntax.",
   "priority": 8,
   "trust": "canonical",
   "domains": [

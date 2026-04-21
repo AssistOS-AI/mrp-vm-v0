@@ -15,17 +15,21 @@ async function createSession(baseUrl, isAdmin = false) {
   return response.json();
 }
 
-test('admin-only server endpoints reject non-admin sessions and accept admin sessions', async () => {
+test('admin-only server endpoints enforce bootstrap-admin and user boundaries', async () => {
   const rootDir = await createTempRuntimeRoot();
-  const server = createServer({ rootDir, runtimeOptions: { deterministic: {} } });
+  const server = createServer({ rootDir, allowFakeLlm: true, runtimeOptions: { deterministic: {} } });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
 
   try {
     const address = server.address();
     const baseUrl = `http://127.0.0.1:${address.port}`;
+    const adminSession = await createSession(baseUrl, false);
     const userSession = await createSession(baseUrl, false);
-    const adminSession = await createSession(baseUrl, true);
+
+    assert.equal(adminSession.effective_role, 'admin');
+    assert.equal(adminSession.auth_mode, 'bootstrap_admin');
+    assert.equal(userSession.effective_role, 'user');
 
     await fetch(`${baseUrl}/api/sessions/${userSession.session_id}/kb`, {
       method: 'POST',
@@ -87,6 +91,64 @@ test('admin-only server endpoints reject non-admin sessions and accept admin ses
       }),
     });
     assert.equal(acceptedPromotion.status, 200);
+  } finally {
+    server.close();
+    await once(server, 'close');
+  }
+});
+
+test('bootstrap admin key can be created before any server key exists', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const server = createServer({ rootDir, allowFakeLlm: true, runtimeOptions: { deterministic: {} } });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+
+  try {
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+
+    const bootstrapResponse = await fetch(`${baseUrl}/api/auth/bootstrap-key`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        label: 'Bootstrap admin',
+      }),
+    });
+    assert.equal(bootstrapResponse.status, 201);
+    const bootstrapPayload = await bootstrapResponse.json();
+    assert.equal(bootstrapPayload.record.role, 'admin');
+    assert.match(String(bootstrapPayload.api_key), /^key_/);
+
+    const authContext = await fetch(`${baseUrl}/api/auth/context`, {
+      headers: {
+        'x-api-key': bootstrapPayload.api_key,
+      },
+    }).then((response) => response.json());
+    assert.equal(authContext.caller.role, 'admin');
+    assert.equal(authContext.caller.auth_mode, 'api_key');
+
+    const createdSession = await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': bootstrapPayload.api_key,
+      },
+      body: JSON.stringify({}),
+    }).then((response) => response.json());
+    assert.equal(createdSession.effective_role, 'admin');
+
+    const secondBootstrap = await fetch(`${baseUrl}/api/auth/bootstrap-key`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        label: 'Another bootstrap',
+      }),
+    });
+    assert.equal(secondBootstrap.status, 403);
   } finally {
     server.close();
     await once(server, 'close');

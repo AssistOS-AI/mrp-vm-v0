@@ -5,7 +5,12 @@ import { createTempRuntimeRoot } from '../fixtures/runtime-root.mjs';
 
 test('SDK entry points create sessions, submit requests, inspect, and close', async () => {
   const rootDir = await createTempRuntimeRoot();
-  const runtime = createRuntime(rootDir, { deterministic: {} });
+  const runtime = createRuntime(rootDir, {
+    deterministic: {},
+    manualOverrides: {
+      forceFakeLlm: true,
+    },
+  });
   const session = await createSession(runtime, { isAdmin: true });
 
   assert.ok(session.session_id);
@@ -27,7 +32,12 @@ test('SDK entry points create sessions, submit requests, inspect, and close', as
 
 test('session executor rejects concurrent active requests', async () => {
   const rootDir = await createTempRuntimeRoot();
-  const runtime = createRuntime(rootDir, { deterministic: {} });
+  const runtime = createRuntime(rootDir, {
+    deterministic: {},
+    manualOverrides: {
+      forceFakeLlm: true,
+    },
+  });
   const session = await createSession(runtime, {});
 
   const first = await submitRequest(session, {

@@ -36,7 +36,7 @@ All non-test wrapper executions must obtain provider access through `LLMAgent` f
 1. where AchillesAgentLib is resolved from,
 2. which model is bound to each wrapper profile,
 3. which model tier and task tag are attached to each invocation,
-4. whether the repository is using the real Achilles path or an explicitly configured fake fallback.
+4. whether the repository is using the managed Achilles path or an explicitly configured fake fallback.
 
 The deterministic fake adapter remains valid only for tests, fixtures, and explicit local fallback. It must not become the hidden default architecture for production-facing wrapper work.
 
@@ -66,6 +66,8 @@ Every wrapper profile must also have default KUs that describe:
 4. when fallback to heavier model behavior is allowed.
 
 This keeps wrapper use aligned with DS011 rather than hidden inside adapter code.
+
+Those KUs must be detailed enough that planning can choose among wrapper profiles intentionally. The summary must say what kind of task the profile is good at, while the KU body must explain input expectations, output discipline, and anti-patterns. Placeholder descriptions such as "wrapper profile" are not sufficient.
 
 ### Runtime routing and model tiers
 

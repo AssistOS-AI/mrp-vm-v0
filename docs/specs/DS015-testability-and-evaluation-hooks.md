@@ -17,6 +17,8 @@ The runtime must be testable before real-model integration grows large enough to
 
 The implementation must provide deterministic substitutes for all nondeterministic execution boundaries, especially LLM wrappers. Fake or stub adapters must be able to return fixed outputs, refusals, and failures under test control.
 
+Fake adapters must also support scripted sequences keyed by interpreter profile so tests can predefine multi-step plans and responses without relying on prompt-text matching. It must be possible to specify a per-profile queue of outputs and/or keyed outputs for a specific invocation signature.
+
 The runtime must also expose deterministic modes for:
 
 1. scheduler ordinals and timestamps,

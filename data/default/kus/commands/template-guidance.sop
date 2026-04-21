@@ -1,6 +1,28 @@
 @ku_template_guidance text
-Use template-eval when the output should be deterministic and sectioned.
-Prefer placeholders, if blocks, and each blocks over free-form generation.
+Choose template-eval when the output should be deterministic, sectioned, and assembled from already-known values.
+
+Use it for:
+- final response assembly from prior families,
+- prompt assembly with stable wording,
+- reports, summaries, or lists where the structure matters more than novel prose.
+
+Good bodies:
+- use $value or ${value} for straightforward placeholders,
+- reserve {{#if}} and {{#each}} for simple structural control only when needed,
+- keep the template readable and explicit about sections.
+
+Choose template-eval over writerLLM when the response shape is already known and only composition remains. This keeps output stable, inspectable, and cheap.
+
+Strong fits include:
+- final answer wrappers around computed values,
+- markdown reports from already prepared sections,
+- prompts that should preserve exact wording except for slot filling,
+- user-facing answers where section headings, numbered steps, and exact computed states are already known and should not be reinvented.
+
+Avoid template-eval when:
+- the step requires open-ended prose invention,
+- the template body is really a request for reasoning,
+- the task needs procedural state updates instead of rendering.
 @ku_template_guidance:meta json
 {
   "rev": 1,
@@ -8,8 +30,8 @@ Prefer placeholders, if blocks, and each blocks over free-form generation.
   "scope": "default",
   "status": "active",
   "title": "template guidance",
-  "summary": "Default guidance for template-eval bodies.",
-  "priority": 5,
+  "summary": "Use template-eval for deterministic assembly of known values into stable sectioned output with $placeholders; avoid using it as a hidden prose generator.",
+  "priority": 9,
   "trust": "trusted",
   "domains": [
     "runtime",
@@ -24,6 +46,7 @@ Prefer placeholders, if blocks, and each blocks over free-form generation.
     "guidance"
   ],
   "input_patterns": [
-    "\\{\\{.+?\\}\\}"
+    "\\$[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)*",
+    "\\$\\{[A-Za-z_][A-Za-z0-9_.]*\\}"
   ]
 }
