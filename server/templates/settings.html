@@ -42,17 +42,14 @@
         <form id="model-settings" class="settings-section stack">
           <div class="between">
             <div class="stack compact">
-              <div class="eyebrow">Routing</div>
-              <h3>Selection and binding</h3>
+              <div class="eyebrow">Models</div>
+              <h3>Default model</h3>
             </div>
             <button id="save-model-settings" type="submit">Save</button>
           </div>
-          <div class="settings-two-column">
-            <section class="inset-card stack">
-              <div class="stack compact">
-                <div class="eyebrow">Selection</div>
-                <h4>Default LLM</h4>
-              </div>
+          <section class="inset-card stack">
+            <div class="muted small">Choose the default LLM from the discovered catalog. Tags stay visible directly in the selector so the list remains compact but still informative.</div>
+            <div class="settings-form-grid">
               <label class="stack">
                 <span class="small muted">Filter by tag</span>
                 <select id="default-llm-tag-filter"></select>
@@ -61,16 +58,9 @@
                 <span class="small muted">Model</span>
                 <select id="default-llm"></select>
               </label>
-              <div id="default-llm-tags" class="row wrap"></div>
-            </section>
-            <section class="inset-card stack">
-              <div class="stack compact">
-                <div class="eyebrow">Binding</div>
-                <h4>Interpreter bindings</h4>
-              </div>
-              <div id="profile-bindings" class="settings-binding-grid"></div>
-            </section>
-          </div>
+            </div>
+            <div id="default-llm-tags" class="row wrap"></div>
+          </section>
         </form>
       </section>
 
@@ -98,46 +88,13 @@
           </div>
 
           <div id="bootstrap-status" class="settings-auth-status"></div>
-
-          <div class="settings-two-column">
-            <section class="inset-card stack">
-              <div class="stack compact">
-                <div class="eyebrow">Access</div>
-                <h4>Use API key</h4>
-              </div>
-              <label class="stack">
-                <span class="small muted">Current key</span>
-                <input id="api-key-input" list="saved-key-options" placeholder="Paste or select an API key">
-                <datalist id="saved-key-options"></datalist>
-              </label>
-              <label class="stack">
-                <span class="small muted">Local label</span>
-                <input id="api-key-label" placeholder="Admin laptop key">
-              </label>
-              <div class="settings-inline-actions">
-                <button id="save-api-key" type="button">Use key</button>
-                <button id="remember-api-key" class="secondary" type="button">Save locally</button>
-                <button id="clear-api-key" class="secondary" type="button">Clear current</button>
-              </div>
-              <div class="muted small">If API keys already exist, normal access should always start from one of these keys. Saved browser keys appear below for quick switching.</div>
-              <div id="saved-api-keys" class="stack"></div>
-            </section>
-
-            <section class="inset-card stack">
-              <div class="stack compact">
-                <div class="eyebrow">Bootstrap</div>
-                <h4>Admin key bootstrap</h4>
-              </div>
-              <label class="stack">
-                <span class="small muted">Bootstrap label</span>
-                <input id="bootstrap-key-label" placeholder="Bootstrap admin">
-              </label>
-              <div class="settings-inline-actions">
-                <button id="bootstrap-key" type="button">Create bootstrap admin key</button>
-              </div>
-              <div class="muted small">Available only before any API key exists.</div>
-            </section>
-          </div>
+          <section class="inset-card stack">
+            <div class="stack compact">
+              <div class="eyebrow">Access</div>
+              <h4>Current access</h4>
+            </div>
+            <div id="auth-current-access" class="stack"></div>
+          </section>
 
           <form id="api-key-form" class="inset-card stack">
             <div class="stack compact">
@@ -173,6 +130,38 @@
       </section>
     </section>
   </main>
+  <div id="settings-key-modal" class="modal">
+    <div class="modal-content stack auth-modal-content">
+      <div class="stack compact">
+        <div class="eyebrow">Authentication</div>
+        <h3 id="settings-key-modal-title">API key</h3>
+        <div id="settings-key-modal-status" class="muted small"></div>
+      </div>
+      <div id="settings-key-modal-create" class="stack">
+        <label class="stack">
+          <span class="small muted">Bootstrap label</span>
+          <input id="settings-key-modal-label" placeholder="Bootstrap admin">
+        </label>
+        <div class="settings-inline-actions">
+          <button id="settings-bootstrap-submit" type="button">Create bootstrap admin key</button>
+          <button class="secondary" type="button" data-close-key-modal>Close</button>
+        </div>
+      </div>
+      <div id="settings-key-modal-reveal" class="stack" hidden>
+        <div id="settings-key-modal-meta" class="row wrap"></div>
+        <label class="stack">
+          <span class="small muted">API key</span>
+          <input id="settings-key-modal-token" readonly>
+        </label>
+        <div class="settings-inline-actions">
+          <button id="settings-key-modal-copy" type="button">Copy key</button>
+          <button id="settings-key-modal-remember" class="secondary" type="button">Save locally</button>
+          <button id="settings-key-modal-use" class="secondary" type="button">Use key</button>
+          <button class="secondary" type="button" data-close-key-modal>Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/assets/settings.js"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@ id: DS023
 title: Model Tier and Routing Strategy
 status: implemented
 owner: runtime
-summary: Defines model tiers, profile bindings, tag-aware model discovery, settings-facing selection controls, and AchillesAgentLib resolution rules for LLM wrapper routing.
+summary: Defines model tiers, profile bindings, tag-aware model discovery, simplified settings-facing default-model controls, and AchillesAgentLib resolution rules for LLM wrapper routing.
 ---
 # DS023 Model Tier and Routing Strategy
 
@@ -74,14 +74,15 @@ When AchillesAgentLib is not available, the server may infer tags heuristically 
 
 ### Settings-facing selection behavior
 
-The settings page must expose model routing through select controls rather than through a separate read-only gallery of candidate cards. The required behavior is:
+The settings page must expose model selection through compact select controls rather than through a separate read-only gallery of candidate cards. The required behavior is:
 
 1. model options show associated tags inline in their labels,
 2. model tag filters may narrow the visible options without hiding the full catalog permanently,
-3. profile bindings and default-model selection are rendered in a compact two-column grid when width allows,
+3. the default-model selection is rendered compactly without exposing unrelated internal routing details,
 4. the UI should not dedicate a separate "candidate models" panel once the tag-aware selects already expose the catalog.
 
 The purpose of tags is routing clarity, not decorative display. If the runtime knows a model is tagged `coding`, `reasoning`, or `agentic`, that information must be visible where the user makes the selection.
+The runtime may still maintain per-profile bindings internally, but the baseline settings UI does not have to expose those bindings until a dedicated operator-facing workflow is specified.
 
 ### Task tags
 
@@ -108,6 +109,10 @@ Response: Embedded runtimes, tests, and local tooling often need multiple config
 Question #3: Why are task tags required in addition to profile names?
 
 Response: Two invocations may share one wrapper profile but belong to very different repository workflows. Task tags let the provider layer distinguish documentation, specification, orchestration, bootstrap, and testing work without duplicating wrapper profiles for every use case.
+
+Question #4: Why keep profile bindings internal even though they exist in runtime configuration?
+
+Response: Profile bindings are implementation-level routing state for wrapper families such as `plannerLLM` or `writerLLM`. Exposing them as primary settings without a stronger UX model makes the UI look like it offers an end-user routing system when it is really showing internal adapter plumbing. The baseline UI therefore focuses on default-model selection and tag visibility while preserving profile bindings as internal runtime configuration.
 
 ## Conclusion
 

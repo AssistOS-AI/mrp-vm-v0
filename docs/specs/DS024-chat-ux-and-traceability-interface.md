@@ -111,6 +111,7 @@ The right side contains:
 3. action buttons including `Save` and `Default` placed below the editor body.
 
 The editor must remain to the right of the tree on wide screens rather than collapsing below it unnecessarily.
+On wide screens the tree rail should use a conservative default width rather than consuming roughly one third of the screen, and the UI may expose a drag handle so operators can resize that rail when deeper nesting needs more room.
 
 ### Settings page
 
@@ -124,12 +125,14 @@ There is no separate runtime-overview tab.
 
 #### Models tab
 
-The models tab uses compact select controls laid out in two columns when width allows. The tab must:
+The models tab uses compact select controls for the default model. The tab must:
 
-1. expose default-model and profile-binding selects,
+1. expose the default-model select,
 2. show model tags inline inside select option labels,
 3. optionally filter the visible list by tag,
 4. avoid a separate candidate-model gallery once the select controls already reveal the catalog.
+
+Per-profile wrapper bindings may still exist internally in runtime configuration, but the baseline settings page does not expose them until there is a clearer operator-facing UX for that mechanism.
 
 #### Interpreters tab
 
@@ -146,6 +149,10 @@ The authentication tab must support:
 5. creating additional keys with explicit role,
 6. revoking keys when authorized.
 
+The first-login bootstrap flow should appear as a modal or equivalent popup, reveal the new bootstrap admin key once so the operator can copy it, and then allow login with that key.
+After bootstrap is complete, fresh browsers or logged-out states should show only ordinary login behavior rather than a persistent bootstrap section.
+When an API key is active, the UI should show a masked version plus `Copy` and `Logout` actions instead of printing the full token inline.
+Server-side key inventory may show only non-secret metadata such as id, role, and prefix; full key copy remains available at creation time or from browser-saved key entries.
 When the page loads and saved keys exist, the UI should prompt for or suggest an API key rather than hiding the current auth state.
 Switching keys should clear stale session assumptions so subsequent protected pages and newly created sessions use the newly selected authority context coherently.
 

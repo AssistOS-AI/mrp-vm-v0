@@ -19,7 +19,12 @@ const state = {
   search: '',
   typeFilter: '',
   openNodes: new Set(),
+  treeWidth: Number(localStorage.getItem('mrpvm.kbTreeWidth')) || 280,
 };
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
 
 function scopeLabel(scope) {
   return { default: 'Default KUs', global: 'Global KUs', session: 'Session KUs' }[scope] || scope;
@@ -236,6 +241,17 @@ function renderEditor() {
   renderPermissionMessage();
 }
 
+function applyTreeWidth() {
+  const shell = el('kb-browser-shell');
+  if (!shell || window.innerWidth <= 980) {
+    return;
+  }
+  const shellWidth = shell.getBoundingClientRect().width || 0;
+  const maxWidth = shellWidth > 0 ? Math.min(420, Math.max(250, Math.floor(shellWidth * 0.42))) : 360;
+  state.treeWidth = clamp(state.treeWidth || 280, 250, maxWidth);
+  shell.style.setProperty('--kb-tree-width', `${state.treeWidth}px`);
+}
+
 async function loadKb() {
   const params = new URLSearchParams();
   if (state.sessionId) {
@@ -344,12 +360,51 @@ function attachHandlers() {
   });
   el('kb-editor').addEventListener('submit', saveKu);
   el('load-default-ku').addEventListener('click', loadDefaultIntoEditor);
+  const resizer = el('kb-tree-resizer');
+  if (resizer) {
+    let active = false;
+    const move = (event) => {
+      if (!active || window.innerWidth <= 980) {
+        return;
+      }
+      const shell = el('kb-browser-shell');
+      if (!shell) {
+        return;
+      }
+      const bounds = shell.getBoundingClientRect();
+      const maxWidth = Math.min(420, Math.max(250, Math.floor(bounds.width * 0.42)));
+      state.treeWidth = clamp(event.clientX - bounds.left, 250, maxWidth);
+      localStorage.setItem('mrpvm.kbTreeWidth', String(state.treeWidth));
+      applyTreeWidth();
+    };
+    const stop = () => {
+      if (!active) {
+        return;
+      }
+      active = false;
+      document.body.classList.remove('is-resizing');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+    };
+    resizer.addEventListener('pointerdown', (event) => {
+      if (window.innerWidth <= 980) {
+        return;
+      }
+      active = true;
+      document.body.classList.add('is-resizing');
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', stop);
+      event.preventDefault();
+    });
+  }
+  window.addEventListener('resize', applyTreeWidth);
 }
 
 async function init() {
   clearNotice();
   attachHandlers();
   await Promise.all([loadKb(), loadAuth()]);
+  applyTreeWidth();
   summarizeItems();
   renderTree();
   renderInspector();

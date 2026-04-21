@@ -4,6 +4,7 @@ import { createRuntime, compileGraph, KbStore, MRPVM, listAchillesModels } from 
 import { parseUrl, json, html, text, notFound, badRequest, forbidden, unauthorized, readJsonBody, readRequestBody, parseMultipart, startSse, writeSseEvent } from './http-helpers.mjs';
 import { loadPublicAsset, loadTemplate } from './asset-loader.mjs';
 import { AuthStore } from './auth-store.mjs';
+import { loadDemoTasks } from './demo-catalog.mjs';
 
 function parsePathname(pathname) {
   return pathname.split('/').filter(Boolean);
@@ -657,6 +658,7 @@ async function buildTraceabilityPayload(runtime, session, requestId) {
 
 export function createServer(options = {}) {
   const rootDir = options.rootDir ?? process.cwd();
+  const demoTasksPromise = loadDemoTasks(rootDir);
   const runtimeOptions = {
     ...(options.runtimeOptions ?? {}),
   };
@@ -732,6 +734,13 @@ export function createServer(options = {}) {
         return;
       }
 
+      if (request.method === 'GET' && url.pathname === '/api/demo-tasks') {
+        json(response, 200, {
+          items: await demoTasksPromise,
+        });
+        return;
+      }
+
       if (request.method === 'POST' && url.pathname === '/api/auth/bootstrap-key') {
         const status = await authStore.getBootstrapStatus();
         if (status.has_api_keys) {
@@ -762,7 +771,7 @@ export function createServer(options = {}) {
         if (!requireAdmin(response, callerContext)) {
           return;
         }
-        const keys = await authStore.listKeys();
+        const keys = (await authStore.listKeys()).filter((entry) => entry.status !== 'revoked');
         json(response, 200, {
           items: keys.map((entry) => ({
             id: entry.id,

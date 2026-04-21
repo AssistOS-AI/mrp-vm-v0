@@ -17,27 +17,12 @@ import {
   statusClass,
 } from './shared.js';
 
-const DEMO_TASKS = {
-  'session-review': `Review this session request as a multi-step execution showcase.
-1. Retrieve any relevant planning or KB guidance.
-2. Build a structured session summary.
-3. Extract concrete next actions.
-4. Return the answer in a clean final response.`,
-  'logic-triage': `I will give you three candidate incident notes. Validate them, classify severity with explicit checks, explain disagreements, and produce a final operator-facing triage summary.
-
-Note A: latency jumped to 800ms after deploy
-Note B: one region shows intermittent 502
-Note C: customer screenshots suggest stale cache data`,
-  'kb-guided-plan': `Use the repository KB and runtime guidance to decide which commands and interpreters best fit this task, then answer:
-Compare when js-eval, logic-eval, template-eval, and deepLLM should be used, and give one concrete SOP Lang plan example.`,
-  'code-and-report': `Generate a short implementation plan for a utility that parses CSV rows, compute a sample transformed result, and present both the code-oriented output and a readable report.`,
-  'aggregation-audit': `Simulate a workflow that accumulates evidence, compares competing conclusions, and produces a final response. Make the execution trace rich enough to inspect in Traceability.`,
-};
-
 const state = {
   auth: null,
   advancedPanel: 'root',
   currentDetails: null,
+  demoTaskMap: {},
+  demoTasks: [],
   eventSource: null,
   pendingRequest: null,
   sessionId: null,
@@ -148,11 +133,26 @@ function renderConversationMeta() {
   renderSessionDropdown(state.sessions);
 }
 
+function renderDemoTasks() {
+  const container = el('demo-task-list');
+  container.innerHTML = state.demoTasks.map((task) => `
+    <button class="ghost demo-task-btn" type="button" data-demo-task="${escapeHtml(task.id)}">${escapeHtml(task.title)}</button>
+  `).join('');
+}
+
+async function loadDemoTasks() {
+  const payload = await fetchJson('/api/demo-tasks');
+  state.demoTasks = Array.isArray(payload.items) ? payload.items : [];
+  state.demoTaskMap = Object.fromEntries(state.demoTasks.map((item) => [item.id, item]));
+  renderDemoTasks();
+}
+
 function updateComposerStatus() {
-  const parts = [];
-  parts.push(`step ${Number(el('step-budget')?.value || 0)}`);
-  parts.push(`plan ${Number(el('planning-budget')?.value || 0)}`);
-  el('composer-status').textContent = parts.join(' · ');
+  const status = el('composer-status');
+  if (!status) {
+    return;
+  }
+  status.textContent = '';
 }
 
 function createMessageElement({ role, label, meta, body, actions = '', pending = false, timestamp = '' }) {
@@ -347,6 +347,32 @@ async function createSession() {
   await refreshSessions({ autoLoad: false });
   await loadSession(created.session_id, { allowReconnect: false });
   setDropdownOpen(false);
+}
+
+async function reloadActiveSession() {
+  if (!state.sessionId) {
+    notify('No session is selected.', 'error');
+    return;
+  }
+  teardownStream();
+  await refreshSessions({ autoLoad: false });
+  await loadSession(state.sessionId, { allowReconnect: true });
+  notify('Session reloaded.');
+}
+
+async function logoutFromChat() {
+  teardownStream();
+  setApiKey('');
+  setActiveSessionId('');
+  state.sessionId = null;
+  state.sessions = [];
+  state.currentDetails = null;
+  state.pendingRequest = null;
+  renderConversation();
+  renderConversationMeta();
+  await ensureAuthFlow();
+  await refreshSessions({ autoLoad: false });
+  notify('Logged out.');
 }
 
 function updateSessionRecord(patch) {
@@ -548,6 +574,8 @@ async function insertTextFilesIntoInput(fileList) {
 
 function attachEventHandlers() {
   el('new-session').addEventListener('click', () => createSession().catch((error) => notify(error.message, 'error')));
+  el('reload-session').addEventListener('click', () => reloadActiveSession().catch((error) => notify(error.message, 'error')));
+  el('chat-logout').addEventListener('click', () => logoutFromChat().catch((error) => notify(error.message, 'error')));
   el('chat-composer').addEventListener('submit', submitRequest);
 
   el('session-selector-btn').addEventListener('click', (event) => {
@@ -649,7 +677,7 @@ function attachEventHandlers() {
     if (!button) {
       return;
     }
-    textarea.value = DEMO_TASKS[button.dataset.demoTask] || '';
+    textarea.value = state.demoTaskMap[button.dataset.demoTask]?.prompt || '';
     textarea.focus();
     textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
@@ -693,6 +721,7 @@ function attachEventHandlers() {
 
 async function init() {
   attachEventHandlers();
+  await loadDemoTasks();
   state.sessionId = localStorage.getItem('mrpvm.activeSessionId');
   updateComposerStatus();
   await ensureAuthFlow();

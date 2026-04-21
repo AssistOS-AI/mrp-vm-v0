@@ -27,6 +27,8 @@
             <div class="session-dropdown-list" id="session-dropdown-list"></div>
             <div class="session-dropdown-footer">
               <button id="new-session" type="button">＋ New session</button>
+              <button id="reload-session" class="secondary" type="button">↻ Reload session</button>
+              <button id="chat-logout" class="secondary" type="button">Logout</button>
             </div>
           </div>
         </div>
@@ -103,13 +105,7 @@
                   </div>
                   <div class="stack">
                     <div class="advanced-menu-title">Demo tasks</div>
-                    <div id="demo-task-list" class="stack compact">
-                      <button class="ghost demo-task-btn" type="button" data-demo-task="session-review">Session review workflow</button>
-                      <button class="ghost demo-task-btn" type="button" data-demo-task="logic-triage">Logic + validation triage</button>
-                      <button class="ghost demo-task-btn" type="button" data-demo-task="kb-guided-plan">KB guided planning</button>
-                      <button class="ghost demo-task-btn" type="button" data-demo-task="code-and-report">Code and report</button>
-                      <button class="ghost demo-task-btn" type="button" data-demo-task="aggregation-audit">Aggregation audit</button>
-                    </div>
+                    <div id="demo-task-list" class="stack compact"></div>
                   </div>
                 </div>
                 <div class="advanced-menu-panel" data-advanced-panel="budgets" hidden>
@@ -140,7 +136,6 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
           </div>
-          <div id="composer-status" class="composer-status muted small"></div>
         </form>
       </div>
     </div>

@@ -1,17 +1,17 @@
 import {
   clearNotice,
+  copyText,
   el,
   escapeHtml,
   fetchJson,
-  forgetApiKey,
   formatDate,
   getApiKey,
   getSavedApiKeys,
   notify,
+  rememberApiKey,
   renderSystemContext,
   setActiveSessionId,
   setApiKey,
-  statusClass,
 } from './shared.js';
 
 const state = {
@@ -19,9 +19,11 @@ const state = {
   keys: [],
   models: [],
   availableTags: [],
-  modelFilters: {
-    default: '',
-    profiles: {},
+  modelFilter: '',
+  keyModal: {
+    mode: null,
+    token: '',
+    record: null,
   },
 };
 
@@ -46,10 +48,6 @@ function modelLabel(model) {
   return tags ? `${model.name} [${tags}]` : model.name;
 }
 
-function findModel(modelId) {
-  return state.models.find((entry) => entry.id === modelId) || null;
-}
-
 function modelMatchesReference(model, reference) {
   const target = normalizeText(reference);
   if (!target) {
@@ -61,24 +59,21 @@ function modelMatchesReference(model, reference) {
   });
 }
 
-function inferPreferenceTags(reference, binding, profile) {
-  const source = [
-    reference,
-    binding?.taskTag,
-    binding?.tier,
-    profile,
-  ].filter(Boolean).join(' ').toLowerCase();
-  const inferred = [];
-  if (/fast|cheap|mini|lite/.test(source)) inferred.push('fast');
-  if (/code|coder|codex/.test(source)) inferred.push('coding');
-  if (/write|writer|doc/.test(source)) inferred.push('writing');
-  if (/reason|deep|analysis|strong/.test(source)) inferred.push('reasoning');
-  if (/plan|agent|orchestr/.test(source)) inferred.push('agentic');
-  if (inferred.length === 0) inferred.push('general');
-  return unique(inferred).filter((tag) => state.availableTags.includes(tag));
+function inferDefaultFilter(reference) {
+  const exact = state.models.find((model) => modelMatchesReference(model, reference));
+  if (exact) {
+    return modelTags(exact)[0] || '';
+  }
+  const source = String(reference || '').toLowerCase();
+  if (/code|coder|codex/.test(source) && state.availableTags.includes('coding')) return 'coding';
+  if (/reason|deep|strong|max|premium/.test(source) && state.availableTags.includes('reasoning')) return 'reasoning';
+  if (/agent|plan|orchestr/.test(source) && state.availableTags.includes('agentic')) return 'agentic';
+  if (/write|doc/.test(source) && state.availableTags.includes('writing')) return 'writing';
+  if (/fast|mini|lite|cheap|small/.test(source) && state.availableTags.includes('fast')) return 'fast';
+  return '';
 }
 
-function resolveModelId(reference, filterTag = '', binding = null, profile = '') {
+function resolveModelId(reference, filterTag = '') {
   if (state.models.length === 0) {
     return reference || '';
   }
@@ -86,12 +81,8 @@ function resolveModelId(reference, filterTag = '', binding = null, profile = '')
   if (exact) {
     return exact.id;
   }
-  const tags = unique([
-    normalizeText(filterTag),
-    ...inferPreferenceTags(reference, binding, profile),
-  ]);
-  if (tags.length > 0) {
-    const tagged = state.models.find((model) => tags.some((tag) => modelTags(model).includes(tag)));
+  if (filterTag) {
+    const tagged = state.models.find((model) => modelTags(model).includes(normalizeText(filterTag)));
     if (tagged) {
       return tagged.id;
     }
@@ -120,9 +111,8 @@ function tagOptionsMarkup(selected = '') {
 }
 
 function renderTagRail(containerId, modelId) {
-  const container = el(containerId);
-  const model = findModel(modelId);
-  container.innerHTML = model
+  const model = state.models.find((entry) => entry.id === modelId);
+  el(containerId).innerHTML = model
     ? (model.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join('')
     : '<span class="muted small">No tag metadata.</span>';
 }
@@ -138,68 +128,21 @@ function renderAuthorityStrip() {
 }
 
 function renderPermissionMessage() {
-  const canEdit = canEditGlobalState();
-  el('settings-permission-message').textContent = canEdit
-    ? 'Admin authority is active. Model bindings, interpreter enablement, and server key provisioning are writable.'
-    : 'Non-admin mode: global settings stay read-only. Use the Authentication tab to switch to another API key.';
-}
-
-function ensureModelFilters() {
-  if (!state.modelFilters.default) {
-    state.modelFilters.default = inferPreferenceTags(state.config?.default_llm, null, 'default')[0] || '';
-  }
-  for (const [profile, binding] of Object.entries(state.config?.profile_bindings || {})) {
-    if (!state.modelFilters.profiles[profile]) {
-      state.modelFilters.profiles[profile] = inferPreferenceTags(binding.model, binding, profile)[0] || '';
-    }
-  }
+  el('settings-permission-message').textContent = canEditGlobalState()
+    ? 'Admin authority is active. Global model defaults, interpreters, and API keys are writable.'
+    : 'Non-admin mode: settings are read-only until you authenticate with an admin API key.';
 }
 
 function renderModels() {
-  ensureModelFilters();
-  const defaultSelectedId = resolveModelId(state.config?.default_llm, state.modelFilters.default);
-  el('default-llm-tag-filter').innerHTML = tagOptionsMarkup(state.modelFilters.default);
-  el('default-llm').innerHTML = filterModels(state.modelFilters.default, defaultSelectedId)
-    .map((model) => `<option value="${escapeHtml(model.id)}" ${model.id === defaultSelectedId ? 'selected' : ''}>${escapeHtml(modelLabel(model))}</option>`)
+  if (!state.modelFilter) {
+    state.modelFilter = inferDefaultFilter(state.config?.default_llm);
+  }
+  const selectedId = resolveModelId(state.config?.default_llm, state.modelFilter);
+  el('default-llm-tag-filter').innerHTML = tagOptionsMarkup(state.modelFilter);
+  el('default-llm').innerHTML = filterModels(state.modelFilter, selectedId)
+    .map((model) => `<option value="${escapeHtml(model.id)}" ${model.id === selectedId ? 'selected' : ''}>${escapeHtml(modelLabel(model))}</option>`)
     .join('');
   renderTagRail('default-llm-tags', el('default-llm').value);
-
-  const bindings = state.config?.profile_bindings || {};
-  el('profile-bindings').innerHTML = Object.entries(bindings).map(([profile, binding]) => {
-    const filterTag = state.modelFilters.profiles[profile] || '';
-    const selectedId = resolveModelId(binding.model, filterTag, binding, profile);
-    const options = filterModels(filterTag, selectedId)
-      .map((model) => `<option value="${escapeHtml(model.id)}" ${model.id === selectedId ? 'selected' : ''}>${escapeHtml(modelLabel(model))}</option>`)
-      .join('');
-    const selectedModel = findModel(selectedId);
-    return `
-      <div class="settings-binding-card stack compact">
-        <div class="settings-binding-header">
-          <div class="stack compact">
-            <strong>${escapeHtml(profile)}</strong>
-            <div class="muted small">${escapeHtml(binding.taskTag || binding.tier || 'general')}</div>
-          </div>
-        </div>
-        <label class="stack">
-          <span class="small muted">Filter by tag</span>
-          <select data-profile-filter="${escapeHtml(profile)}">
-            ${tagOptionsMarkup(filterTag)}
-          </select>
-        </label>
-        <label class="stack">
-          <span class="small muted">Model</span>
-          <select data-profile="${escapeHtml(profile)}">
-            ${options}
-          </select>
-        </label>
-        <div class="row wrap" data-profile-tags="${escapeHtml(profile)}">
-          ${selectedModel
-            ? (selectedModel.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join('')
-            : '<span class="muted small">No tags.</span>'}
-        </div>
-      </div>
-    `;
-  }).join('');
 }
 
 function renderInterpreters() {
@@ -221,69 +164,128 @@ function renderInterpreters() {
   `).join('');
 }
 
-function renderSavedApiKeys() {
-  const items = getSavedApiKeys();
-  el('saved-key-options').innerHTML = items.map((entry) => `
-    <option value="${escapeHtml(entry.token)}">${escapeHtml(entry.label)}</option>
-  `).join('');
-  el('saved-api-keys').innerHTML = items.length
-    ? items.map((entry) => `
-      <div class="saved-key-row">
-        <div class="stack compact">
-          <strong>${escapeHtml(entry.label)}</strong>
-          <div class="muted small">${escapeHtml(entry.id)} · saved ${escapeHtml(formatDate(entry.saved_at))}</div>
-        </div>
-        <div class="row wrap">
-          <button class="secondary" type="button" data-use-saved-key="${escapeHtml(entry.token)}">Use</button>
-          <button class="secondary" type="button" data-forget-saved-key="${escapeHtml(entry.id)}">Forget</button>
-        </div>
-      </div>
-    `).join('')
-    : '<div class="muted small">No browser-saved API keys yet.</div>';
+function maskToken(token) {
+  const value = String(token || '').trim();
+  if (!value) {
+    return '';
+  }
+  return value.length <= 18 ? `${value.slice(0, 6)}…` : `${value.slice(0, 10)}…${value.slice(-6)}`;
 }
 
-function renderBootstrapState() {
-  const bootstrap = state.config?.auth || {};
-  const currentApiKey = getApiKey();
-  const statusParts = [];
-  statusParts.push(`<span class="badge">${bootstrap.has_api_keys ? 'API keys configured' : 'No API keys yet'}</span>`);
-  if (bootstrap.bootstrap_admin_available) {
-    statusParts.push('<span class="badge status-active">Bootstrap available</span>');
-  } else if (bootstrap.bootstrap_admin_session_id) {
-    statusParts.push(`<span class="badge">${escapeHtml(bootstrap.bootstrap_admin_session_id)}</span>`);
+function savedEntryForId(id) {
+  return getSavedApiKeys().find((entry) => entry.id === id) || null;
+}
+
+function activeKeyMatches(entry) {
+  const token = getApiKey();
+  const activeId = token.split('.')[0] || '';
+  return activeId && activeId === entry.id;
+}
+
+function copyableTokenForEntry(entry) {
+  return savedEntryForId(entry.id)?.token || (activeKeyMatches(entry) ? getApiKey() : '');
+}
+
+function renderBootstrapStatus() {
+  const auth = state.config?.auth || {};
+  if (!auth.has_api_keys) {
+    el('bootstrap-status').innerHTML = '<span class="badge status-active">No API keys exist yet. Bootstrap admin setup is required.</span>';
+    return;
   }
-  if (currentApiKey) {
-    statusParts.push('<span class="badge status-enabled">Current key loaded</span>');
-  } else if (bootstrap.has_api_keys) {
-    statusParts.push('<span class="badge status-error">API key required</span>');
+  if (state.config?.system_context?.auth_mode === 'api_key') {
+    el('bootstrap-status').innerHTML = '<span class="badge status-enabled">Authenticated with API key.</span>';
+    return;
   }
-  el('bootstrap-status').innerHTML = statusParts.join('');
-  el('bootstrap-key').disabled = bootstrap.has_api_keys || !bootstrap.bootstrap_admin_available;
+  el('bootstrap-status').innerHTML = '<span class="badge status-error">API key login required.</span>';
+}
+
+function renderCurrentAccess() {
+  const auth = state.config?.auth || {};
+  const currentToken = getApiKey();
+  const authenticated = state.config?.system_context?.auth_mode === 'api_key';
+  const currentId = currentToken.split('.')[0] || '';
+
+  if (!auth.has_api_keys) {
+    el('auth-current-access').innerHTML = `
+      <div class="settings-key-card">
+        <div class="stack compact">
+          <strong>Bootstrap admin key</strong>
+          <div class="muted small">Create the first admin key. The full key is shown once in a popup so you can copy it, then decide when to log in with it.</div>
+        </div>
+        <div class="settings-inline-actions">
+          <button type="button" data-open-bootstrap-modal>Create bootstrap admin key</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (authenticated && currentToken) {
+    el('auth-current-access').innerHTML = `
+      <div class="settings-key-card">
+        <div class="stack compact">
+          <strong>Active API key</strong>
+          <div class="muted small">${escapeHtml(maskToken(currentToken))}</div>
+          <div class="row wrap">
+            <span class="badge">${escapeHtml(state.config?.system_context?.role || 'user')}</span>
+            <span class="badge">${escapeHtml(currentId)}</span>
+          </div>
+        </div>
+        <div class="settings-inline-actions">
+          <button class="secondary" type="button" data-copy-current-key>Copy</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const invalidStored = currentToken && !authenticated;
+  el('auth-current-access').innerHTML = `
+    <div class="settings-key-card stack">
+      <div class="stack compact">
+        <strong>${invalidStored ? 'Stored API key is not accepted' : 'Log in with an API key'}</strong>
+        <div class="muted small">${invalidStored
+          ? 'The browser still has a stale or invalid key value. Paste a valid key or clear the stale one.'
+          : 'Paste a valid API key to authenticate and unlock admin settings.'
+        }</div>
+      </div>
+      <label class="stack">
+        <span class="small muted">API key</span>
+        <input id="api-key-input" placeholder="Paste an API key">
+      </label>
+      <div class="settings-inline-actions">
+        <button id="login-api-key" type="button">Login</button>
+        ${invalidStored ? '<button id="clear-api-key" class="secondary" type="button">Clear stale key</button>' : ''}
+      </div>
+    </div>
+  `;
 }
 
 function renderIssuedKeys() {
-  el('issued-keys-summary').textContent = state.keys.length ? `${state.keys.length} key(s)` : 'Admin authority required.';
+  el('issued-keys-summary').textContent = state.keys.length ? `${state.keys.length} valid key(s)` : 'Admin authority required.';
   el('api-key-list').innerHTML = state.keys.length
-    ? state.keys.map((entry) => `
-      <div class="issued-key-row">
-        <div class="stack compact">
-          <strong>${escapeHtml(entry.label)}</strong>
-          <div class="muted small">${escapeHtml(entry.id)} · ${escapeHtml(entry.role)} · ${escapeHtml(entry.token_prefix)}</div>
-          <div class="muted small">Created ${escapeHtml(formatDate(entry.created_at))} · last used ${escapeHtml(formatDate(entry.last_used_at))}</div>
+    ? state.keys.map((entry) => {
+      const copyableToken = copyableTokenForEntry(entry);
+      return `
+        <div class="issued-key-row">
+          <div class="stack compact">
+            <strong>${escapeHtml(entry.label)}</strong>
+            <div class="muted small">${escapeHtml(entry.id)} · ${escapeHtml(entry.role)} · ${escapeHtml(entry.token_prefix)}…</div>
+            <div class="muted small">Created ${escapeHtml(formatDate(entry.created_at))} · last used ${escapeHtml(formatDate(entry.last_used_at))}</div>
+          </div>
+          <div class="row wrap">
+            <button class="secondary" type="button" data-copy-key="${escapeHtml(entry.id)}" ${copyableToken ? '' : 'disabled'}>Copy</button>
+            <button class="secondary" type="button" data-revoke-key="${escapeHtml(entry.id)}">Invalidate</button>
+          </div>
         </div>
-        <button class="secondary" type="button" data-revoke-key="${escapeHtml(entry.id)}">Revoke</button>
-      </div>
-    `).join('')
-    : '<div class="muted small">No key inventory visible.</div>';
+      `;
+    }).join('')
+    : '<div class="muted small">No active server key inventory is visible.</div>';
 }
 
 function renderAuthPanel() {
-  const currentToken = getApiKey();
-  const savedCurrent = getSavedApiKeys().find((entry) => entry.token === currentToken);
-  el('api-key-input').value = currentToken;
-  el('api-key-label').value = savedCurrent?.label || '';
-  renderSavedApiKeys();
-  renderBootstrapState();
+  renderBootstrapStatus();
+  renderCurrentAccess();
   renderIssuedKeys();
 }
 
@@ -294,7 +296,9 @@ function syncAuthority() {
   el('create-key').disabled = !canEdit;
   el('new-key-label').disabled = !canEdit;
   el('new-key-role').disabled = !canEdit;
-  document.querySelectorAll('#settings-models-tab select, #settings-interpreters-tab input[type="checkbox"]').forEach((node) => {
+  el('default-llm').disabled = !canEdit;
+  el('default-llm-tag-filter').disabled = !canEdit;
+  document.querySelectorAll('#settings-interpreters-tab input[type="checkbox"]').forEach((node) => {
     node.disabled = !canEdit;
   });
 }
@@ -338,24 +342,20 @@ async function refresh() {
   renderInterpreters();
   renderAuthPanel();
   syncAuthority();
+  maybePromptBootstrap();
 }
 
 async function saveModelSettings(event) {
   event.preventDefault();
   try {
-    const interpreterMappings = {};
-    document.querySelectorAll('#profile-bindings [data-profile]').forEach((input) => {
-      interpreterMappings[input.dataset.profile] = input.value;
-    });
     await fetchJson('/api/config', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         default_llm: el('default-llm').value,
-        interpreter_mappings: interpreterMappings,
       }),
     });
-    notify('Model routing updated.');
+    notify('Default model updated.');
     await refresh();
   } catch (error) {
     notify(error.message, 'error');
@@ -381,6 +381,68 @@ async function saveInterpreters(event) {
   }
 }
 
+function showKeyModal(mode, payload = {}) {
+  state.keyModal = {
+    mode,
+    token: payload.token || '',
+    record: payload.record || null,
+  };
+  renderKeyModal();
+  el('settings-key-modal').classList.add('visible');
+}
+
+function hideKeyModal() {
+  state.keyModal = { mode: null, token: '', record: null };
+  el('settings-key-modal').classList.remove('visible');
+}
+
+function renderKeyModal() {
+  const { mode, token, record } = state.keyModal;
+  el('settings-key-modal-create').hidden = mode !== 'bootstrap-create';
+  el('settings-key-modal-reveal').hidden = mode !== 'reveal';
+  if (mode === 'bootstrap-create') {
+    el('settings-key-modal-title').textContent = 'Create bootstrap admin key';
+    el('settings-key-modal-status').textContent = 'This is a one-time setup step. The server stores only a hash, so copy the key when it appears.';
+    return;
+  }
+  if (mode === 'reveal') {
+    el('settings-key-modal-title').textContent = 'Copy this API key now';
+    el('settings-key-modal-status').textContent = 'The server inventory keeps only ids and prefixes. Full key copy is possible now because this browser just created it.';
+    el('settings-key-modal-token').value = token;
+    el('settings-key-modal-meta').innerHTML = record
+      ? [
+        `<span class="badge">${escapeHtml(record.role || 'user')}</span>`,
+        record.id ? `<span class="badge">${escapeHtml(record.id)}</span>` : '',
+      ].filter(Boolean).join('')
+      : '';
+  }
+}
+
+function maybePromptBootstrap() {
+  const auth = state.config?.auth || {};
+  if (!auth.has_api_keys && state.keyModal.mode !== 'reveal') {
+    showKeyModal('bootstrap-create');
+  }
+}
+
+async function createBootstrapKey() {
+  try {
+    const payload = await fetchJson('/api/auth/bootstrap-key', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        label: el('settings-key-modal-label').value.trim() || 'Bootstrap admin',
+      }),
+    });
+    rememberApiKey(payload.api_key, payload.record.label);
+    showKeyModal('reveal', { token: payload.api_key, record: payload.record });
+    notify('Bootstrap admin key created.');
+    await refresh();
+  } catch (error) {
+    notify(error.message, 'error');
+  }
+}
+
 async function createServerKey(event) {
   event.preventDefault();
   try {
@@ -392,31 +454,11 @@ async function createServerKey(event) {
         role: el('new-key-role').value,
       }),
     });
-    setApiKey(payload.api_key, { remember: true, label: payload.record.label });
-    setActiveSessionId('');
-    el('api-key-input').value = payload.api_key;
-    el('api-key-label').value = payload.record.label;
+    rememberApiKey(payload.api_key, payload.record.label);
+    showKeyModal('reveal', { token: payload.api_key, record: payload.record });
+    el('new-key-label').value = '';
+    el('new-key-role').value = 'admin';
     notify(`Created ${payload.record.role} API key ${payload.record.id}.`);
-    await refresh();
-  } catch (error) {
-    notify(error.message, 'error');
-  }
-}
-
-async function createBootstrapKey() {
-  try {
-    const payload = await fetchJson('/api/auth/bootstrap-key', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        label: el('bootstrap-key-label').value.trim() || 'Bootstrap admin',
-      }),
-    });
-    setApiKey(payload.api_key, { remember: true, label: payload.record.label });
-    setActiveSessionId('');
-    el('api-key-input').value = payload.api_key;
-    el('api-key-label').value = payload.record.label;
-    notify('Bootstrap admin key created and stored locally.');
     await refresh();
   } catch (error) {
     notify(error.message, 'error');
@@ -428,109 +470,123 @@ async function revokeKey(keyId) {
     await fetchJson(`/api/auth/keys/${keyId}`, {
       method: 'DELETE',
     });
-    notify('API key revoked.');
+    notify('API key invalidated.');
     await refresh();
   } catch (error) {
     notify(error.message, 'error');
   }
 }
 
-function useApiKeyInput({ remember = false } = {}) {
-  const token = el('api-key-input').value.trim();
-  const label = el('api-key-label').value.trim();
+function loginWithApiKey() {
+  const token = el('api-key-input')?.value.trim();
   if (!token) {
     notify('Provide an API key first.', 'error');
     return false;
   }
-  setApiKey(token, { remember, label });
+  setApiKey(token);
   setActiveSessionId('');
-  notify(remember ? 'API key stored locally and activated.' : 'API key activated for this browser.');
+  notify('API key activated for this browser.');
   return true;
+}
+
+function useModalKey() {
+  if (!state.keyModal.token) {
+    notify('No API key is available in the popup.', 'error');
+    return;
+  }
+  setApiKey(state.keyModal.token);
+  setActiveSessionId('');
+  hideKeyModal();
+  notify('API key activated for this browser.');
+  refresh().catch((error) => notify(error.message, 'error'));
 }
 
 function attachHandlers() {
   document.querySelectorAll('.tab-button').forEach((button) => {
-    button.addEventListener('click', () => {
-      if (button.disabled) {
-        return;
-      }
-      activateTab(button.dataset.tab);
-    });
+    button.addEventListener('click', () => activateTab(button.dataset.tab));
   });
 
   el('model-settings').addEventListener('submit', saveModelSettings);
   el('interpreter-settings').addEventListener('submit', saveInterpreters);
   el('api-key-form').addEventListener('submit', createServerKey);
   el('refresh-auth').addEventListener('click', () => refresh().catch((error) => notify(error.message, 'error')));
-  el('bootstrap-key').addEventListener('click', () => createBootstrapKey().catch((error) => notify(error.message, 'error')));
-  el('save-api-key').addEventListener('click', () => {
-    if (useApiKeyInput({ remember: false })) {
-      refresh().catch((error) => notify(error.message, 'error'));
-    }
-  });
-  el('remember-api-key').addEventListener('click', () => {
-    if (useApiKeyInput({ remember: true })) {
-      refresh().catch((error) => notify(error.message, 'error'));
-    }
-  });
-  el('clear-api-key').addEventListener('click', () => {
-    setApiKey('');
-    setActiveSessionId('');
-    notify('Current API key cleared.');
-    refresh().catch((error) => notify(error.message, 'error'));
-  });
-  el('default-llm').addEventListener('change', () => {
-    renderTagRail('default-llm-tags', el('default-llm').value);
-  });
+  el('default-llm').addEventListener('change', () => renderTagRail('default-llm-tags', el('default-llm').value));
   el('default-llm-tag-filter').addEventListener('change', (event) => {
-    state.modelFilters.default = event.target.value;
+    state.modelFilter = event.target.value;
     renderModels();
     syncAuthority();
   });
-  el('profile-bindings').addEventListener('change', (event) => {
-    const filterSelect = event.target.closest('[data-profile-filter]');
-    if (filterSelect) {
-      state.modelFilters.profiles[filterSelect.dataset.profileFilter] = filterSelect.value;
-      renderModels();
-      syncAuthority();
+
+  el('auth-current-access').addEventListener('click', (event) => {
+    if (event.target.closest('[data-open-bootstrap-modal]')) {
+      showKeyModal('bootstrap-create');
       return;
     }
-    const select = event.target.closest('[data-profile]');
-    if (!select) {
+    if (event.target.closest('[data-copy-current-key]')) {
+      copyText(getApiKey()).then(() => notify('API key copied.')).catch((error) => notify(error.message, 'error'));
       return;
     }
-    const tagsContainer = document.querySelector(`[data-profile-tags="${select.dataset.profile}"]`);
-    const model = findModel(select.value);
-    tagsContainer.innerHTML = model
-      ? (model.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join('')
-      : '<span class="muted small">No tags.</span>';
-  });
-  el('saved-api-keys').addEventListener('click', (event) => {
-    const useButton = event.target.closest('[data-use-saved-key]');
-    if (useButton) {
-      const token = useButton.dataset.useSavedKey;
-      const saved = getSavedApiKeys().find((entry) => entry.token === token);
-      setApiKey(token);
+    if (event.target.closest('#login-api-key')) {
+      if (loginWithApiKey()) {
+        refresh().catch((error) => notify(error.message, 'error'));
+      }
+      return;
+    }
+    if (event.target.closest('#clear-api-key')) {
+      setApiKey('');
       setActiveSessionId('');
-      el('api-key-input').value = token;
-      el('api-key-label').value = saved?.label || '';
-      notify('Saved API key activated.');
+      notify('Stale API key cleared.');
       refresh().catch((error) => notify(error.message, 'error'));
-      return;
-    }
-    const forgetButton = event.target.closest('[data-forget-saved-key]');
-    if (forgetButton) {
-      forgetApiKey(forgetButton.dataset.forgetSavedKey);
-      renderAuthPanel();
-      notify('Saved API key removed from this browser.');
     }
   });
+
   el('api-key-list').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-revoke-key]');
-    if (!button) {
+    const copyButton = event.target.closest('[data-copy-key]');
+    if (copyButton) {
+      const entry = state.keys.find((item) => item.id === copyButton.dataset.copyKey);
+      const token = entry ? copyableTokenForEntry(entry) : '';
+      if (!token) {
+        notify('This browser does not have a local copy of that API key.', 'error');
+        return;
+      }
+      copyText(token).then(() => notify('API key copied.')).catch((error) => notify(error.message, 'error'));
       return;
     }
-    revokeKey(button.dataset.revokeKey);
+    const revokeButton = event.target.closest('[data-revoke-key]');
+    if (revokeButton) {
+      revokeKey(revokeButton.dataset.revokeKey);
+    }
+  });
+
+  el('settings-key-modal').addEventListener('click', (event) => {
+    if (event.target === el('settings-key-modal') || event.target.closest('[data-close-key-modal]')) {
+      hideKeyModal();
+      return;
+    }
+    if (event.target.closest('#settings-bootstrap-submit')) {
+      createBootstrapKey().catch((error) => notify(error.message, 'error'));
+      return;
+    }
+    if (event.target.closest('#settings-key-modal-copy')) {
+      copyText(state.keyModal.token).then(() => notify('API key copied.')).catch((error) => notify(error.message, 'error'));
+      return;
+    }
+    if (event.target.closest('#settings-key-modal-remember')) {
+      if (state.keyModal.token) {
+        rememberApiKey(state.keyModal.token, state.keyModal.record?.label || state.keyModal.record?.id || 'Saved key');
+        notify('API key saved locally.');
+      }
+      return;
+    }
+    if (event.target.closest('#settings-key-modal-use')) {
+      useModalKey();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.keyModal.mode) {
+      hideKeyModal();
+    }
   });
 }
 
@@ -538,7 +594,7 @@ attachHandlers();
 activateTab('settings-models-tab');
 refresh()
   .then(() => {
-    if (!canEditGlobalState() || (state.config?.auth?.has_api_keys && !getApiKey())) {
+    if (!canEditGlobalState() || !getApiKey()) {
       activateTab('settings-auth-tab');
     }
   })

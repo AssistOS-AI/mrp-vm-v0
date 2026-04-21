@@ -160,7 +160,7 @@ Settings must remain separate from chat. The page must expose:
 
 1. tabbed sections for `Models`, `Interpreters`, and `Authentication`,
 2. a wide layout that uses the available horizontal space instead of a narrow centered column,
-3. model selection through select controls that show discovered model tags inline in the option labels,
+3. default-model selection through select controls that show discovered model tags inline in the option labels,
 4. no separate runtime-overview tab and no redundant candidate-model gallery,
 5. per-interpreter enabled or disabled state rendered efficiently in one-row cards,
 6. API-key management, saved-key selection, and bootstrap-admin status messaging,
@@ -201,6 +201,8 @@ The server must distinguish admin sessions from ordinary user sessions and must 
 Recommended origin values are `client`, `openai_api`, and `internal`. Recommended auth modes are `bootstrap_admin`, `api_key`, `anonymous`, and `internal`.
 
 The server must support API-key creation and management. Each API key has an explicit role of `admin` or `user`. If the system has no API keys configured, the first browser login may create a bootstrap-admin API key and store it locally so first-run setup can complete coherently. Once API keys exist, protected operations must require API-key-backed authority rather than silent trust in the browser UI alone.
+The bootstrap step is a one-time first-run flow. After it completes, future browsers and logged-out states should present ordinary API-key login only, not the bootstrap controls.
+The UI should present the active API key in masked form together with `Copy` and `Logout` actions. Server-issued key inventory may expose ids, roles, timestamps, and token prefixes, but full API keys are only available at creation time or from browser-saved local copies.
 
 An admin session:
 
