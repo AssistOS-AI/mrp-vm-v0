@@ -9,7 +9,7 @@ summary: Defines declaration-line grammar, parser outputs, declaration-style SOP
 
 ## Introduction
 
-This specification owns the source-text structure of SOP Lang. DS002 defines what declarations and families mean once parsed. DS003 defines how the runtime recognizes declaration boundaries, distinguishes declaration content from emitted variable content, and constructs the parse artifacts consumed by graph compilation.
+This specification owns the source-text structure of SOP Lang. DS002 defines what declarations and families mean once parsed. DS025 defines the semantic role of non-executing helper surfaces such as `text` and `json` inside persistent SOP modules. DS003 defines how the runtime recognizes declaration boundaries, distinguishes declaration content from emitted variable content, and constructs the parse artifacts consumed by graph compilation.
 
 ## Core Content
 

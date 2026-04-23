@@ -32,15 +32,107 @@ function cloneBudgets(budgets = {}) {
   };
 }
 
-function buildDefaultCommandRegistry() {
+function buildExecutionTiming(startedAt, finishedAt) {
+  const startedAtMs = Date.parse(startedAt);
+  const finishedAtMs = Date.parse(finishedAt);
+  return {
+    started_at: startedAt,
+    finished_at: finishedAt,
+    duration_ms: Number.isFinite(startedAtMs) && Number.isFinite(finishedAtMs)
+      ? Math.max(0, finishedAtMs - startedAtMs)
+      : null,
+  };
+}
+
+function commandLabel(declaration = {}) {
+  return (declaration.commands ?? []).join(
+    declaration.declaration_kind === 'fallback'
+      ? ' | '
+      : declaration.declaration_kind === 'multi_attempt'
+        ? ' & '
+        : ', ',
+  );
+}
+
+function buildDefaultCommandRegistry(runtimeConfig = null) {
+  const commandEnabled = (name, defaultValue = true, disableable = true) => {
+    if (!disableable) {
+      return true;
+    }
+    return runtimeConfig?.interpreterStates?.[name] ?? defaultValue;
+  };
   const registry = new CommandRegistry();
-  registry.register('planning', executePlanning);
-  registry.register('js-eval', executeJsEval);
-  registry.register('logic-eval', executeLogicEval);
-  registry.register('template-eval', executeTemplateEval);
-  registry.register('analytic-memory', executeAnalyticMemory);
-  registry.register('kb', executeKbCommand);
-  registry.register('credibility', executeCredibilityCommand);
+  registry.register('planning', executePlanning, {
+    purpose: 'Plan or repair an executable SOP Lang graph from the current request and runtime state.',
+    input_contract: ['request_text', 'request_envelope', 'component_catalog'],
+    output_shapes: ['sop_declarations'],
+    deterministic: false,
+    category: 'orchestration',
+    source_kind: 'internal_command',
+    disableable: false,
+    enabled: true,
+  });
+  registry.register('js-eval', executeJsEval, {
+    purpose: 'Execute deterministic JavaScript for exact calculation, transformation, or search.',
+    input_contract: ['javascript_body', 'runtime_references'],
+    output_shapes: ['plain_value', 'structured_value', 'declaration_insertions'],
+    deterministic: true,
+    category: 'native_command',
+    source_kind: 'internal_command',
+    disableable: true,
+    enabled: commandEnabled('js-eval'),
+  });
+  registry.register('logic-eval', executeLogicEval, {
+    purpose: 'Run bounded symbolic reasoning through the logic-eval solver runtime or legacy local rules.',
+    input_contract: ['logic_problem_or_program', 'runtime_references'],
+    output_shapes: ['plain_value', 'structured_value', 'metadata_updates'],
+    deterministic: false,
+    category: 'native_command',
+    source_kind: 'internal_command',
+    uses_llm_adapter: true,
+    disableable: true,
+    enabled: commandEnabled('logic-eval'),
+  });
+  registry.register('template-eval', executeTemplateEval, {
+    purpose: 'Assemble deterministic text from known placeholders and simple structural helpers.',
+    input_contract: ['template_body', 'runtime_references'],
+    output_shapes: ['plain_value'],
+    deterministic: true,
+    category: 'native_command',
+    source_kind: 'internal_command',
+    disableable: true,
+    enabled: commandEnabled('template-eval'),
+  });
+  registry.register('analytic-memory', executeAnalyticMemory, {
+    purpose: 'Aggregate or export session-level analytic state and summaries.',
+    input_contract: ['aggregation_request', 'session_state'],
+    output_shapes: ['plain_value', 'structured_value', 'analytic_checkpoint'],
+    deterministic: true,
+    category: 'native_command',
+    source_kind: 'internal_command',
+    disableable: true,
+    enabled: commandEnabled('analytic-memory'),
+  });
+  registry.register('kb', executeKbCommand, {
+    purpose: 'Retrieve or inspect knowledge units using deterministic scope and ranking rules.',
+    input_contract: ['query_or_guidance_request', 'runtime_scope'],
+    output_shapes: ['plain_value', 'structured_value'],
+    deterministic: true,
+    category: 'native_command',
+    source_kind: 'internal_command',
+    disableable: true,
+    enabled: commandEnabled('kb'),
+  });
+  registry.register('credibility', executeCredibilityCommand, {
+    purpose: 'Score multiple family variants and choose or withdraw representatives explicitly.',
+    input_contract: ['candidate_family_variants', 'selection_rules'],
+    output_shapes: ['metadata_updates', 'withdrawals', 'plain_value'],
+    deterministic: true,
+    category: 'native_command',
+    source_kind: 'internal_command',
+    disableable: true,
+    enabled: commandEnabled('credibility'),
+  });
   return registry;
 }
 
@@ -94,7 +186,7 @@ export class MRPVM {
     this.kbStore = new KbStore(rootDir);
     this.traceStore = new TraceStore(rootDir);
     this.analyticStore = new AnalyticStore(rootDir);
-    this.commandRegistry = options.commandRegistry ?? buildDefaultCommandRegistry();
+    this.commandRegistry = options.commandRegistry ?? buildDefaultCommandRegistry(this.runtimeConfig);
     this.externalInterpreters = options.externalInterpreters ?? buildDefaultExternalRegistry({
       runtimeConfig: this.runtimeConfig,
       llmAdapter: options.llmAdapter,
@@ -411,15 +503,8 @@ export class MRPVM {
       selected_items: context.contextPackage.selectedItems,
       pruned_items: context.contextPackage.prunedItems,
       byte_counts: context.contextPackage.byteCount,
-      context_markdown: context.contextPackage.markdown,
-      selected_knowledge_units: context.kbResult.selected.map((entry) => ({
-        ku_id: entry.kuId,
-        scope: entry.scope,
-        title: entry.meta.title,
-        summary: entry.meta.summary,
-        meta: entry.meta,
-        content: entry.content,
-      })),
+      context_sections: context.contextPackage.sections,
+      selected_knowledge_units: context.contextPackage.sections.knowledge_units,
       resolved_dependencies: [...context.resolvedDependencies.entries()].map(([raw, variant]) => ({
         raw,
         target_id: variant.id,
@@ -437,6 +522,21 @@ export class MRPVM {
     });
 
     if (this.commandRegistry.has(name)) {
+      if (!this.commandRegistry.isEnabled(name)) {
+        return {
+          emittedVariants: [],
+          metadataUpdates: [],
+          withdrawals: [],
+          declarationInsertions: [],
+          failure: createFailureRecord({
+            kind: 'blocked_state',
+            message: `Command ${name} is disabled.`,
+            origin: name,
+            familyId: context.targetFamily,
+            repairable: true,
+          }),
+        };
+      }
       return this.commandRegistry.get(name)(context);
     }
 
@@ -677,7 +777,34 @@ export class MRPVM {
         let structuralChange = false;
         for (const node of readyNodes) {
           request.budgets.steps_remaining -= 1;
+          const startedAt = this.tools.now();
           const effects = await this.executeNode(node, request, sessionId, requestId, epochNumber);
+          const finishedAt = this.tools.now();
+          const executionTiming = buildExecutionTiming(startedAt, finishedAt);
+          effects.executionTiming = executionTiming;
+          effects.emittedVariants = effects.emittedVariants.map((entry) => ({
+            ...entry,
+            meta: {
+              ...entry.meta,
+              started_at: executionTiming.started_at,
+              finished_at: executionTiming.finished_at,
+              duration_ms: executionTiming.duration_ms,
+              execution_timing: executionTiming,
+            },
+          }));
+          effects.metadataUpdates.unshift({
+            targetId: `${node.targetFamily}:meta`,
+            patch: {
+              last_execution_timing: executionTiming,
+              last_route: commandLabel(node.declaration),
+            },
+          });
+          if (effects.failure) {
+            effects.failure = {
+              ...effects.failure,
+              execution_timing: executionTiming,
+            };
+          }
           this.applyEffects(effects, {
             sessionId,
             requestId,
@@ -700,6 +827,7 @@ export class MRPVM {
                 meta: entry.meta,
               })),
               source_component: node.declaration.commands.join(','),
+              execution_timing: effects.executionTiming,
             });
           }
 
@@ -717,6 +845,7 @@ export class MRPVM {
                 target_id: entry.targetId,
                 patch: entry.patch,
               })),
+              execution_timing: effects.executionTiming,
             });
           }
 
@@ -732,6 +861,7 @@ export class MRPVM {
               repairable_flag: effects.failure.repairable,
               originating_component: effects.failure.origin,
               failure: effects.failure,
+              execution_timing: effects.executionTiming,
             });
           }
 
@@ -747,6 +877,7 @@ export class MRPVM {
               insertion_source: node.declaration.commands.join(','),
               new_declaration_ids: [],
               inserted_texts: effects.declarationInsertions.map((entry) => entry.text),
+              execution_timing: effects.executionTiming,
             });
           }
 
@@ -804,6 +935,7 @@ export class MRPVM {
         response: outcome.response,
         stop_reason: outcome.stop_reason,
         request_text: request.requestText,
+        error_message: null,
       });
       await this.emitTrace(sessionId, 'request_stopped', {
         session_id: sessionId,
@@ -847,9 +979,10 @@ export class MRPVM {
       await this.sessionManager.appendRequestSummary(sessionId, {
         request_id: requestId,
         created_at: this.tools.now(),
-        response: null,
+        response: error.message,
         stop_reason: outcome.stop_reason,
         request_text: input.requestText,
+        error_message: error.message,
       });
       await this.emitTrace(sessionId, 'request_stopped', {
         session_id: sessionId,
@@ -858,6 +991,7 @@ export class MRPVM {
         stop_reason: outcome.stop_reason,
         remaining_blocked_regions: [],
         error_message: error.message,
+        error: outcome.error,
       });
       const existingRecord = this.requestRecords.get(requestId) ?? {
         request_id: requestId,
@@ -867,7 +1001,7 @@ export class MRPVM {
       };
       this.requestRecords.set(requestId, {
         ...existingRecord,
-        status: 'stopped',
+        status: 'failed',
         outcome,
         family_state: this.stateStore.listFamilies(),
         plan_snapshot: request?.planText ?? existingRecord.plan_snapshot ?? '',

@@ -1,0 +1,11 @@
+export { ExecutionContext } from './execution-context.mjs';
+export { evaluateExpression, isExpr } from './expression-eval.mjs';
+export { SolverProgram, solveText } from './solve-text.mjs';
+export { PreflightAnalyzer, VERDICTS } from './preflight-analyzer.mjs';
+export { ObligationRegistry } from './obligation-registry.mjs';
+export { QuestionGenerator } from './question-generator.mjs';
+export { RuleProblem } from './solvers/rule-problem.mjs';
+export { ConstraintProblem } from './solvers/constraint-problem.mjs';
+export { GraphProblem } from './solvers/graph-problem.mjs';
+export { SearchProblem } from './solvers/search-problem.mjs';
+export { NumericProblem } from './solvers/numeric-problem.mjs';

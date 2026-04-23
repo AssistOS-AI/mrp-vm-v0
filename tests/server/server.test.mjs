@@ -100,6 +100,46 @@ test('server exposes native session and request APIs plus /chat', async () => {
     assert.equal(config.default_llm, 'write');
     assert.equal(config.llm_adapter, 'fake');
     assert.equal(config.interpreter_mappings.plannerLLM, 'plan');
+    assert.ok(config.model_routing_targets.some((entry) => entry.name === 'logicGeneratorLLM'));
+    assert.ok(config.model_routing_targets.some((entry) => entry.name === 'formatterLLM'));
+    assert.ok(config.interpreters.some((entry) => entry.name === 'logic-eval' && entry.component_type === 'Internal predefined command'));
+    assert.ok(config.interpreters.some((entry) => entry.name === 'planning' && entry.disableable === false));
+
+    const updatedConfig = await fetch(`${baseUrl}/api/config`, {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': session.session_id,
+      },
+      body: JSON.stringify({
+        default_llm: 'deep',
+        interpreter_mappings: {
+          plannerLLM: 'deep',
+          writerLLM: 'fast',
+          logicGeneratorLLM: 'deep',
+          formatterLLM: 'write',
+        },
+      }),
+    }).then((response) => response.json());
+    assert.equal(updatedConfig.default_llm, 'deep');
+    assert.equal(updatedConfig.interpreter_mappings.plannerLLM, 'deep');
+    assert.equal(updatedConfig.profile_bindings.writerLLM.model, 'fast');
+    assert.equal(updatedConfig.profile_bindings.logicGeneratorLLM.model, 'deep');
+
+    const toggledConfig = await fetch(`${baseUrl}/api/config`, {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': session.session_id,
+      },
+      body: JSON.stringify({
+        interpreters: {
+          'logic-eval': { enabled: false },
+          plannerLLM: { enabled: true },
+        },
+      }),
+    }).then((response) => response.json());
+    assert.equal(toggledConfig.interpreter_states['logic-eval'], false);
 
     const completion = await fetch(`${baseUrl}/v1/chat/completions`, {
       method: 'POST',

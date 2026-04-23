@@ -32,7 +32,7 @@ Body text for the KU.
 {"rev":1,"ku_type":"content","scope":"default","status":"active"}
 ```
 
-The same convention applies to caller profiles under `data/default/callers/`, global KUs, and session KUs. Session upsert and promotion APIs must therefore read and write raw SOP Lang module text rather than a separate metadata envelope.
+The same convention applies to caller profiles under `data/default/callers/`, global KUs, and session KUs. Session upsert and promotion APIs must therefore read and write raw SOP Lang module text rather than a separate metadata envelope. DS025 clarifies that `text` and `json` are reserved helper surfaces for these persistent artifacts rather than ordinary executable runtime routes.
 
 The KU identifier must be variable-safe and stable. The baseline form is `ku_` plus a cryptographically strong lowercase hexadecimal suffix.
 

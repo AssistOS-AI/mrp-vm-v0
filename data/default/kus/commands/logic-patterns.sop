@@ -1,0 +1,55 @@
+@ku_logic_patterns text
+Canonical logic-eval patterns:
+
+1. Legacy guard with failure:
+when not exists input
+then emit error for ~response reason "Missing required input."
+
+2. Inline GraphProblem:
+{"result_mode":"structured","program_steps":[{"op":"createSolver","varName":"g","className":"GraphProblem","options":{}},{"op":"solverCall","varName":"g","method":"node","args":["A"]},{"op":"solverCall","varName":"g","method":"node","args":["B"]},{"op":"solverCall","varName":"g","method":"edge","args":["A","B"]},{"op":"solverCall","varName":"g","method":"findPath","args":["A","B"]},{"op":"solverSolve","varName":"g","resultName":"path"},{"op":"setFinal","value":["ref","results.path.solution.path"]}]}
+
+3. Inline ConstraintProblem:
+{"result_mode":"structured","program_steps":[{"op":"createSolver","varName":"assignment","className":"ConstraintProblem","options":{"maxSolutions":1}},{"op":"solverCall","varName":"assignment","method":"domain","args":["alice",["red","blue"]]},{"op":"solverCall","varName":"assignment","method":"domain","args":["bob",["red","blue"]]},{"op":"solverCall","varName":"assignment","method":"forbid","args":["alice","blue"]},{"op":"solverCall","varName":"assignment","method":"implies","args":["alice","red","bob","blue"]},{"op":"solverCall","varName":"assignment","method":"query","args":["assignment"]},{"op":"solverSolve","varName":"assignment","resultName":"owners"},{"op":"setFinal","value":["ref","results.owners.solution"]}]}
+
+4. Natural-language bounded solver request:
+Determine whether the cutover dependency graph from $dependencies allows shift_full_traffic only after verify_billing_drain, and return the valid execution order as structured output.
+
+Anti-patterns:
+- prose explanations,
+- open-ended memo writing,
+- pseudo-code that invents new runtime primitives,
+- vague "validate this in natural language" instructions,
+- arbitrary scripts better handled by js-eval,
+- tasks with no finite entities, constraints, or target state.
+
+If a body stops looking like a bounded symbolic problem and turns into unrestricted prose or scripting, it no longer belongs in logic-eval.
+@ku_logic_patterns:meta json
+{
+  "rev": 2,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "logic canonical patterns",
+  "summary": "Canonical logic-eval body patterns for legacy guards, inline graph and constraint programs, and bounded natural-language solver requests, plus clear anti-patterns.",
+  "priority": 8,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "logic"
+  ],
+  "commands": [
+    "logic-eval"
+  ],
+  "interpreters": [],
+  "tags": [
+    "logic",
+    "patterns",
+    "guidance"
+  ],
+  "input_patterns": [
+    "when\\s+.+",
+    "then\\s+.+",
+    "\"program_steps\"",
+    "emit error for ~[A-Za-z_][A-Za-z0-9_]* reason"
+  ]
+}

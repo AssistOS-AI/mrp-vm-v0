@@ -29,9 +29,9 @@ Trace is separate from executable state. It may reference executable artifacts, 
 | `interpreter_invoked` | interpreter id, adapter profile, expected output mode |
 | `context_packaged` | selected items, pruned items, byte counts, source tiers |
 | `family_resolved` | family id, chosen representative, resolution reason |
-| `variant_emitted` | emitted ids, family ids, source component |
-| `failure_recorded` | failure kind, affected family or request scope, repairable flag, originating component |
-| `metadata_updated` | target ids, changed keys, structural-impact flag |
+| `variant_emitted` | emitted ids, family ids, source component, execution timing when available |
+| `failure_recorded` | failure kind, affected family or request scope, repairable flag, originating component, execution timing when available |
+| `metadata_updated` | target ids, changed keys, structural-impact flag, execution timing when available |
 | `analytic_memory_updated` | updated keys, scope, export flag, checkpoint hash if any |
 | `declarations_inserted` | inserted declaration hash, insertion source, new declaration ids |
 | `planning_triggered` | mode, trigger reason, blocked-region summary |
@@ -39,6 +39,8 @@ Trace is separate from executable state. It may reference executable artifacts, 
 | `request_stopped` | final outcome, stop reason, remaining blocked regions |
 
 The event schema must be stable enough that replay tools can parse it without command-specific guesswork.
+
+When a declaration execution completes, the trace should preserve `started_at`, `finished_at`, and `duration_ms` either directly on the emitted event payload or in a clearly associated timing object. Traceability tooling may derive fallback timing from event timestamps, but persisted timing is preferred when the runtime knows the execution window explicitly.
 
 ### Replay contract
 

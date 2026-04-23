@@ -39,7 +39,7 @@ Test fixtures must be able to express:
 | Expected trace fragments | event types and critical payload assertions |
 | Expected context package | selected and pruned context items when relevant |
 
-Fixtures may be stored as JSON, YAML, or mixed text-plus-fixture assets, but the format must be machine-readable and stable.
+Fixtures may be stored as JSON, YAML, or mixed text-plus-fixture assets, but the format must be machine-readable and stable. Repository-owned showcase prompts that also power the operator UI should live in reusable fixture assets (for example under `data/demo/`) rather than being duplicated separately inside browser code and automated tests.
 
 ### Inspection hooks
 

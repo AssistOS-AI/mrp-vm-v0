@@ -23,6 +23,8 @@ const DEFAULT_PROFILE_BINDINGS = {
   codeGeneratorLLM: { tier: 'standard', model: 'code', taskTag: DEFAULT_TASK_TAGS.bootstrap },
   writerLLM: { tier: 'standard', taskTag: DEFAULT_TASK_TAGS.documentation },
   plannerLLM: { tier: 'premium', model: 'plan', taskTag: DEFAULT_TASK_TAGS.orchestration },
+  logicGeneratorLLM: { tier: 'premium', model: 'logic', taskTag: DEFAULT_TASK_TAGS.specification },
+  formatterLLM: { tier: 'standard', taskTag: DEFAULT_TASK_TAGS.documentation },
 };
 
 function createResolver(baseDir) {

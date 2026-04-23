@@ -1,39 +1,42 @@
 @ku_logic_guidance text
-Choose logic-eval when the step is a small deterministic rule block rather than a script or prose instruction.
+Choose logic-eval when the step is a bounded symbolic reasoning problem that should stay inspectable after formalization.
 
 Use it for:
-- local gating conditions,
-- simple classification rules,
-- explicit scoring or withdrawal rules,
-- checks that can be written as use/when/and/or/then lines.
+- graph, path, reachability, and ordering problems,
+- finite constraint and assignment problems,
+- bounded search or state-transition problems,
+- finite rule/fact deduction,
+- bounded numeric reasoning over explicit intervals,
+- small legacy guards that still fit use/when/then blocks.
 
-Good bodies:
-- start with an optional use line,
-- express predicates explicitly,
-- end with concrete actions such as set, score, withdraw, patch-meta, or emit error.
+Accepted body shapes:
+- a natural-language problem statement with clear finite entities, constraints, targets, and $family references,
+- a JSON envelope with fields such as problem, result_mode, program_steps or steps, and optional formatting instructions,
+- a short legacy rule block for compatibility when explicit when/then syntax is still the best local fit.
 
-Choose logic-eval over js-eval when the logic is easiest to audit as declarative rules and the action space is small. This is valuable for guards, validation, and simple branching that should remain easy to inspect in traces.
+Good logic-eval bodies:
+- keep the problem finite and explicit,
+- name the entities, domains, states, nodes, facts, or targets directly,
+- say what the solver must return,
+- use result_mode structured when downstream steps need machine-readable output,
+- keep explanation or prose formatting in a later writerLLM/template-eval step when that is cleaner.
 
-Typical good fits:
-- "if input is empty then emit error",
-- "if score below threshold then withdraw candidate",
-- "if all required fields exist then set approved".
-
-Use logic-eval only when the rule syntax itself is the value. If the planner is merely trying to express natural-language reasoning, route the step to deepLLM or writerLLM instead of forcing prose into logic-eval.
+Choose logic-eval over js-eval when the reasoning should stay symbolic and auditable instead of becoming open procedural code. Choose js-eval when the step truly needs unrestricted data shaping, arbitrary loops, or exact deterministic coding beyond the logic-eval solver primitives.
 
 Avoid logic-eval when:
-- the instruction is mostly narrative,
-- the step needs loops or object manipulation,
-- the task is really deterministic text assembly,
-- the body is pseudo-code rather than rule syntax.
+- the step is mainly polished prose or memo writing,
+- the request is open-ended brainstorming,
+- the body is pseudo-code masquerading as a solver specification,
+- the task needs host access or arbitrary scripting,
+- the problem is clearly unbounded or too vague to formalize honestly.
 @ku_logic_guidance:meta json
 {
-  "rev": 1,
+  "rev": 3,
   "ku_type": "content",
   "scope": "default",
   "status": "active",
   "title": "logic guidance",
-  "summary": "Use logic-eval for short deterministic use/when/then rules, validation gates, and explicit local scoring or withdrawal decisions.",
+  "summary": "Use logic-eval for bounded symbolic reasoning such as graph, constraint, search, rule, and finite numeric problems, plus small legacy rule guards; avoid using it for open-ended prose or arbitrary scripting.",
   "priority": 9,
   "trust": "trusted",
   "domains": [
@@ -50,6 +53,8 @@ Avoid logic-eval when:
   ],
   "input_patterns": [
     "when\\s+.+",
-    "then\\s+.+"
+    "then\\s+.+",
+    "\"program_steps\"",
+    "solve|reachable|constraint|graph|path|domain|state|target"
   ]
 }

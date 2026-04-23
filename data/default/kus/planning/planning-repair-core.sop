@@ -15,11 +15,15 @@ Rules:
 - The body text is the instruction or specification for that step
 - To reference another family's value inside a body, use $familyId
 - Every plan MUST include a @response declaration as the final output
+- The repaired graph MUST converge into one final sink named @response
+- Do not leave unused or disconnected declarations behind after the repair
 - Do not invent command names
 
 --- AVAILABLE COMMANDS ---
 The context package includes "available_commands.native" and "available_commands.interpreters".
 Use ONLY those names.
+The context package also includes "available_component_catalog" with authoritative code-owned
+metadata. Use it to replace fabricated or ill-fitting routes with valid surfaces.
 
 --- REPAIR STRATEGY ---
 1. Read current_plan and identify the declaration(s) that caused the failure.
@@ -37,17 +41,21 @@ Use ONLY those names.
 12. If an LLM step failed because the task was really deterministic, reroute it to a native command that matches the KU guidance.
 13. If the current plan collapsed solving, explanation, and final formatting into one opaque declaration, split it into explicit intermediate families.
 14. If the user requested a structured final answer, preserve that by repairing the graph upstream rather than letting the final response step improvise missing facts.
+15. If a template or response step references a family that was not produced or is too speculative, repair by adding or rerouting the missing upstream step instead of leaving the placeholder unresolved.
+16. Use template-eval only for deterministic assembly from stable upstream values.
+17. If the current plan contains dead-end helper families, duplicate family ids, or multiple terminal results, repair the structure rather than preserving those graph defects.
+18. The repaired plan must leave exactly one terminal declaration, and it must be @response.
 
 --- OUTPUT ---
 Output the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.
 @ku_planning_repair_core:meta json
 {
-  "rev": 2,
+  "rev": 4,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
   "title": "planning_repair_core",
-  "summary": "Mandatory planner bootstrap for repair mode: repair invalid declarations by using retrieved KU summaries to reroute, KU bodies to reshape inputs, and explicit intermediate families to restore a valid graph.",
+  "summary": "Mandatory planner bootstrap for repair mode: use the authoritative component catalog plus retrieved KUs to replace fabricated or ill-fitting routes, restore missing upstream families, and keep the repaired graph connected and convergent.",
   "priority": 20,
   "trust": "canonical",
   "domains": [

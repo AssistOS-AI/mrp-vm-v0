@@ -2,6 +2,28 @@ import { createVariantId, parseVariantId } from '../utils/ids.mjs';
 import { canonicalText } from '../utils/text.mjs';
 import { createFailureRecord, isUsableVariant } from '../utils/errors.mjs';
 
+export function deriveFamilyExecutionStatus(family) {
+  if (!family) {
+    return 'missing';
+  }
+  if ((family.variants ?? []).some(isUsableVariant)) {
+    return 'completed';
+  }
+  if ((family.variants ?? []).some((variant) => (variant.meta?.status ?? 'active') === 'error')) {
+    return 'failed';
+  }
+  if ((family.variants ?? []).some((variant) => (variant.meta?.status ?? 'active') === 'refused')) {
+    return 'refused';
+  }
+  if ((family.variants ?? []).some((variant) => (variant.meta?.status ?? 'active') === 'blocked')) {
+    return 'blocked';
+  }
+  if ((family.variants ?? []).some((variant) => (variant.meta?.status ?? 'active') === 'withdrawn')) {
+    return 'withdrawn';
+  }
+  return family.familyMeta?.status ?? 'pending';
+}
+
 function createFamilyRecord(familyId) {
   return {
     familyId,
@@ -10,6 +32,11 @@ function createFamilyRecord(familyId) {
     },
     variants: [],
   };
+}
+
+function syncFamilyStatus(family) {
+  family.familyMeta.status = deriveFamilyExecutionStatus(family);
+  return family;
 }
 
 export class StateStore {
@@ -78,7 +105,7 @@ export class StateStore {
       },
     };
     family.variants.push(variant);
-    family.familyMeta.status = 'active';
+    syncFamilyStatus(family);
     this.representativeCache.delete(familyId);
     return variant;
   }
@@ -91,6 +118,9 @@ export class StateStore {
         ...family.familyMeta,
         ...patch,
       };
+      if (patch.status == null && family.variants.length > 0) {
+        syncFamilyStatus(family);
+      }
       this.representativeCache.delete(familyId);
       return family.familyMeta;
     }
@@ -103,6 +133,7 @@ export class StateStore {
       ...variant.meta,
       ...patch,
     };
+    syncFamilyStatus(this.ensureFamily(variant.familyId));
     this.representativeCache.delete(variant.familyId);
     return variant.meta;
   }

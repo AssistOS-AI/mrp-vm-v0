@@ -35,7 +35,9 @@ Planning must receive a normalized input object containing at least:
 4. Family state summary, including blocked families and plural families awaiting DS012 resolution.
 5. Session summary, including active session KUs and recent request summaries.
 6. Remaining budgets and retry counters.
-7. The active command and interpreter catalog.
+7. The active command and interpreter catalog, including authoritative code-owned metadata such as purpose, input contract, output shapes, determinism hints, and enabled state.
+
+The command/interpreter catalog must come from the runtime code registry plus enabled interpreter contracts rather than from freeform prompt prose alone. Planning may still use KU guidance for routing, but the catalog remains the final authority for what names are legal.
 
 The runtime must also distinguish the minimum contextual differences between modes:
 

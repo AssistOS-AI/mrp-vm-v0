@@ -1,5 +1,7 @@
+import { solveText } from '../logic-eval/solve-text.mjs';
 import { createEmptyEffects } from '../runtime/effects.mjs';
 import { createFailureRecord } from '../utils/errors.mjs';
+import { canonicalText } from '../utils/text.mjs';
 
 function parseLiteral(value) {
   const trimmed = value.trim();
@@ -27,7 +29,8 @@ function resolveFamilyValue(runtime, familyId) {
   if (!family) {
     return undefined;
   }
-  const representative = runtime.stateStore.representativeCache.get(familyId) ?? family.variants.find((variant) => variant.meta.status === 'active');
+  const representative = runtime.stateStore.representativeCache.get(familyId)
+    ?? family.variants.find((variant) => variant.meta.status === 'active');
   return representative?.value;
 }
 
@@ -205,7 +208,128 @@ function applyAction(action, runtime, effects) {
   throw new Error(`Unsupported logic-eval action: ${action}`);
 }
 
-export async function executeLogicEval(context) {
+function isLegacyRuleBody(body) {
+  const lines = String(body ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return false;
+  }
+  return lines.every((line) => ['use ', 'when ', 'and ', 'or ', 'then '].some((prefix) => line.startsWith(prefix)));
+}
+
+function tryParseJsonBody(body) {
+  const trimmed = String(body ?? '').trim();
+  if (!trimmed || (!trimmed.startsWith('{') && !trimmed.startsWith('['))) {
+    return { parsed: null, attempted: false };
+  }
+  return {
+    parsed: JSON.parse(trimmed),
+    attempted: true,
+  };
+}
+
+function resolveReferenceEntry(context, token) {
+  return context.resolvedDependencies.get(token) ?? null;
+}
+
+function renderReferenceText(context, token) {
+  const resolved = resolveReferenceEntry(context, token);
+  if (!resolved) {
+    return `[missing ${token}]`;
+  }
+  return typeof resolved.rendered === 'string' && resolved.rendered
+    ? resolved.rendered
+    : canonicalText(resolved.value);
+}
+
+function interpolateReferenceText(text, context) {
+  let output = String(text ?? '');
+  const references = [...new Set(context.node.dependencies.map((reference) => reference.raw))]
+    .sort((left, right) => right.length - left.length);
+  for (const token of references) {
+    output = output.split(token).join(renderReferenceText(context, token));
+  }
+  return output;
+}
+
+function materializeEmbeddedReferences(value, context) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => materializeEmbeddedReferences(entry, context));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, materializeEmbeddedReferences(entry, context)]),
+    );
+  }
+  if (typeof value === 'string') {
+    const resolved = resolveReferenceEntry(context, value);
+    if (resolved) {
+      return resolved.value;
+    }
+  }
+  return value;
+}
+
+function normalizeSolverEnvelope(context) {
+  const body = String(context.body ?? '');
+  if (isLegacyRuleBody(body)) {
+    return {
+      mode: 'legacy',
+    };
+  }
+
+  const { parsed, attempted } = tryParseJsonBody(body);
+  if (Array.isArray(parsed)) {
+    return {
+      mode: 'solver',
+      problem: interpolateReferenceText(body, context),
+      programSteps: materializeEmbeddedReferences(parsed, context),
+      resultMode: 'structured',
+    };
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    const inlineProgramSteps = parsed.program_steps ?? parsed.steps ?? null;
+    const problemSource = parsed.problem ?? parsed.instruction ?? parsed.text ?? parsed.description ?? body;
+    return {
+      mode: 'solver',
+      problem: interpolateReferenceText(problemSource, context),
+      formatInstructions: parsed.format_instructions
+        ? interpolateReferenceText(parsed.format_instructions, context)
+        : '',
+      programSteps: inlineProgramSteps
+        ? materializeEmbeddedReferences(inlineProgramSteps, context)
+        : null,
+      resultMode: parsed.result_mode === 'structured' || parsed.result_mode === 'raw'
+        ? 'structured'
+        : parsed.result_mode === 'text'
+          ? 'text'
+          : (inlineProgramSteps ? 'structured' : 'text'),
+      generatorProfile: parsed.generator_profile ?? null,
+      formatterProfile: parsed.formatter_profile ?? null,
+      allowRegeneration: parsed.allow_regeneration,
+    };
+  }
+
+  if (attempted) {
+    throw new Error('Malformed JSON body for logic-eval.');
+  }
+
+  return {
+    mode: 'solver',
+    problem: interpolateReferenceText(body, context),
+    formatInstructions: '',
+    programSteps: null,
+    resultMode: 'text',
+    generatorProfile: null,
+    formatterProfile: null,
+    allowRegeneration: undefined,
+  };
+}
+
+async function executeLegacyLogicEval(context) {
   const effects = createEmptyEffects();
   const rules = parseRules(context.body);
 
@@ -233,9 +357,109 @@ export async function executeLogicEval(context) {
       },
       meta: {
         origin: 'logic-eval',
+        logic_eval_mode: 'legacy',
       },
     });
   }
 
   return effects;
+}
+
+function buildSolverFailure(context, message, details = null) {
+  return createFailureRecord({
+    kind: 'execution_error',
+    message,
+    origin: 'logic-eval',
+    familyId: context.targetFamily,
+    repairable: true,
+    details,
+  });
+}
+
+async function executeSolverLogicEval(context, envelope) {
+  const effects = createEmptyEffects();
+  const llmAdapter = context.runtime.externalInterpreters?.llmAdapter ?? null;
+  if (!llmAdapter) {
+    effects.failure = createFailureRecord({
+      kind: 'provider_failure',
+      message: 'logic-eval requires a managed LLM adapter but none is configured.',
+      origin: 'logic-eval',
+      familyId: context.targetFamily,
+      repairable: true,
+    });
+    return effects;
+  }
+
+  const problemText = envelope.formatInstructions
+    ? `${envelope.problem}\n\nOutput instructions:\n${envelope.formatInstructions}`
+    : envelope.problem;
+
+  try {
+    const result = await solveText(llmAdapter, problemText, {
+      programSteps: envelope.programSteps ?? undefined,
+      generatorProfile: envelope.generatorProfile ?? undefined,
+      formatterProfile: envelope.formatterProfile ?? undefined,
+      allowRegeneration: envelope.allowRegeneration,
+      formatResult: envelope.resultMode === 'structured'
+        ? (final) => canonicalText(final)
+        : undefined,
+    });
+
+    if (result.status === 'invalid_program' || result.status === 'failed') {
+      effects.failure = buildSolverFailure(context, result.text, {
+        logic_eval_status: result.status,
+      });
+      return effects;
+    }
+
+    const emittedValue = envelope.resultMode === 'structured'
+      ? (result.result ?? {
+        status: result.status,
+        text: result.text,
+        questions: result.questions ?? [],
+      })
+      : (result.text ?? canonicalText(result.result ?? {
+        status: result.status,
+        questions: result.questions ?? [],
+      }));
+
+    effects.emittedVariants.push({
+      familyId: context.targetFamily,
+      value: emittedValue,
+      meta: {
+        origin: 'logic-eval',
+        source_interpreter: 'logic-eval',
+        logic_eval_mode: 'solver',
+        logic_eval_status: result.status,
+        result_mode: envelope.resultMode,
+        program_source: envelope.programSteps ? 'inline' : 'generated',
+      },
+    });
+    return effects;
+  } catch (error) {
+    effects.failure = buildSolverFailure(context, error.message, {
+      logic_eval_mode: 'solver',
+    });
+    return effects;
+  }
+}
+
+export async function executeLogicEval(context) {
+  try {
+    const envelope = normalizeSolverEnvelope(context);
+    if (envelope.mode === 'legacy') {
+      return executeLegacyLogicEval(context);
+    }
+    return executeSolverLogicEval(context, envelope);
+  } catch (error) {
+    const effects = createEmptyEffects();
+    effects.failure = createFailureRecord({
+      kind: 'parse_error',
+      message: error.message,
+      origin: 'logic-eval',
+      familyId: context.targetFamily,
+      repairable: true,
+    });
+    return effects;
+  }
 }

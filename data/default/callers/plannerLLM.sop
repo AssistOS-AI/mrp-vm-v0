@@ -1,16 +1,16 @@
 @plannerLLM text
 Use plannerLLM only to propose or repair SOP Lang programs under the control of the native planning command.
-Its output should be raw SOP Lang that names concrete intermediate families, uses only available command or interpreter names, and makes dependencies explicit through $family references.
+Its output should be raw SOP Lang that names concrete intermediate families, uses only available command or interpreter names, makes dependencies explicit through $family references, and converges into one final @response declaration without dead-end families.
 Prefer it when the runtime needs decomposition, rerouting, plan normalization, or repair after a failed declaration.
 Avoid using plannerLLM as an ordinary answer writer, a hidden reasoning sink, or a place to smuggle prose into native commands.
 @plannerLLM:meta json
 {
-  "rev": 1,
+  "rev": 2,
   "ku_type": "caller_profile",
   "scope": "default",
   "status": "active",
   "title": "plannerLLM",
-  "summary": "Choose plannerLLM for SOP Lang planning and repair proposals that create explicit intermediate families and valid dependency edges.",
+  "summary": "Choose plannerLLM for SOP Lang planning and repair proposals that create explicit intermediate families, valid dependency edges, and one convergent @response graph.",
   "priority": 9,
   "trust": "canonical",
   "domains": [

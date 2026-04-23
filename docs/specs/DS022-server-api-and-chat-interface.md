@@ -117,7 +117,7 @@ The chat page must behave like a modern messaging application. It should stay co
 2. **Message input**: send natural-language requests from a fixed composer anchored at the bottom, with advanced options opened through a compact popover placed immediately before the text input and structured as a small two-level menu.
 3. **Conversation rendering**: show message bubbles, timestamps, lightweight running/completed/error indicators, and an animated `Thinking...` placeholder while an assistant response is still in progress.
 4. **Assistant actions**: every assistant response must expose a `Details` or `Traceability` action that opens the dedicated traceability page for that request. Copy response and retry request actions are also expected.
-5. **Advanced options**: support text-file insertion into the input area, budget controls, and a small menu of predefined demo tasks that exercise distinct commands and interpreters.
+5. **Advanced options**: support text-file insertion into the input area, budget controls, and a small menu of predefined demo tasks that exercise distinct commands and interpreters. The demo-task catalog should come from repository-owned shared fixtures rather than duplicated browser-only constants.
 6. **System context visibility**: provide a compact summary of the current authority context without moving deep trace or KB content inline.
 
 Raw SOP Lang, trace payloads, KU lists, and execution graphs must not be shown inline on the chat page by default.
@@ -138,7 +138,9 @@ The `Variables` tab must use a split layout:
 2. a right detail area for the selected variable,
 3. three nested tabs named `Current Value`, `Metadata`, and `Definition`.
 
-The `Execution Graph` tab must render the graph as a left-to-right topological workflow with visually distinct nodes and explicit dependency arrows rather than as a flat list of edge names.
+The `SOP Lang` tab should present executed SOP in a readable code surface with lightweight syntax differentiation so family names, command names, and `$var` / `~var` references are easy to scan at a glance.
+
+The `Execution Graph` tab must render the graph as a left-to-right topological workflow with visually distinct nodes and explicit dependency arrows rather than as a flat list of edge names. Operators must also be able to drag nodes locally inside the graph view while the dependency lines follow the moved nodes.
 
 ### KB Browser page
 
@@ -162,9 +164,13 @@ Settings must remain separate from chat. The page must expose:
 2. a wide layout that uses the available horizontal space instead of a narrow centered column,
 3. default-model selection through select controls that show discovered model tags inline in the option labels,
 4. no separate runtime-overview tab and no redundant candidate-model gallery,
-5. per-interpreter enabled or disabled state rendered efficiently in one-row cards,
-6. API-key management, saved-key selection, and bootstrap-admin status messaging,
-7. clear permission messaging when controls are unavailable because the current authority context is not admin.
+5. one compact model selector for each LLM routing target in addition to the default-model selector, including internal command stages such as `logicGeneratorLLM` and `formatterLLM`,
+6. per-component enabled or disabled state rendered efficiently in one-row cards for both external interpreters and internal predefined commands, except `planning`, which remains visible but non-disableable,
+7. API-key inventory and bootstrap-admin status messaging without turning Settings into a general browser login surface,
+8. issued API keys shown before key-creation controls on the Authentication tab,
+9. key creation performed through a popup flow rather than an inline creation form,
+10. no dedicated "Active API key" card, no full active-token rendering inside the page, and no header display of active key identity strings,
+11. clear permission messaging when controls are unavailable because the current authority context is not admin.
 
 ### Trace-to-UI mapping
 
@@ -176,7 +182,7 @@ DS014 defines the trace event types and minimum payloads. The chat UI and native
 | `epoch_opened` | Show epoch number, ready-node count, and visible frontier summary. |
 | `command_invoked` | Show which declaration is executing, which command, and execution ordinal. |
 | `interpreter_invoked` | Show which external interpreter is called, adapter profile, and expected output mode. |
-| `context_packaged` | Collapsible detail showing selected KUs, pruned items, and byte counts. |
+| `context_packaged` | Collapsible detail showing selected KU references, pruned items, byte counts, and structured context sections without embedding full KU text into the trace payload. |
 | `family_resolved` | Show which family was resolved, which variant was selected, and why. Update the family state panel. |
 | `variant_emitted` | Show the new variant value (truncated if long) and update the family state panel. |
 | `failure_recorded` | Surface an error or repair state in the active request status, and keep the detailed failure payload on the traceability page. |
@@ -188,6 +194,8 @@ DS014 defines the trace event types and minimum payloads. The chat UI and native
 | `request_stopped` | Replace the `Thinking...` placeholder with the final assistant response, show final outcome and stop reason, and persist that request in the traceability timeline. |
 
 The chat route may stay intentionally compact, but live request state must still be driven by the trace stream rather than by speculative client-side bookkeeping. The detailed plan, variable state, and execution-graph inspection surfaces live on the dedicated traceability page, which must remain reconstructable from persisted request snapshots plus trace-derived status updates when a user reconnects mid-request.
+
+The server may expose the demo catalog through a simple API route so both the browser UI and automated tests consume the same repository-owned examples.
 
 ### Authentication, session origin, and authority
 
@@ -202,7 +210,7 @@ Recommended origin values are `client`, `openai_api`, and `internal`. Recommende
 
 The server must support API-key creation and management. Each API key has an explicit role of `admin` or `user`. If the system has no API keys configured, the first browser login may create a bootstrap-admin API key and store it locally so first-run setup can complete coherently. Once API keys exist, protected operations must require API-key-backed authority rather than silent trust in the browser UI alone.
 The bootstrap step is a one-time first-run flow. After it completes, future browsers and logged-out states should present ordinary API-key login only, not the bootstrap controls.
-The UI should present the active API key in masked form together with `Copy` and `Logout` actions. Server-issued key inventory may expose ids, roles, timestamps, and token prefixes, but full API keys are only available at creation time or from browser-saved local copies.
+The UI should not render the active API key value or active key identity strings as primary page artifacts. Server-issued key inventory may expose ids, roles, timestamps, and token prefixes, but full API keys are only available at creation time or from browser-saved local copies.
 
 An admin session:
 
@@ -222,7 +230,7 @@ A non-admin session:
 
 Authority is determined through the session's persisted auth metadata and any authenticated API key used to create or reuse that session. The server must include the session's role and auth metadata in `request_started` payloads for audit purposes.
 
-When API keys exist, the UI should prompt the user to choose or paste a saved API key on load, with local autocomplete over previously stored keys. Switching keys must switch the effective role for future sessions and protected operations.
+When API keys exist, browser login flows may still exist where operationally necessary, but the Settings page itself should remain focused on issued-key inventory, bootstrap state, creation, and revocation rather than acting as a general-purpose login/logout hub.
 
 ### Streaming protocol
 

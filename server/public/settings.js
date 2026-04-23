@@ -112,7 +112,11 @@ function tagOptionsMarkup(selected = '') {
 
 function renderTagRail(containerId, modelId) {
   const model = state.models.find((entry) => entry.id === modelId);
-  el(containerId).innerHTML = model
+  const container = el(containerId);
+  if (!container) {
+    return;
+  }
+  container.innerHTML = model
     ? (model.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join('')
     : '<span class="muted small">No tag metadata.</span>';
 }
@@ -120,11 +124,9 @@ function renderTagRail(containerId, modelId) {
 function renderAuthorityStrip() {
   const ctx = state.config?.system_context || {};
   renderSystemContext(el('settings-system-context'), ctx);
-  el('settings-authority-strip').innerHTML = [
-    `<span class="badge">${escapeHtml(ctx.role || 'anonymous')}</span>`,
-    ctx.auth_mode ? `<span class="badge">${escapeHtml(ctx.auth_mode)}</span>` : '',
-    ctx.owner_identity ? `<span class="badge">${escapeHtml(ctx.owner_identity)}</span>` : '',
-  ].filter(Boolean).join('');
+  el('settings-authority-strip').innerHTML = ctx.can_edit_global_state
+    ? '<span class="badge">Global settings writable</span>'
+    : '<span class="badge">Read-only view</span>';
 }
 
 function renderPermissionMessage() {
@@ -143,6 +145,63 @@ function renderModels() {
     .map((model) => `<option value="${escapeHtml(model.id)}" ${model.id === selectedId ? 'selected' : ''}>${escapeHtml(modelLabel(model))}</option>`)
     .join('');
   renderTagRail('default-llm-tags', el('default-llm').value);
+  renderInterpreterModelBindings();
+}
+
+function modelRoutingTargets() {
+  return state.config?.model_routing_targets || [];
+}
+
+function currentBindingFor(name) {
+  return state.config?.profile_bindings?.[name]
+    ?? { model: state.config?.interpreter_mappings?.[name] ?? '', tier: 'standard', taskTag: '' };
+}
+
+function renderInterpreterModelBindings() {
+  const container = el('interpreter-model-bindings');
+  const interpreters = modelRoutingTargets();
+  if (!container) {
+    return;
+  }
+  if (interpreters.length === 0) {
+    container.innerHTML = '<div class="muted small">No LLM routing targets are currently available.</div>';
+    return;
+  }
+
+  container.innerHTML = interpreters.map((entry) => {
+    const binding = currentBindingFor(entry.name);
+    const selectedId = resolveModelId(binding.model, state.modelFilter);
+    const options = filterModels(state.modelFilter, selectedId)
+      .map((model) => `<option value="${escapeHtml(model.id)}" ${model.id === selectedId ? 'selected' : ''}>${escapeHtml(modelLabel(model))}</option>`)
+      .join('');
+    const tagRailId = `interpreter-model-tags-${entry.name}`;
+    return `
+      <div class="settings-binding-card stack">
+        <div class="settings-binding-header">
+          <div class="stack compact">
+            <strong>${escapeHtml(entry.name)}</strong>
+            <div class="muted small">${escapeHtml(entry.purpose || entry.name)}</div>
+          </div>
+          <div class="row wrap">
+            <span class="badge">${escapeHtml(entry.owner_label || 'LLM routing')}</span>
+            <span class="badge">${escapeHtml(binding.tier || entry.cost_class || 'standard')}</span>
+            ${binding.taskTag ? `<span class="badge">${escapeHtml(binding.taskTag)}</span>` : ''}
+          </div>
+        </div>
+        <label class="stack">
+          <span class="small muted">Model</span>
+          <select data-interpreter-model="${escapeHtml(entry.name)}">${options}</select>
+        </label>
+        <div id="${escapeHtml(tagRailId)}" class="row wrap"></div>
+      </div>
+    `;
+  }).join('');
+
+  interpreters.forEach((entry) => {
+    const binding = currentBindingFor(entry.name);
+    const selectedId = resolveModelId(binding.model, state.modelFilter);
+    renderTagRail(`interpreter-model-tags-${entry.name}`, selectedId);
+  });
 }
 
 function renderInterpreters() {
@@ -153,12 +212,19 @@ function renderInterpreters() {
         <span class="muted small">${escapeHtml(entry.purpose || entry.name)}</span>
       </div>
       <div class="interpreter-meta">
+        <span class="badge">${escapeHtml(entry.component_type || 'Component')}</span>
         <span class="badge">${escapeHtml(entry.cost_class || 'normal')}</span>
-        <span class="badge">${entry.uses_llm_adapter ? 'llm-adapter' : 'native'}</span>
+        <span class="badge">${entry.uses_llm_adapter ? 'llm-assisted' : 'deterministic'}</span>
       </div>
       <div class="interpreter-toggle">
-        <input type="checkbox" data-interpreter="${escapeHtml(entry.name)}" ${entry.enabled ? 'checked' : ''}>
-        <span class="small muted">Enabled</span>
+        <input
+          type="checkbox"
+          data-interpreter="${escapeHtml(entry.name)}"
+          data-disableable="${entry.disableable === false ? 'false' : 'true'}"
+          ${entry.enabled ? 'checked' : ''}
+          ${entry.disableable === false ? 'disabled' : ''}
+        >
+        <span class="small muted">${entry.disableable === false ? 'Always on' : 'Enabled'}</span>
       </div>
     </label>
   `).join('');
@@ -192,77 +258,48 @@ function renderBootstrapStatus() {
     el('bootstrap-status').innerHTML = '<span class="badge status-active">No API keys exist yet. Bootstrap admin setup is required.</span>';
     return;
   }
-  if (state.config?.system_context?.auth_mode === 'api_key') {
-    el('bootstrap-status').innerHTML = '<span class="badge status-enabled">Authenticated with API key.</span>';
+  if (canEditGlobalState()) {
+    el('bootstrap-status').innerHTML = '<span class="badge status-enabled">API key management is writable.</span>';
     return;
   }
-  el('bootstrap-status').innerHTML = '<span class="badge status-error">API key login required.</span>';
+  el('bootstrap-status').innerHTML = '<span class="badge status-error">An admin API key is required to manage issued keys.</span>';
 }
 
-function renderCurrentAccess() {
+function renderAuthCreateCard() {
   const auth = state.config?.auth || {};
-  const currentToken = getApiKey();
-  const authenticated = state.config?.system_context?.auth_mode === 'api_key';
-  const currentId = currentToken.split('.')[0] || '';
-
+  const canEdit = canEditGlobalState();
   if (!auth.has_api_keys) {
-    el('auth-current-access').innerHTML = `
-      <div class="settings-key-card">
-        <div class="stack compact">
-          <strong>Bootstrap admin key</strong>
-          <div class="muted small">Create the first admin key. The full key is shown once in a popup so you can copy it, then decide when to log in with it.</div>
-        </div>
-        <div class="settings-inline-actions">
-          <button type="button" data-open-bootstrap-modal>Create bootstrap admin key</button>
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  if (authenticated && currentToken) {
-    el('auth-current-access').innerHTML = `
-      <div class="settings-key-card">
-        <div class="stack compact">
-          <strong>Active API key</strong>
-          <div class="muted small">${escapeHtml(maskToken(currentToken))}</div>
-          <div class="row wrap">
-            <span class="badge">${escapeHtml(state.config?.system_context?.role || 'user')}</span>
-            <span class="badge">${escapeHtml(currentId)}</span>
-          </div>
-        </div>
-        <div class="settings-inline-actions">
-          <button class="secondary" type="button" data-copy-current-key>Copy</button>
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  const invalidStored = currentToken && !authenticated;
-  el('auth-current-access').innerHTML = `
-    <div class="settings-key-card stack">
+    el('auth-create-card').innerHTML = `
       <div class="stack compact">
-        <strong>${invalidStored ? 'Stored API key is not accepted' : 'Log in with an API key'}</strong>
-        <div class="muted small">${invalidStored
-          ? 'The browser still has a stale or invalid key value. Paste a valid key or clear the stale one.'
-          : 'Paste a valid API key to authenticate and unlock admin settings.'
-        }</div>
+        <div class="eyebrow">Provisioning</div>
+        <h4>Create bootstrap admin key</h4>
+        <div class="muted small">The first server key is created in a popup and the full value is shown only once.</div>
       </div>
-      <label class="stack">
-        <span class="small muted">API key</span>
-        <input id="api-key-input" placeholder="Paste an API key">
-      </label>
       <div class="settings-inline-actions">
-        <button id="login-api-key" type="button">Login</button>
-        ${invalidStored ? '<button id="clear-api-key" class="secondary" type="button">Clear stale key</button>' : ''}
+        <button id="open-create-key-modal" type="button" ${auth.bootstrap_admin_available ? '' : 'disabled'}>Create bootstrap admin key</button>
       </div>
+    `;
+    return;
+  }
+  el('auth-create-card').innerHTML = `
+    <div class="stack compact">
+      <div class="eyebrow">Provisioning</div>
+      <h4>Create server key</h4>
+      <div class="muted small">Create new admin or user keys in a popup. The inventory below keeps only ids and prefixes; the full key appears once after creation.</div>
+    </div>
+    <div class="settings-inline-actions">
+      <button id="open-create-key-modal" type="button" ${canEdit ? '' : 'disabled'}>Create key</button>
     </div>
   `;
 }
 
 function renderIssuedKeys() {
-  el('issued-keys-summary').textContent = state.keys.length ? `${state.keys.length} valid key(s)` : 'Admin authority required.';
+  const auth = state.config?.auth || {};
+  el('issued-keys-summary').textContent = state.keys.length
+    ? `${state.keys.length} valid key(s)`
+    : auth.has_api_keys
+      ? 'Admin authority required.'
+      : 'No keys issued yet.';
   el('api-key-list').innerHTML = state.keys.length
     ? state.keys.map((entry) => {
       const copyableToken = copyableTokenForEntry(entry);
@@ -285,21 +322,32 @@ function renderIssuedKeys() {
 
 function renderAuthPanel() {
   renderBootstrapStatus();
-  renderCurrentAccess();
   renderIssuedKeys();
+  renderAuthCreateCard();
 }
 
 function syncAuthority() {
   const canEdit = canEditGlobalState();
+  const auth = state.config?.auth || {};
+  const canBootstrap = !auth.has_api_keys && auth.bootstrap_admin_available;
   el('save-model-settings').disabled = !canEdit;
   el('save-interpreters').disabled = !canEdit;
-  el('create-key').disabled = !canEdit;
-  el('new-key-label').disabled = !canEdit;
-  el('new-key-role').disabled = !canEdit;
   el('default-llm').disabled = !canEdit;
   el('default-llm-tag-filter').disabled = !canEdit;
-  document.querySelectorAll('#settings-interpreters-tab input[type="checkbox"]').forEach((node) => {
+  if (el('open-create-key-modal')) {
+    el('open-create-key-modal').disabled = auth.has_api_keys ? !canEdit : !auth.bootstrap_admin_available;
+  }
+  if (el('settings-key-modal-label')) {
+    el('settings-key-modal-label').disabled = !(canEdit || canBootstrap);
+  }
+  if (el('settings-key-modal-role')) {
+    el('settings-key-modal-role').disabled = !canEdit;
+  }
+  document.querySelectorAll('[data-interpreter-model]').forEach((node) => {
     node.disabled = !canEdit;
+  });
+  document.querySelectorAll('#settings-interpreters-tab input[type="checkbox"]').forEach((node) => {
+    node.disabled = !canEdit || node.dataset.disableable === 'false';
   });
 }
 
@@ -348,14 +396,19 @@ async function refresh() {
 async function saveModelSettings(event) {
   event.preventDefault();
   try {
+    const interpreterMappings = {};
+    document.querySelectorAll('[data-interpreter-model]').forEach((select) => {
+      interpreterMappings[select.dataset.interpreterModel] = select.value;
+    });
     await fetchJson('/api/config', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         default_llm: el('default-llm').value,
+        interpreter_mappings: interpreterMappings,
       }),
     });
-    notify('Default model updated.');
+    notify('Model routing updated.');
     await refresh();
   } catch (error) {
     notify(error.message, 'error');
@@ -398,11 +451,24 @@ function hideKeyModal() {
 
 function renderKeyModal() {
   const { mode, token, record } = state.keyModal;
-  el('settings-key-modal-create').hidden = mode !== 'bootstrap-create';
+  el('settings-key-modal-create').hidden = !(mode === 'bootstrap-create' || mode === 'create');
   el('settings-key-modal-reveal').hidden = mode !== 'reveal';
   if (mode === 'bootstrap-create') {
     el('settings-key-modal-title').textContent = 'Create bootstrap admin key';
     el('settings-key-modal-status').textContent = 'This is a one-time setup step. The server stores only a hash, so copy the key when it appears.';
+    el('settings-key-modal-label').value = 'Bootstrap admin';
+    el('settings-key-modal-role-wrap').hidden = true;
+    el('settings-key-modal-role').value = 'admin';
+    el('settings-key-modal-submit').textContent = 'Create bootstrap admin key';
+    return;
+  }
+  if (mode === 'create') {
+    el('settings-key-modal-title').textContent = 'Create server key';
+    el('settings-key-modal-status').textContent = 'Choose the label and role, then copy the new key when it appears.';
+    el('settings-key-modal-label').value = '';
+    el('settings-key-modal-role-wrap').hidden = false;
+    el('settings-key-modal-role').value = 'admin';
+    el('settings-key-modal-submit').textContent = 'Create key';
     return;
   }
   if (mode === 'reveal') {
@@ -443,21 +509,18 @@ async function createBootstrapKey() {
   }
 }
 
-async function createServerKey(event) {
-  event.preventDefault();
+async function createServerKey() {
   try {
     const payload = await fetchJson('/api/auth/keys', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        label: el('new-key-label').value.trim(),
-        role: el('new-key-role').value,
+        label: el('settings-key-modal-label').value.trim(),
+        role: el('settings-key-modal-role').value,
       }),
     });
     rememberApiKey(payload.api_key, payload.record.label);
     showKeyModal('reveal', { token: payload.api_key, record: payload.record });
-    el('new-key-label').value = '';
-    el('new-key-role').value = 'admin';
     notify(`Created ${payload.record.role} API key ${payload.record.id}.`);
     await refresh();
   } catch (error) {
@@ -475,18 +538,6 @@ async function revokeKey(keyId) {
   } catch (error) {
     notify(error.message, 'error');
   }
-}
-
-function loginWithApiKey() {
-  const token = el('api-key-input')?.value.trim();
-  if (!token) {
-    notify('Provide an API key first.', 'error');
-    return false;
-  }
-  setApiKey(token);
-  setActiveSessionId('');
-  notify('API key activated for this browser.');
-  return true;
 }
 
 function useModalKey() {
@@ -508,35 +559,32 @@ function attachHandlers() {
 
   el('model-settings').addEventListener('submit', saveModelSettings);
   el('interpreter-settings').addEventListener('submit', saveInterpreters);
-  el('api-key-form').addEventListener('submit', createServerKey);
   el('refresh-auth').addEventListener('click', () => refresh().catch((error) => notify(error.message, 'error')));
-  el('default-llm').addEventListener('change', () => renderTagRail('default-llm-tags', el('default-llm').value));
-  el('default-llm-tag-filter').addEventListener('change', (event) => {
-    state.modelFilter = event.target.value;
-    renderModels();
-    syncAuthority();
+  el('model-settings').addEventListener('change', (event) => {
+    if (event.target.id === 'default-llm') {
+      renderTagRail('default-llm-tags', el('default-llm').value);
+      return;
+    }
+    if (event.target.id === 'default-llm-tag-filter') {
+      state.modelFilter = event.target.value;
+      renderModels();
+      syncAuthority();
+      return;
+    }
+    const select = event.target.closest('[data-interpreter-model]');
+    if (select) {
+      renderTagRail(`interpreter-model-tags-${select.dataset.interpreterModel}`, select.value);
+    }
   });
 
-  el('auth-current-access').addEventListener('click', (event) => {
-    if (event.target.closest('[data-open-bootstrap-modal]')) {
-      showKeyModal('bootstrap-create');
-      return;
-    }
-    if (event.target.closest('[data-copy-current-key]')) {
-      copyText(getApiKey()).then(() => notify('API key copied.')).catch((error) => notify(error.message, 'error'));
-      return;
-    }
-    if (event.target.closest('#login-api-key')) {
-      if (loginWithApiKey()) {
-        refresh().catch((error) => notify(error.message, 'error'));
+  el('settings-auth-tab').addEventListener('click', (event) => {
+    if (event.target.closest('#open-create-key-modal')) {
+      if ((state.config?.auth?.has_api_keys ?? false) === false) {
+        showKeyModal('bootstrap-create');
+      } else {
+        showKeyModal('create');
       }
       return;
-    }
-    if (event.target.closest('#clear-api-key')) {
-      setApiKey('');
-      setActiveSessionId('');
-      notify('Stale API key cleared.');
-      refresh().catch((error) => notify(error.message, 'error'));
     }
   });
 
@@ -563,8 +611,9 @@ function attachHandlers() {
       hideKeyModal();
       return;
     }
-    if (event.target.closest('#settings-bootstrap-submit')) {
-      createBootstrapKey().catch((error) => notify(error.message, 'error'));
+    if (event.target.closest('#settings-key-modal-submit')) {
+      const action = state.keyModal.mode === 'bootstrap-create' ? createBootstrapKey : createServerKey;
+      action().catch((error) => notify(error.message, 'error'));
       return;
     }
     if (event.target.closest('#settings-key-modal-copy')) {

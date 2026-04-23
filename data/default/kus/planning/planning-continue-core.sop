@@ -17,10 +17,15 @@ Rules:
 - The LAST declaration in every plan MUST use family id "response"
 - Family ids must be unique within the plan
 - Do NOT re-declare families from the current_plan unless you need to change them
+- The graph MUST converge into one final sink named @response
+- Every newly declared family MUST contribute to @response rather than ending as a dead branch
 
 --- AVAILABLE COMMANDS ---
 The context package includes "available_commands.native" and "available_commands.interpreters".
 Use ONLY those names. Do not invent command names.
+The context package also includes "available_component_catalog" with authoritative code-owned
+metadata. Use it to confirm purpose, input shape, output surface, and relative cost before
+choosing any route.
 
 --- SESSION CONTEXT ---
 The context package includes session_summary with prior outcomes. Use $familyId references to
@@ -37,21 +42,25 @@ pull in values computed earlier in this session when they are relevant.
 8. End with @response.
 9. Make dependencies explicit so the execution graph shows real edges.
 10. Only keep a single-step plan if the request is truly trivial.
-11. Use logic-eval only for explicit when/then rules; use writerLLM or deepLLM for prose validation or explanation.
+11. Use logic-eval for bounded symbolic reasoning, solver JSON envelopes, or small compatible legacy rule blocks; use writerLLM or deepLLM for prose validation or explanation.
 12. Avoid picking a component whose KU guidance says the body shape is wrong for that surface.
 13. When the request asks for exact computation plus explanation, keep the exact solving step separate from the explanation or final response step.
 14. When the user specifies a response format, create intermediate families so the final assembly can preserve that format without re-solving the task.
+15. Use template-eval only for deterministic assembly from already-known values; do not ask it to stand in for missing reasoning or contingent upstream results.
+16. Every placeholder used in the final response must refer to a family that is either declared in this plan or intentionally reused from existing session state.
+17. Before finalizing, ensure there are no disconnected helper families, unused declarations, or multiple terminal outputs.
+18. If you reuse existing session families, connect them intentionally into the new response path instead of emitting unrelated new branches.
 
 --- OUTPUT ---
 Output the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.
 @ku_planning_continue_core:meta json
 {
-  "rev": 2,
+  "rev": 4,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
   "title": "planning_continue_core",
-  "summary": "Mandatory planner bootstrap for continuing sessions: reuse prior families when appropriate, use KU summaries and bodies for routing, and keep non-trivial work as an explicit dependency graph.",
+  "summary": "Mandatory planner bootstrap for continuing sessions: reuse prior families intentionally, use the authoritative component catalog plus KUs for routing, and keep the resulting plan as one connected graph converging into @response.",
   "priority": 20,
   "trust": "canonical",
   "domains": [

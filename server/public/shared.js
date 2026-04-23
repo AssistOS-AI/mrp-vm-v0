@@ -173,10 +173,8 @@ export function renderSystemContext(container, context = {}) {
     return;
   }
   container.innerHTML = [
-    `<span class="badge">${context.role || 'anonymous'}</span>`,
     context.session_origin ? `<span class="badge">${context.session_origin}</span>` : '',
-    context.auth_mode ? `<span class="badge">${context.auth_mode}</span>` : '',
-    `<span class="badge">${context.can_edit_global_state ? 'global-edit enabled' : 'global-edit disabled'}</span>`,
+    `<span class="badge">${context.can_edit_global_state ? 'global settings writable' : 'global settings read-only'}</span>`,
   ].filter(Boolean).join(' ');
 }
 

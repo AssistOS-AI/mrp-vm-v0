@@ -120,3 +120,49 @@ test('planning reroutes invalid prose js-eval steps to a reasoning interpreter',
   assert.match(inspection.plan_snapshot, /@solver deepLLM/);
   assert.doesNotMatch(inspection.plan_snapshot, /@solver js-eval/);
 });
+
+test('planning retries when the planner emits a disconnected graph with unused declarations', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, {
+    deterministic: {},
+    fakeAdapterConfig: {
+      scriptedSequences: {
+        plannerLLM: [[
+          '@facts fastLLM',
+          'Extract the key facts from the request.',
+          '',
+          '@deadend writerLLM',
+          'Write a side note that is never used.',
+          '',
+          '@response template-eval',
+          'Facts: $facts',
+        ].join('\n'), [
+          '@facts fastLLM',
+          'Extract the key facts from the request.',
+          '',
+          '@explanation deepLLM',
+          'Explain why the extracted facts answer the request.',
+          'Facts: $facts',
+          '',
+          '@response template-eval',
+          'Facts: $facts',
+          'Explanation: $explanation',
+        ].join('\n')],
+        fastLLM: ['Structured facts'],
+        deepLLM: ['Connected explanation'],
+      },
+    },
+  });
+
+  const outcome = await runtime.submitRequest({
+    requestText: 'Summarize the situation and explain why the answer is correct.',
+  });
+
+  assert.equal(outcome.stop_reason, 'completed');
+  assert.match(String(outcome.response), /Structured facts/);
+  assert.match(String(outcome.response), /Connected explanation/);
+
+  const inspection = await runtime.inspectRequestPublic(outcome.request_id);
+  assert.match(inspection.plan_snapshot, /@explanation deepLLM/);
+  assert.doesNotMatch(inspection.plan_snapshot, /@deadend writerLLM/);
+});

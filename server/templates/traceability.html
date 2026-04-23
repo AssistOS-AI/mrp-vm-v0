@@ -47,7 +47,7 @@
             </div>
             <button id="copy-sop" class="secondary" type="button">Copy</button>
           </div>
-          <pre id="sop-content" class="code-panel"></pre>
+          <pre class="code-panel"><code id="sop-content" class="sop-code"></code></pre>
         </section>
 
         <section id="variables-tab" class="tab-panel"></section>
@@ -57,13 +57,14 @@
     </div>
   </main>
 
-  <div id="node-modal" class="modal">
-    <div class="modal-content stack">
-      <div class="between">
-        <h3 id="node-modal-title">Node details</h3>
+  <div id="node-modal" class="modal modal--fullscreen">
+    <div class="modal-content modal-content--fullscreen stack">
+      <div class="node-modal-toolbar">
+        <div id="node-modal-heading" class="node-modal-heading">Node details</div>
+        <div id="node-modal-tabs" class="trace-tabs-bar trace-tabs-bar--modal"></div>
         <button id="close-node-modal" class="secondary" type="button">Close</button>
       </div>
-      <div id="node-modal-body" class="stack"></div>
+      <div id="node-modal-body" class="node-modal-body"></div>
     </div>
   </div>
   <script type="module" src="/assets/traceability.js"></script>

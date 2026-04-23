@@ -43,12 +43,12 @@
           <div class="between">
             <div class="stack compact">
               <div class="eyebrow">Models</div>
-              <h3>Default model</h3>
+              <h3>Default model and LLM interpreter bindings</h3>
             </div>
             <button id="save-model-settings" type="submit">Save</button>
           </div>
           <section class="inset-card stack">
-            <div class="muted small">Choose the default LLM from the discovered catalog. Tags stay visible directly in the selector so the list remains compact but still informative.</div>
+            <div class="muted small">Choose the default LLM and, below it, the concrete model for each LLM-backed interpreter. Tags stay visible directly in the selectors so the catalog remains compact but still informative.</div>
             <div class="settings-form-grid">
               <label class="stack">
                 <span class="small muted">Filter by tag</span>
@@ -60,6 +60,13 @@
               </label>
             </div>
             <div id="default-llm-tags" class="row wrap"></div>
+          </section>
+          <section class="inset-card stack">
+            <div class="stack compact">
+              <div class="eyebrow">Interpreter routing</div>
+              <h4>LLM routing targets</h4>
+            </div>
+            <div id="interpreter-model-bindings" class="settings-binding-grid"></div>
           </section>
         </form>
       </section>
@@ -88,36 +95,6 @@
           </div>
 
           <div id="bootstrap-status" class="settings-auth-status"></div>
-          <section class="inset-card stack">
-            <div class="stack compact">
-              <div class="eyebrow">Access</div>
-              <h4>Current access</h4>
-            </div>
-            <div id="auth-current-access" class="stack"></div>
-          </section>
-
-          <form id="api-key-form" class="inset-card stack">
-            <div class="stack compact">
-              <div class="eyebrow">Provisioning</div>
-              <h4>Create server key</h4>
-            </div>
-            <div class="settings-form-grid">
-              <label class="stack">
-                <span class="small muted">New key label</span>
-                <input id="new-key-label" placeholder="Operator user">
-              </label>
-              <label class="stack">
-                <span class="small muted">Role</span>
-                <select id="new-key-role">
-                  <option value="admin">admin</option>
-                  <option value="user">user</option>
-                </select>
-              </label>
-            </div>
-            <div class="settings-inline-actions">
-              <button id="create-key" type="submit">Create key</button>
-            </div>
-          </form>
 
           <div class="inset-card stack">
             <div class="between">
@@ -126,6 +103,8 @@
             </div>
             <div id="api-key-list" class="stack"></div>
           </div>
+
+          <section id="auth-create-card" class="inset-card stack"></section>
         </section>
       </section>
     </section>
@@ -138,12 +117,21 @@
         <div id="settings-key-modal-status" class="muted small"></div>
       </div>
       <div id="settings-key-modal-create" class="stack">
-        <label class="stack">
-          <span class="small muted">Bootstrap label</span>
-          <input id="settings-key-modal-label" placeholder="Bootstrap admin">
-        </label>
+        <div class="settings-form-grid">
+          <label class="stack">
+            <span class="small muted">Key label</span>
+            <input id="settings-key-modal-label" placeholder="Bootstrap admin">
+          </label>
+          <label id="settings-key-modal-role-wrap" class="stack">
+            <span class="small muted">Role</span>
+            <select id="settings-key-modal-role">
+              <option value="admin">admin</option>
+              <option value="user">user</option>
+            </select>
+          </label>
+        </div>
         <div class="settings-inline-actions">
-          <button id="settings-bootstrap-submit" type="button">Create bootstrap admin key</button>
+          <button id="settings-key-modal-submit" type="button">Create key</button>
           <button class="secondary" type="button" data-close-key-modal>Close</button>
         </div>
       </div>

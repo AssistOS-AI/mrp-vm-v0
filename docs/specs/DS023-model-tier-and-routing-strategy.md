@@ -57,6 +57,8 @@ Each LLM wrapper profile must bind to a tier, a concrete model, and a task tag. 
 | `codeGeneratorLLM` | `standard` | `project-bootstrap` |
 | `writerLLM` | `standard` | `documentation` |
 | `plannerLLM` | `premium` | `orchestration` |
+| `logicGeneratorLLM` | `premium` | `specification` |
+| `formatterLLM` | `standard` | `documentation` |
 
 Hosts may override the concrete model per profile and may override the tier or task tag when a downstream environment needs different routing economics.
 
@@ -78,11 +80,13 @@ The settings page must expose model selection through compact select controls ra
 
 1. model options show associated tags inline in their labels,
 2. model tag filters may narrow the visible options without hiding the full catalog permanently,
-3. the default-model selection is rendered compactly without exposing unrelated internal routing details,
-4. the UI should not dedicate a separate "candidate models" panel once the tag-aware selects already expose the catalog.
+3. the default-model selection is rendered compactly,
+4. the settings UI must also expose one compact model select for each LLM routing target when operators need explicit per-profile routing, including internal command stages such as `logicGeneratorLLM` and `formatterLLM`,
+5. the per-profile controls must reuse the same discovered model catalog rather than inventing a second model source,
+6. the UI should not dedicate a separate "candidate models" panel once the tag-aware selects already expose the catalog.
 
 The purpose of tags is routing clarity, not decorative display. If the runtime knows a model is tagged `coding`, `reasoning`, or `agentic`, that information must be visible where the user makes the selection.
-The runtime may still maintain per-profile bindings internally, but the baseline settings UI does not have to expose those bindings until a dedicated operator-facing workflow is specified.
+When the UI exposes per-profile bindings, it should still keep the presentation compact and operator-facing rather than turning settings into a raw dump of adapter internals.
 
 ### Task tags
 
@@ -110,9 +114,9 @@ Question #3: Why are task tags required in addition to profile names?
 
 Response: Two invocations may share one wrapper profile but belong to very different repository workflows. Task tags let the provider layer distinguish documentation, specification, orchestration, bootstrap, and testing work without duplicating wrapper profiles for every use case.
 
-Question #4: Why keep profile bindings internal even though they exist in runtime configuration?
+Question #4: Why allow the settings UI to expose per-profile bindings even though they are internal runtime routing state?
 
-Response: Profile bindings are implementation-level routing state for wrapper families such as `plannerLLM` or `writerLLM`. Exposing them as primary settings without a stronger UX model makes the UI look like it offers an end-user routing system when it is really showing internal adapter plumbing. The baseline UI therefore focuses on default-model selection and tag visibility while preserving profile bindings as internal runtime configuration.
+Response: Once operators need to pin different models for `plannerLLM`, `writerLLM`, `logicGeneratorLLM`, `formatterLLM`, or the other routed profiles, hiding those bindings entirely becomes artificial. The important constraint is not secrecy; it is UX discipline. The UI may expose one compact select per routed LLM target as long as it still routes through the authoritative runtime configuration and the shared discovered model catalog.
 
 ## Conclusion
 

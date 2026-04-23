@@ -20,13 +20,13 @@ This specification defines the detailed user experience for the MRP-VM v0 interf
 2. **Operational depth by navigation**: Trace, KB inspection, and settings live on dedicated pages.
 3. **Selection before density**: Default views stay compact; detail appears only when the user selects a request, variable, node, or KU.
 4. **Trace clarity**: The execution path must be understandable visually, not only through raw JSON.
-5. **Auth transparency**: The current API-key role and saved-key context must be obvious whenever protected operations are available.
+5. **Authority clarity without key leakage**: The UI may show whether protected operations are writable, but it must not leak active key ids or identity strings into page headers.
 
 ### Chat page
 
 The chat page uses a full-height layout with:
 
-1. a compact sticky header containing branding, navigation, session selector, and auth badges,
+1. a compact sticky header containing branding, navigation, session selector, and minimal capability badges,
 2. one scrollable conversation surface,
 3. one bottom composer.
 
@@ -61,7 +61,12 @@ The detail workspace exposes exactly three tabs:
 
 #### SOP Lang tab
 
-This tab shows the executed SOP Lang program for the selected request in a scrollable code surface with a copy action.
+This tab shows the executed SOP Lang program for the selected request in a scrollable code surface with a copy action. The surface should add lightweight syntax differentiation so:
+
+1. family names in declaration headers are visually distinct,
+2. command or interpreter names are styled differently from family names,
+3. `$var` references stand out inside bodies,
+4. `~var` handles stand out inside bodies.
 
 #### Variables tab
 
@@ -73,7 +78,7 @@ This tab must use a split layout:
 The right detail area contains exactly three nested tabs:
 
 1. `Current Value` for the representative value at the end of execution,
-2. `Metadata` for family and representative metadata,
+2. `Metadata` for family and representative metadata, including execution timing when available,
 3. `Definition` for the SOP declaration that defines the variable in the executed plan.
 
 #### Execution Graph tab
@@ -83,8 +88,11 @@ This tab renders the execution graph as a left-to-right workflow ordered by topo
 1. small readable nodes,
 2. the variable name on one line,
 3. the executed command or interpreter name on a second line with a distinct style,
-4. ellipsis when labels are too long,
-5. explicit dependency arrows between layers.
+4. a compact duration indicator such as `42 ms` or `1.2 s` when timing is available,
+5. ellipsis when labels are too long,
+6. explicit dependency arrows between layers,
+7. draggable nodes whose connector lines follow the current node positions,
+8. a fullscreen node inspector with tabbed sections for declaration, input, context, output, diagnostics, and KU references.
 
 The graph is not a textual edge list. It is a spatial workflow view that makes dependency structure obvious at a glance.
 
@@ -125,36 +133,32 @@ There is no separate runtime-overview tab.
 
 #### Models tab
 
-The models tab uses compact select controls for the default model. The tab must:
+The models tab uses compact select controls for the default model and the routed LLM bindings. The tab must:
 
 1. expose the default-model select,
-2. show model tags inline inside select option labels,
-3. optionally filter the visible list by tag,
-4. avoid a separate candidate-model gallery once the select controls already reveal the catalog.
-
-Per-profile wrapper bindings may still exist internally in runtime configuration, but the baseline settings page does not expose them until there is a clearer operator-facing UX for that mechanism.
+2. expose one model select for each routed LLM target, including internal command stages such as `logicGeneratorLLM` and `formatterLLM`,
+3. show model tags inline inside select option labels,
+4. optionally filter the visible list by tag,
+5. avoid a separate candidate-model gallery once the select controls already reveal the catalog.
 
 #### Interpreters tab
 
-The interpreters tab shows one compact row per interpreter. Status, purpose, cost class, adapter type, and enabled toggle should fit naturally in one row on desktop rather than being stretched vertically without need.
+The interpreters tab shows one compact row per runtime component. Status, purpose, cost class, component type, and enabled toggle should fit naturally in one row on desktop rather than being stretched vertically without need. Internal predefined commands and external interpreters must both appear here. `planning` remains visible but cannot be disabled.
 
 #### Authentication tab
 
 The authentication tab must support:
 
 1. first-login bootstrap-admin API-key creation when no keys exist,
-2. local storage of saved API keys,
-3. autocomplete or pick-list selection among locally saved keys,
-4. switching the active API key,
-5. creating additional keys with explicit role,
-6. revoking keys when authorized.
+2. creating additional keys with explicit role,
+3. revoking keys when authorized,
+4. local storage of newly revealed keys after creation when the operator chooses that explicitly.
 
 The first-login bootstrap flow should appear as a modal or equivalent popup, reveal the new bootstrap admin key once so the operator can copy it, and then allow login with that key.
-After bootstrap is complete, fresh browsers or logged-out states should show only ordinary login behavior rather than a persistent bootstrap section.
-When an API key is active, the UI should show a masked version plus `Copy` and `Logout` actions instead of printing the full token inline.
+After bootstrap is complete, the Settings page should remain focused on issued-key inventory and key provisioning rather than on login/logout controls.
+Issued API keys should appear before the creation control so operators can inspect the current inventory first.
+When an API key is active, the UI should not render the active token, an "Active API key" card, or active key identity strings inline. Key material stays in the creation popup or browser-saved entries.
 Server-side key inventory may show only non-secret metadata such as id, role, and prefix; full key copy remains available at creation time or from browser-saved key entries.
-When the page loads and saved keys exist, the UI should prompt for or suggest an API key rather than hiding the current auth state.
-Switching keys should clear stale session assumptions so subsequent protected pages and newly created sessions use the newly selected authority context coherently.
 
 ### CSS and JavaScript ownership
 

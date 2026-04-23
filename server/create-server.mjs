@@ -1,6 +1,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import { createRuntime, compileGraph, KbStore, MRPVM, listAchillesModels } from '../src/index.mjs';
+import { deriveFamilyExecutionStatus } from '../src/runtime/state-store.mjs';
 import { parseUrl, json, html, text, notFound, badRequest, forbidden, unauthorized, readJsonBody, readRequestBody, parseMultipart, startSse, writeSseEvent } from './http-helpers.mjs';
 import { loadPublicAsset, loadTemplate } from './asset-loader.mjs';
 import { AuthStore } from './auth-store.mjs';
@@ -185,13 +186,50 @@ function chooseRepresentative(variants = []) {
   })[0];
 }
 
-function toVariableView(familyState = [], definitionMap = new Map()) {
+function deriveTiming(startedAt, finishedAt) {
+  const startedAtMs = Date.parse(startedAt);
+  const finishedAtMs = Date.parse(finishedAt);
+  return {
+    started_at: startedAt ?? null,
+    finished_at: finishedAt ?? null,
+    duration_ms: Number.isFinite(startedAtMs) && Number.isFinite(finishedAtMs)
+      ? Math.max(0, finishedAtMs - startedAtMs)
+      : null,
+  };
+}
+
+function isTerminalStopReason(stopReason) {
+  return ['completed', 'execution_error', 'unknown_outcome', 'active_request'].includes(stopReason);
+}
+
+function firstFailureDiagnostic(diagnostics = []) {
+  const failureEvent = diagnostics[0]?.failure ?? diagnostics[0] ?? null;
+  if (!failureEvent) {
+    return null;
+  }
+  return {
+    kind: failureEvent.kind ?? failureEvent.failure_kind ?? 'execution_error',
+    message: failureEvent.message ?? failureEvent.error_message ?? 'Execution failed.',
+    origin: failureEvent.origin ?? failureEvent.originating_component ?? null,
+  };
+}
+
+function toVariableView(familyState = [], definitionMap = new Map(), nodeStatusByFamily = new Map()) {
   return familyState.map((family) => {
     const representative = chooseRepresentative(family.variants);
     const declaration = definitionMap.get(family.familyId) ?? null;
+    const nodeStatus = nodeStatusByFamily.get(family.familyId) ?? null;
+    const baseStatus = deriveFamilyExecutionStatus(family);
+    const timing = representative?.meta?.execution_timing
+      ?? family.familyMeta?.last_execution_timing
+      ?? null;
+    const diagnostic = firstFailureDiagnostic(nodeStatus?.diagnostics);
     return {
       family_id: family.familyId,
-      status: family.familyMeta?.status ?? 'unknown',
+      status: representative ? baseStatus : nodeStatus?.status ?? baseStatus,
+      status_reason: representative
+        ? (representative?.meta?.reason ?? family.familyMeta?.reason ?? diagnostic?.message ?? null)
+        : (nodeStatus?.reason ?? diagnostic?.message ?? family.familyMeta?.reason ?? null),
       representative_id: representative?.id ?? null,
       active_version_id: representative?.id ?? null,
       command_name: declaration?.commands?.join(
@@ -216,12 +254,14 @@ function toVariableView(familyState = [], definitionMap = new Map()) {
       family_meta: family.familyMeta ?? {},
       current_value: representative?.value ?? representative?.rendered ?? null,
       current_meta: representative?.meta ?? {},
+      timing,
       variants: (family.variants ?? []).map((variant) => ({
         id: variant.id,
         value: variant.value ?? variant.rendered ?? '',
         meta: variant.meta ?? {},
         status: variant.meta?.status ?? 'active',
         score: variant.meta?.score ?? variant.meta?.score_pct ?? null,
+        timing: variant.meta?.execution_timing ?? null,
         provenance_summary: summarizeText([
           variant.meta?.origin,
           variant.meta?.source_interpreter,
@@ -245,76 +285,189 @@ function groupEventsByDeclaration(traceEvents = []) {
   return grouped;
 }
 
-function buildExecutionGraph(planText, traceEvents = []) {
+export function buildExecutionGraph(planText, traceEvents = [], requestDetails = null) {
   if (!planText?.trim()) {
     return {
       nodes: [],
       edges: [],
       strata: [],
+      summary: {
+        counts: {},
+        request_stop_reason: requestDetails?.outcome?.stop_reason ?? requestDetails?.status ?? 'unknown',
+        error: requestDetails?.outcome?.error ?? null,
+      },
     };
   }
   const graph = compileGraph(planText);
   const eventsByDeclaration = groupEventsByDeclaration(traceEvents);
+  const requestStarted = traceEvents.find((event) => event.event === 'request_started') ?? null;
+  const requestStopped = [...traceEvents].reverse().find((event) => event.event === 'request_stopped') ?? null;
+  const stopReason = requestDetails?.outcome?.stop_reason ?? requestStopped?.stop_reason ?? requestDetails?.status ?? 'unknown';
+  const requestError = requestDetails?.outcome?.error
+    ?? (requestStopped?.error_message ? { code: 'EXECUTION_ERROR', message: requestStopped.error_message } : null);
+  const terminalFailure = isTerminalStopReason(stopReason) && stopReason !== 'completed';
+  const nodes = graph.nodes.map((node) => {
+    const nodeEvents = eventsByDeclaration.get(node.id) ?? [];
+    const contextEvent = nodeEvents.find((event) => event.event === 'context_packaged') ?? null;
+    const invokedEvents = nodeEvents.filter((event) => event.event === 'command_invoked' || event.event === 'interpreter_invoked');
+    const invokedEvent = invokedEvents.at(-1) ?? null;
+    const failureEvents = nodeEvents.filter((event) => event.event === 'failure_recorded');
+    const outputEvents = nodeEvents.filter((event) => ['variant_emitted', 'metadata_updated', 'failure_recorded', 'declarations_inserted'].includes(event.event));
+    const firstAt = nodeEvents[0]?.created_at ?? null;
+    const lastAt = nodeEvents.at(-1)?.created_at ?? null;
+    const explicitTiming = outputEvents.find((event) => event.execution_timing)?.execution_timing
+      ?? invokedEvent?.execution_timing
+      ?? null;
+    const timing = explicitTiming ?? deriveTiming(firstAt, lastAt);
+    const status = failureEvents.length > 0
+      ? 'failed'
+      : outputEvents.some((event) => ['variant_emitted', 'metadata_updated', 'declarations_inserted'].includes(event.event))
+        ? 'completed'
+        : invokedEvent
+          ? 'running'
+          : 'pending';
+    const failure = firstFailureDiagnostic(failureEvents);
+    return {
+      id: node.id,
+      label: `${node.targetFamily} <- ${node.declaration.commands.join(node.declaration.declaration_kind === 'fallback' ? ' | ' : node.declaration.declaration_kind === 'multi_attempt' ? ' & ' : '')}`,
+      target_family: node.targetFamily,
+      declaration_kind: node.declaration.declaration_kind,
+      commands: node.declaration.commands,
+      body: node.declaration.body,
+      status,
+      status_reason: failure?.message ?? null,
+      dependencies: node.dependencies,
+      external_dependencies: node.externalDependencies,
+      topological_level: node.topologicalLevel,
+      duration_ms: timing.duration_ms,
+      epoch_ids: [...new Set(nodeEvents.map((event) => event.epoch_id).filter(Boolean))],
+      details: {
+        declaration_definition: {
+          target: node.declaration.target,
+          commands: node.declaration.commands,
+          body: node.declaration.body,
+          declaration_kind: node.declaration.declaration_kind,
+          references: node.declaration.references,
+        },
+        context_sections: contextEvent?.context_sections ?? {},
+        resolved_dependencies: contextEvent?.resolved_dependencies ?? [],
+        context_package: {
+          byte_count: contextEvent?.byte_counts ?? 0,
+          selected_items: contextEvent?.selected_items ?? [],
+          pruned_items: contextEvent?.pruned_items ?? [],
+          selected_knowledge_units: contextEvent?.selected_knowledge_units ?? [],
+        },
+        outputs: outputEvents,
+        diagnostics: failureEvents,
+        retries: Math.max(0, invokedEvents.length - 1),
+        timing,
+        execution_layer: node.topologicalLevel,
+        invoked_as: invokedEvent?.command_id ?? invokedEvent?.interpreter_id ?? null,
+        execution_environment: {
+          session_id: requestDetails?.session_id ?? null,
+          request_id: requestDetails?.request_id ?? null,
+          stop_reason: stopReason,
+          request_error: requestError,
+          budgets: requestDetails?.outcome?.remaining_budgets ?? requestStarted?.budgets ?? requestDetails?.envelope?.budgets ?? null,
+          file_count: requestStarted?.request_metadata?.file_count ?? requestDetails?.envelope?.file_descriptors?.length ?? 0,
+          trigger: requestStarted?.trigger ?? null,
+          execution_ordinal: invokedEvent?.execution_ordinal ?? null,
+        },
+        failure,
+        skipped_by: [],
+      },
+    };
+  });
+
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const parentsByNode = new Map(nodes.map((node) => [node.id, []]));
+  for (const edge of graph.edges) {
+    const parents = parentsByNode.get(edge.to) ?? [];
+    parents.push(edge.from);
+    parentsByNode.set(edge.to, parents);
+  }
+
+  if (terminalFailure) {
+    for (const node of nodes) {
+      if (node.status === 'running') {
+        node.status = 'failed';
+        node.status_reason = requestError?.message ?? 'Execution stopped before this node produced a result.';
+        node.details.failure = node.details.failure ?? {
+          kind: requestError?.code ?? 'execution_error',
+          message: node.status_reason,
+          origin: node.details.invoked_as ?? null,
+        };
+        node.details.diagnostics = [
+          ...node.details.diagnostics,
+          {
+            event: 'request_stopped',
+            failure_kind: requestError?.code ?? 'execution_error',
+            failure: node.details.failure,
+          },
+        ];
+      }
+    }
+
+    const failedNodeIds = new Set(nodes.filter((node) => node.status === 'failed').map((node) => node.id));
+    const firstFailedLayer = nodes
+      .filter((node) => node.status === 'failed')
+      .reduce((min, node) => Math.min(min, node.topological_level), Number.POSITIVE_INFINITY);
+
+    const collectFailedAncestors = (nodeId, visited = new Set()) => {
+      if (visited.has(nodeId)) {
+        return [];
+      }
+      visited.add(nodeId);
+      const parents = parentsByNode.get(nodeId) ?? [];
+      const matches = [];
+      for (const parentId of parents) {
+        if (failedNodeIds.has(parentId)) {
+          matches.push(parentId);
+        }
+        matches.push(...collectFailedAncestors(parentId, visited));
+      }
+      return [...new Set(matches)];
+    };
+
+    for (const node of nodes) {
+      if (node.status !== 'pending') {
+        continue;
+      }
+      const skippedBy = collectFailedAncestors(node.id);
+      if (skippedBy.length === 0 && Number.isFinite(firstFailedLayer) && node.topological_level >= firstFailedLayer) {
+        skippedBy.push(...nodes
+          .filter((candidate) => candidate.status === 'failed' && candidate.topological_level <= node.topological_level)
+          .map((candidate) => candidate.id));
+      }
+      if (skippedBy.length === 0) {
+        continue;
+      }
+      node.status = 'skipped';
+      node.details.skipped_by = [...new Set(skippedBy)];
+      node.status_reason = `Skipped after ${node.details.skipped_by.map((id) => {
+        const failedNode = nodeMap.get(id);
+        return failedNode ? `${failedNode.target_family}` : id;
+      }).join(', ')} failed.`;
+    }
+  }
+
+  const counts = nodes.reduce((acc, node) => {
+    acc[node.status] = (acc[node.status] ?? 0) + 1;
+    return acc;
+  }, {});
+
   return {
     edges: graph.edges,
     strata: graph.strata.map((stratum, index) => ({
       layer: index,
       node_ids: stratum.map((node) => node.id),
     })),
-    nodes: graph.nodes.map((node) => {
-      const nodeEvents = eventsByDeclaration.get(node.id) ?? [];
-      const contextEvent = nodeEvents.find((event) => event.event === 'context_packaged') ?? null;
-      const invokedEvent = nodeEvents.find((event) => event.event === 'command_invoked' || event.event === 'interpreter_invoked') ?? null;
-      const outputEvents = nodeEvents.filter((event) => ['variant_emitted', 'metadata_updated', 'failure_recorded', 'declarations_inserted'].includes(event.event));
-      const firstAt = nodeEvents[0]?.created_at ?? null;
-      const lastAt = nodeEvents.at(-1)?.created_at ?? null;
-      const status = nodeEvents.some((event) => event.event === 'failure_recorded')
-        ? 'failed'
-        : outputEvents.some((event) => event.event === 'variant_emitted' || event.event === 'metadata_updated')
-          ? 'completed'
-          : invokedEvent
-            ? 'running'
-            : 'pending';
-      return {
-        id: node.id,
-        label: `${node.targetFamily} <- ${node.declaration.commands.join(node.declaration.declaration_kind === 'fallback' ? ' | ' : node.declaration.declaration_kind === 'multi_attempt' ? ' & ' : '')}`,
-        target_family: node.targetFamily,
-        declaration_kind: node.declaration.declaration_kind,
-        commands: node.declaration.commands,
-        body: node.declaration.body,
-        status,
-        dependencies: node.dependencies,
-        external_dependencies: node.externalDependencies,
-        topological_level: node.topologicalLevel,
-        epoch_ids: [...new Set(nodeEvents.map((event) => event.epoch_id).filter(Boolean))],
-        details: {
-          declaration_definition: {
-            target: node.declaration.target,
-            commands: node.declaration.commands,
-            body: node.declaration.body,
-            declaration_kind: node.declaration.declaration_kind,
-            references: node.declaration.references,
-          },
-          runtime_context: contextEvent?.context_markdown ?? '',
-          resolved_dependencies: contextEvent?.resolved_dependencies ?? [],
-          context_package: {
-            byte_count: contextEvent?.byte_counts ?? 0,
-            selected_items: contextEvent?.selected_items ?? [],
-            pruned_items: contextEvent?.pruned_items ?? [],
-            selected_knowledge_units: contextEvent?.selected_knowledge_units ?? [],
-          },
-          outputs: outputEvents,
-          diagnostics: nodeEvents.filter((event) => event.event === 'failure_recorded'),
-          retries: Math.max(0, nodeEvents.filter((event) => event.event === 'command_invoked' || event.event === 'interpreter_invoked').length - 1),
-          timing: {
-            started_at: firstAt,
-            finished_at: lastAt,
-          },
-          execution_layer: node.topologicalLevel,
-          invoked_as: invokedEvent?.command_id ?? invokedEvent?.interpreter_id ?? null,
-        },
-      };
-    }),
+    nodes,
+    summary: {
+      counts,
+      request_stop_reason: stopReason,
+      error: requestError,
+    },
   };
 }
 
@@ -506,10 +659,7 @@ function resolveModelChoice(modelsList, requestedModel, preferredTags = []) {
 
 function buildSystemContext(callerContext) {
   return {
-    role: getCallerRole(callerContext),
     session_origin: callerContext.callerSession?.session_origin ?? null,
-    auth_mode: callerContext.apiKey ? 'api_key' : (callerContext.callerSession?.auth_mode ?? 'anonymous'),
-    owner_identity: getCallerIdentity(callerContext),
     can_edit_global_state: isAdminCaller(callerContext),
   };
 }
@@ -517,12 +667,68 @@ function buildSystemContext(callerContext) {
 function createInterpreterSnapshot(runtime) {
   const existingHandle = runtime.sessions.values().next().value;
   if (existingHandle) {
-    return existingHandle.executor.externalInterpreters.listContracts();
+    return [
+      ...existingHandle.executor.commandRegistry.listContracts(),
+      ...existingHandle.executor.externalInterpreters.listContracts(),
+    ];
   }
   const probe = new MRPVM(runtime.rootDir, {
     runtimeConfig: runtime.runtimeConfig,
   });
-  return probe.externalInterpreters.listContracts();
+  return [
+    ...probe.commandRegistry.listContracts(),
+    ...probe.externalInterpreters.listContracts(),
+  ];
+}
+
+function buildModelRoutingTargets(config) {
+  const profileCatalog = {
+    fastLLM: {
+      purpose: 'Fast external interpreter for lightweight language tasks.',
+      source_kind: 'external_interpreter',
+      owner_label: 'External interpreter',
+    },
+    deepLLM: {
+      purpose: 'Reasoning-oriented external interpreter for harder analysis.',
+      source_kind: 'external_interpreter',
+      owner_label: 'External interpreter',
+    },
+    codeGeneratorLLM: {
+      purpose: 'External interpreter specialized for code generation.',
+      source_kind: 'external_interpreter',
+      owner_label: 'External interpreter',
+    },
+    writerLLM: {
+      purpose: 'External interpreter specialized for polished prose.',
+      source_kind: 'external_interpreter',
+      owner_label: 'External interpreter',
+    },
+    plannerLLM: {
+      purpose: 'LLM stage used by the native planning command to propose or repair SOP Lang.',
+      source_kind: 'internal_stage',
+      owner_label: 'Planning stage',
+    },
+    logicGeneratorLLM: {
+      purpose: 'LLM stage used by logic-eval to generate SolverProgram steps.',
+      source_kind: 'internal_stage',
+      owner_label: 'logic-eval stage',
+    },
+    formatterLLM: {
+      purpose: 'LLM stage used by logic-eval to phrase the structured solver result.',
+      source_kind: 'internal_stage',
+      owner_label: 'logic-eval stage',
+    },
+  };
+  return Object.entries(config.llm.profileBindings).map(([name, binding]) => ({
+    name,
+    purpose: profileCatalog[name]?.purpose ?? `${name} model binding`,
+    source_kind: profileCatalog[name]?.source_kind ?? 'llm_profile',
+    owner_label: profileCatalog[name]?.owner_label ?? 'LLM profile',
+    tier: binding.tier,
+    task_tag: binding.taskTag,
+    model: binding.model,
+    assigned_model_role: name,
+  }));
 }
 
 async function buildConfigView(runtime, policies, authStore, callerContext) {
@@ -543,8 +749,14 @@ async function buildConfigView(runtime, policies, authStore, callerContext) {
       uses_llm_adapter: entry.uses_llm_adapter,
       cost_class: entry.cost_class,
       enabled: entry.enabled,
+      disableable: entry.disableable !== false,
+      source_kind: entry.source_kind ?? (entry.category === 'native_command' || entry.category === 'orchestration' ? 'internal_command' : 'external_interpreter'),
+      component_type: entry.category === 'orchestration' || entry.source_kind === 'internal_command'
+        ? 'Internal predefined command'
+        : 'External interpreter',
       assigned_model_role: entry.name,
     })),
+    model_routing_targets: buildModelRoutingTargets(config),
     model_candidates: buildModelCandidates(config),
     model_selection_heuristics: 'Model candidates are populated from AchillesAgentLib when available. Tag filters apply directly to that catalog.',
     policies,
@@ -581,14 +793,23 @@ function applyConfigPatch(runtime, policies, patch = {}) {
     }
   }
   if (patch.interpreters) {
+    const interpreterCatalog = new Map(createInterpreterSnapshot(runtime).map((entry) => [entry.name, entry]));
     runtime.runtimeConfig.interpreterStates = {
       ...(runtime.runtimeConfig.interpreterStates ?? {}),
     };
     for (const [name, config] of Object.entries(patch.interpreters)) {
-      runtime.runtimeConfig.interpreterStates[name] = Boolean(config.enabled);
+      const requestedEnabled = Boolean(config.enabled);
+      const contract = interpreterCatalog.get(name);
+      if (contract?.disableable === false && !requestedEnabled) {
+        throw new Error(`${name} cannot be disabled.`);
+      }
+      runtime.runtimeConfig.interpreterStates[name] = requestedEnabled;
       for (const handle of runtime.sessions.values()) {
+        if (handle.executor.commandRegistry.has(name)) {
+          handle.executor.commandRegistry.setEnabled(name, requestedEnabled);
+        }
         if (handle.executor.externalInterpreters.has(name)) {
-          handle.executor.externalInterpreters.setEnabled(name, config.enabled);
+          handle.executor.externalInterpreters.setEnabled(name, requestedEnabled);
         }
       }
     }
@@ -625,12 +846,18 @@ async function buildTraceabilityPayload(runtime, session, requestId) {
     session.executor.inspectRequestPublic(requestId),
     session.executor.getTraceEvents(requestId),
   ]);
-  const executionGraph = buildExecutionGraph(requestDetails?.plan_snapshot ?? '', traceEvents);
+  const executionGraph = buildExecutionGraph(requestDetails?.plan_snapshot ?? '', traceEvents, requestDetails);
   const definitionMap = new Map((executionGraph.nodes ?? []).map((node) => [
     node.target_family,
     node.details?.declaration_definition,
   ]));
-  const variables = toVariableView(requestDetails?.family_state ?? [], definitionMap);
+  const nodeStatusByFamily = new Map((executionGraph.nodes ?? []).map((node) => [node.target_family, {
+    status: node.status,
+    reason: node.status_reason,
+    diagnostics: node.details?.diagnostics ?? [],
+  }]));
+  const requestStarted = traceEvents.find((event) => event.event === 'request_started') ?? null;
+  const variables = toVariableView(requestDetails?.family_state ?? [], definitionMap, nodeStatusByFamily);
   return {
     session_id: session.session_id,
     request_id: requestId,
@@ -641,13 +868,20 @@ async function buildTraceabilityPayload(runtime, session, requestId) {
       response: requestDetails?.outcome?.response ?? null,
       outcome: requestDetails?.outcome ?? null,
       created_at: requestDetails?.envelope?.created_at ?? requestDetails?.outcome?.created_at ?? null,
+      execution_environment: {
+        session_id: session.session_id,
+        request_id: requestId,
+        budgets: requestDetails?.outcome?.remaining_budgets ?? requestStarted?.budgets ?? requestDetails?.envelope?.budgets ?? null,
+        file_count: requestStarted?.request_metadata?.file_count ?? requestDetails?.envelope?.file_descriptors?.length ?? 0,
+        trigger: requestStarted?.trigger ?? null,
+      },
     },
     timeline: (sessionDetails.request_history ?? []).map((item) => ({
       request_id: item.request_id,
       status: item.stop_reason ?? item.status ?? 'unknown',
       last_activity_at: item.created_at ?? null,
       request_preview: summarizeText(item.request_text, 120),
-      response_preview: summarizeText(item.response, 140),
+      response_preview: summarizeText(item.response ?? item.error_message ?? '', 140),
     })),
     sop_lang: requestDetails?.plan_snapshot ?? '',
     variables,

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { MRPVM, createRuntimeConfig, listAchillesModels } from '../../src/index.mjs';
+import { loadDemoTasks } from '../../server/demo-catalog.mjs';
 import { createTempRuntimeRoot } from '../fixtures/runtime-root.mjs';
 
 test('real LLM solves the water jug problem', async (t) => {
@@ -34,30 +35,8 @@ test('real LLM solves the water jug problem', async (t) => {
   }
 
   const runtime = new MRPVM(rootDir, { runtimeConfig });
-  const request = [
-    'Ai trei recipiente cu capacități de 8L, 5L și 3L. Recipientul de 8L este plin cu apă, celelalte două sunt goale. Nu ai alte instrumente de măsurare.',
-    '',
-    'Poți efectua doar următoarele operații:',
-    '',
-    'Torni apă dintr-un recipient în altul până când sursa se golește sau destinația se umple complet.',
-    'Nu poți arunca apă și nu poți marca recipiente.',
-    '',
-    'Obiectiv:',
-    'Obține exact 4L de apă într-unul dintre recipiente.',
-    '',
-    'Cerințe:',
-    '',
-    'Determină dacă problema este rezolvabilă.',
-    'Dacă da, găsește secvența minimă de pași.',
-    'Justifică de ce soluția este corectă și minimală.',
-    'Generalizează: pentru ce combinații de volume (a, b, c) și țintă T problema rămâne rezolvabilă?',
-    '',
-    'Formatul răspunsului:',
-    '',
-    'Secvență de pași (clar numerotați)',
-    'Starea sistemului după fiecare pas (ex: (8,0,0) → (3,5,0))',
-    'Concluzie finală: unde se află cei 4L',
-  ].join('\n');
+  const request = (await loadDemoTasks(process.cwd())).find((item) => item.id === 'water-jug-proof')?.prompt;
+  assert.ok(request, 'Expected shared water-jug demo fixture.');
 
   const outcome = await runtime.submitRequest({
     requestText: request,

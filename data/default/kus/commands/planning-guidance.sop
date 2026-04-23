@@ -20,16 +20,22 @@ Good planning output:
 - creates explicit dependency edges so the execution graph reads like a real workflow rather than a flat list,
 - avoids monolithic plans when the task has separable stages,
 - ensures the final response depends on the relevant prior families.
+- cross-checks the authoritative component catalog from runtime code before choosing a route,
+- avoids template-eval unless the referenced families are already deterministic and available.
+- converges into exactly one terminal family named response,
+- avoids dead-end helper declarations that do not affect the final answer.
 
 For algorithmic or puzzle-like requests, prefer a graph such as: parse constraints or retrieve guidance -> compute exact result -> explain correctness/minimality -> assemble final answer. Avoid planning as a stand-in for execution. The output must be SOP Lang, not the final user answer.
+
+Do not use logic-eval as a container for vague reasoning. If the task is a bounded symbolic problem or a small compatible rule block, use logic-eval. If it needs unrestricted deterministic coding, use js-eval. If it needs justification, explanation, or formal reasoning in prose, use a suitable LLM interpreter instead of faking solver structure.
 @ku_planning_guidance:meta json
 {
-  "rev": 1,
+  "rev": 3,
   "ku_type": "content",
   "scope": "default",
   "status": "active",
   "title": "planning guidance",
-  "summary": "Use planning to decompose an open request into an explicit SOP Lang workflow with meaningful intermediate families, explicit dependencies, and KU-guided routing.",
+  "summary": "Use planning to decompose an open request into one explicit SOP Lang workflow with meaningful intermediate families, explicit dependencies, authoritative-catalog routing, deterministic final assembly, and no dead-end declarations.",
   "priority": 10,
   "trust": "trusted",
   "domains": [

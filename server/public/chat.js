@@ -495,9 +495,7 @@ function renderSavedAuthKeys() {
 async function refreshAuthSummary() {
   state.auth = await loadAuthContext();
   renderSystemContext(el('auth-summary'), {
-    role: state.auth.caller.role,
     session_origin: state.auth.caller.session_origin,
-    auth_mode: state.auth.caller.auth_mode,
     can_edit_global_state: state.auth.caller.role === 'admin',
   });
 }
