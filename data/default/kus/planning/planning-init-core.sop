@@ -49,26 +49,32 @@ may insert declarations. Use that catalog as the final authority for route selec
 14. Avoid a single monolithic declaration unless the request truly has one trivial step.
 15. If the user asks for an exact solution plus explanation, split solving from explaining.
 16. If the user asks for a specific answer structure, prefer a dedicated final assembly step (template-eval or writerLLM) that consumes earlier families.
-17. For algorithmic, puzzle, graph, search, path, ordering, constraint, or bounded numeric tasks, prefer logic-eval when the problem is naturally symbolic and inspectable, and prefer js-eval when unrestricted procedural code is the cleaner exact surface.
+17. For algorithmic, puzzle, graph, search, path, ordering, constraint, or bounded numeric tasks, prefer direct HumanLikeReasoner routing when the route is already obvious, prefer logic-eval only when a bounded rewrite brief is still needed, and prefer js-eval when unrestricted procedural code is the cleaner exact surface.
 18. For proof, justification, minimality, or generalization, prefer a separate reasoning step that consumes the exact solver output instead of re-solving the task from scratch.
 19. Use template-eval only when all referenced families are already produced or are deterministic upstream outputs. Do not use template-eval as a speculative prose generator for families that still require open-ended reasoning.
 20. Every referenced $familyId in any body must correspond to a declared family in this plan, or in continuing-session mode an already-available session family that you intentionally reuse.
 21. Before finalizing, check that every placeholder named in the final response step can actually be produced by the graph.
 22. Before finalizing, check that every declaration has a path to @response. If a family does not affect the final answer, remove it or connect it properly.
 23. Do not produce disconnected side branches, dead-end helper families, or multiple terminal results.
-24. If the task seems too vague, too open-ended, or too large for logic-eval, do not force it into fake solver prose. Prefer js-eval for unrestricted deterministic solving or an appropriate LLM interpreter for explanation and justification.
+24. If the task seems too vague, too open-ended, or too large for logic-eval, do not force it into fake solver prose. Prefer js-eval for unrestricted deterministic solving, DocumentScalePlanner for bounded multi-unit Markdown or JSON analysis, or an appropriate LLM interpreter for explanation and justification.
+25. If you choose a declaration-inserting interpreter such as DocumentScalePlanner, keep the initial graph connected through already-declared families. Make @response depend on the planner family, then let the inserted declarations bridge the later final target back into that family.
 
 Use native commands when possible:
 - js-eval: JavaScript computation, data transformation
-- logic-eval: bounded symbolic reasoning, including natural-language solver requests, JSON solver envelopes, or small legacy when/then rule blocks
+- logic-eval: bounded rewrite-orchestration for reasoning-heavy requests that still need a machine-usable brief
 - template-eval: text assembly from parts
 - kb: knowledge base retrieval
 - analytic-memory: session history aggregation
 
 Never give a native command a prose-only body that does not match its execution contract.
 - If the step is explanatory, argumentative, or validation prose, use writerLLM or deepLLM.
-- Use logic-eval only when the body is either a bounded solver request, a solver JSON envelope, or a small compatible legacy rule block.
+- Use logic-eval only when the body is either a bounded rewrite request, a rewrite JSON envelope, or a direct reference to a reusable reasoning brief.
 - Use template-eval only when the body is the final output template with $familyId placeholders.
+
+Use available external interpreters when their KU guidance fits:
+- HumanLikeReasoner: clear bounded finite symbolic reasoning
+- AdvancedReasoner: bounded advanced meta-reasoning with explicit escalation or review boundaries
+- DocumentScalePlanner: bounded Markdown or JSON analysis that should expand into explicit chunk, rollup, and validation declarations
 
 Use LLM interpreters for tasks requiring language understanding or generation:
 - fastLLM: quick classification, short answers
@@ -103,12 +109,12 @@ Advice: $advice
 Output the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.
 @ku_planning_init_core:meta json
 {
-  "rev": 4,
+  "rev": 5,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
   "title": "planning_init_core",
-  "summary": "Mandatory planner bootstrap for new sessions: use the authoritative component catalog plus retrieved KUs to choose valid surfaces, keep template-eval deterministic, and emit one connected dependency graph that converges into @response.",
+  "summary": "Mandatory planner bootstrap for new sessions: use the authoritative component catalog plus retrieved KUs to choose valid surfaces, route clearly among the bounded reasoners and DocumentScalePlanner, keep template-eval deterministic, and emit one connected dependency graph that converges into @response.",
   "priority": 20,
   "trust": "canonical",
   "domains": [

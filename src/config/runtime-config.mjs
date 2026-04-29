@@ -23,7 +23,7 @@ const DEFAULT_PROFILE_BINDINGS = {
   codeGeneratorLLM: { tier: 'standard', model: 'code', taskTag: DEFAULT_TASK_TAGS.bootstrap },
   writerLLM: { tier: 'standard', taskTag: DEFAULT_TASK_TAGS.documentation },
   plannerLLM: { tier: 'premium', model: 'plan', taskTag: DEFAULT_TASK_TAGS.orchestration },
-  logicGeneratorLLM: { tier: 'premium', model: 'logic', taskTag: DEFAULT_TASK_TAGS.specification },
+  logicGeneratorLLM: { tier: 'premium', taskTag: DEFAULT_TASK_TAGS.specification },
   formatterLLM: { tier: 'standard', taskTag: DEFAULT_TASK_TAGS.documentation },
 };
 
@@ -371,6 +371,12 @@ function useFakeAdapter(manualOverrides, env) {
   return manualOverrides.forceFakeLlm ?? (env.LLM_FAKE === '1');
 }
 
+function resolveLlmFallbacks(env, manualOverrides) {
+  return {
+    enabled: manualOverrides.llmFallbacks?.enabled ?? (env.LLM_ENABLE_PROVIDER_FALLBACK === '1'),
+  };
+}
+
 export function createRuntimeConfig(options = {}) {
   const env = options.env ?? process.env;
   const manualOverrides = options.manualOverrides ?? {};
@@ -391,6 +397,7 @@ export function createRuntimeConfig(options = {}) {
     premium: resolveTierModel(env, manualOverrides, 'premium'),
   };
   const adapter = useFakeAdapter(manualOverrides, env) ? 'fake' : 'managed';
+  const llmFallbacks = resolveLlmFallbacks(env, manualOverrides);
 
   return {
     baseDir,
@@ -405,6 +412,7 @@ export function createRuntimeConfig(options = {}) {
       modelTiers,
       taskTags,
       profileBindings: buildProfileBindings(env, manualOverrides, modelTiers, taskTags),
+      fallbacks: llmFallbacks,
     },
     dependencies,
     manualOverrides: {

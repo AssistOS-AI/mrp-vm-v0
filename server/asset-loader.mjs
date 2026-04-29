@@ -13,7 +13,7 @@ function getMimeType(filePath) {
   if (filePath.endsWith('.css')) {
     return 'text/css; charset=utf-8';
   }
-  if (filePath.endsWith('.js')) {
+  if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
     return 'text/javascript; charset=utf-8';
   }
   if (filePath.endsWith('.html')) {

@@ -29,7 +29,7 @@
         <div class="grid">
           <article class="card">
             <h3>Runtime architecture</h3>
-            <p>The implemented MRP-VM execution model, command surfaces, runtime boundaries, hosting layer, four-page operational UI, and model-routing strategy are summarized in <a href="runtime-architecture.html">Runtime Architecture</a> and specified in DS002 through DS023.</p>
+            <p>The implemented MRP-VM execution model, command surfaces, runtime boundaries, hosting layer, four-page operational UI, model-routing strategy, bounded reasoning surfaces, and document-scale planning surface are summarized in <a href="runtime-architecture.html">Runtime Architecture</a> and specified in DS002 through DS031.</p>
           </article>
           <article class="card">
             <h3>Audit trail</h3>
@@ -37,7 +37,7 @@
           </article>
           <article class="card">
             <h3>Implementation scope</h3>
-            <p>The documented scope is strictly MRP-VM v0: SOP Lang, state families, native commands, wrapper interpreters, trace, test seams, and implementation constraints.</p>
+            <p>The documented scope is strictly MRP-VM v0: SOP Lang, state families, native commands, external interpreters including `HumanLikeReasoner`, `AdvancedReasoner`, and `DocumentScalePlanner`, trace, test seams, and implementation constraints.</p>
           </article>
         </div>
       </section>
@@ -45,7 +45,7 @@
       <section class="section">
         <h2>Implementation posture</h2>
         <p>The implementation follows the Node.js <code>.mjs</code> posture defined in <a href="specsLoader.html?spec=DS001-coding-style.md">DS001</a>. The runtime tree under <code>src/</code> is intentionally modular, the hosting layer and UI templates, styles, and browser logic live under <code>server/</code>, the default KUs live under <code>data/default/</code> in declaration-style SOP Lang, and the test suite mirrors subsystem boundaries under <code>tests/</code>.</p>
-        <p>The current server surface is chat-first but operationally transparent: a compact conversation shell with session and authority status in the header is complemented by dedicated Traceability, KB Browser, and tab-structured Settings pages. Session origin, auth mode, effective role, and API-key-backed authority remain part of the documented hosting boundary. DS004 and DS021 remain proposal-only surfaces, while DS022 and DS023 define the implemented server/API/UI and LLM-routing boundaries.</p>
+        <p>The current server surface is chat-first but operationally transparent: a compact conversation shell with session and authority status in the header is complemented by dedicated Traceability, KB Browser, and tab-structured Settings pages. Session origin, auth mode, effective role, and API-key-backed authority remain part of the documented hosting boundary. DS004 and DS021 remain proposal-only surfaces, while DS022 and DS023 define the implemented server/API/UI and LLM-routing boundaries. DS026 through DS031 define the implemented bounded reasoning and document-scale planning surfaces centered on `HumanLikeReasoner`, `AdvancedReasoner`, `DocumentScalePlanner`, and their routing guidance.</p>
       </section>
     </div>
   </main>

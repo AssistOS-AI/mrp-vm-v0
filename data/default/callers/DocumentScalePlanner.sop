@@ -1,0 +1,46 @@
+@DocumentScalePlanner text
+Use DocumentScalePlanner for bounded document-scale planning tasks over explicit Markdown or JSON inputs when the runtime should build an inspectable chunked SOP workflow instead of treating the whole document as one opaque prompt.
+Prefer it for chapter-, section-, paragraph-, table-, or record-level analysis that needs repeated per-unit processing, rollups, coverage checks, or explicit selective expansion guidance.
+The body may be a direct natural-language planning request, a mixed body that repeats an explicit `document_ref ~family` line plus a JSON envelope, or a direct inline envelope that pins document_text, document_json, operation, granularity, path, final_target, and plan limits for controlled execution.
+Prefer direct DocumentScalePlanner routing when the task already clearly targets multi-unit Markdown or JSON analysis. Prefer HumanLikeReasoner or AdvancedReasoner instead when the task is primarily a bounded reasoning problem, and prefer writerLLM or deepLLM instead when the task is just one-shot prose over a small excerpt.
+When planning uses DocumentScalePlanner, keep the initial graph connected by making @response depend on the declared planner family. Let the inserted declarations bridge the final semantic target back into that planner family rather than referencing an undeclared future family directly from the initial @response declaration.
+@DocumentScalePlanner:meta json
+{
+  "rev": 1,
+  "ku_type": "caller_profile",
+  "scope": "default",
+  "status": "active",
+  "title": "DocumentScalePlanner",
+  "summary": "Choose DocumentScalePlanner for bounded Markdown or JSON analysis tasks that should be executed through explicit chunking, rollups, coverage checks, and declaration insertion rather than one opaque prompt.",
+  "priority": 9,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "planning",
+    "interpreters"
+  ],
+  "commands": [],
+  "interpreters": [
+    "DocumentScalePlanner"
+  ],
+  "tags": [
+    "document",
+    "planning",
+    "chunking"
+  ],
+  "input_patterns": [
+    "markdown|json|chapter|section|paragraph|table|document|outline|memo|report|extract ideas|profile chapters"
+  ],
+  "allowed_ku_types": [
+    "content",
+    "caller_profile",
+    "prompt_asset"
+  ],
+  "accepted_prompt_roles": [
+    "planning"
+  ],
+  "model_classes": [],
+  "byte_budget": 6144,
+  "session_override_allowed": true,
+  "llm_fallback_policy": "disallowed"
+}

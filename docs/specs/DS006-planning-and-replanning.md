@@ -103,6 +103,15 @@ For every native command and every external interpreter in the baseline catalog,
 3. what anti-patterns should be avoided,
 4. what output surface it is expected to produce.
 
+For bounded reasoning and document-analysis work, planning must also distinguish between:
+
+1. direct routing to `HumanLikeReasoner` when the task is already clearly a finite rule, constraint, graph, search, numeric, or mixed finite reasoning problem,
+2. direct routing to `AdvancedReasoner` when the task is already clearly abductive, probabilistic, causal, argumentative, legal, scientific, optimization-routing, proof-routing, SMT-fragment, pragmatic, analogical, ethical, or creative in the bounded meta-reasoning sense, and
+3. direct routing to `DocumentScalePlanner` when the task is already clearly a bounded Markdown or JSON analysis workflow that should expand into explicit chunk, rollup, and validation declarations, and
+4. inserting `logic-eval` first when the planner needs a structured rewrite brief before handing the task to the external reasoning interpreter.
+
+When planning selects an interpreter that may insert declarations later, the initially accepted graph must still remain connected and valid on its own. The initial `@response` step must therefore depend only on declared or intentionally reused families. If the later inserted workflow will produce the final semantic target, the inserted declarations must bridge that target back into an already-declared family rather than relying on an undeclared future dependency in the initial graph.
+
 ## Decisions & Questions
 
 Question #1: Why are there separate planning modes for new sessions, continuing sessions, and repair?
@@ -116,6 +125,22 @@ Response: LLM assistance may be strong, but graph mutation is still a runtime re
 Question #3: Why must every request plan define one canonical `response` family?
 
 Response: User-facing execution needs one explicit target family for the result of that request. Without such a convention, plans could finish with many local artifacts but no clear delivery surface. Keeping `response` request-local avoids inventing a global session output slot.
+
+Question #4: Why should planning distinguish direct `HumanLikeReasoner` routing from `logic-eval`-assisted routing instead of always using one path?
+
+Response: Always forcing the helper step would add unnecessary graph weight once the route is already obvious, but forcing the planner to do all reasoning decomposition itself would overburden planning prompts. The split keeps both surfaces simpler.
+
+Question #5: Why must planning distinguish direct `AdvancedReasoner` routing from both `HumanLikeReasoner` and `logic-eval`?
+
+Response: `AdvancedReasoner` is not just a bigger finite solver. Its value is explicit bounded meta-reasoning about uncertainty, evidence quality, review boundaries, and engine escalation. Treating it as the same route as `HumanLikeReasoner` would hide that difference, while forcing every advanced task through `logic-eval` would add unnecessary orchestration hops once the advanced route is already obvious.
+
+Question #6: Why must planning treat `DocumentScalePlanner` as its own direct route instead of pushing document-analysis tasks through `logic-eval` or the reasoning interpreters?
+
+Response: Document-scale planning is structurally different from reasoning-brief rewriting and from bounded solver execution. Its value is explicit chunking, rollups, coverage checks, and declaration insertion over Markdown or JSON input. Forcing that behavior into `logic-eval` or one of the reasoners would blur contracts and reintroduce duplicate orchestration logic.
+
+Question #7: Why does DS006 require an initial graph to stay connected even when an interpreter will insert declarations later?
+
+Response: Planning validation happens before later insertions exist. If the initial graph depended on undeclared future families, the accepted plan would be structurally dishonest and could terminate incorrectly. Requiring the inserted workflow to bridge back into an already-declared family keeps planning, traceability, and execution aligned.
 
 ## Conclusion
 

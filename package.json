@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "eval": "node eval/runEval.mjs",
     "test": "node run.mjs test",
     "server": "node server/start.mjs"
   }

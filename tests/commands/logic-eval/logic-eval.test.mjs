@@ -4,83 +4,56 @@ import { MRPVM } from '../../../src/index.mjs';
 import { executeLogicEval } from '../../../src/commands/logic-eval.mjs';
 import { createTempRuntimeRoot } from '../../fixtures/runtime-root.mjs';
 
-test('logic-eval runs line-oriented rules and emits set actions', async () => {
-  const rootDir = await createTempRuntimeRoot();
-  const runtime = new MRPVM(rootDir, { deterministic: {} });
-  runtime.stateStore.emitVariant('input', 'ok', { created_epoch: 0 });
-
-  const effects = await executeLogicEval({
-    runtime,
-    targetFamily: 'response',
-    body: [
-      'when exists input',
-      'then set ~response = "accepted" with {"origin":"logic-eval"}',
-    ].join('\n'),
-  });
-
-  assert.equal(effects.emittedVariants[0].familyId, 'response');
-  assert.equal(effects.emittedVariants[0].value, 'accepted');
-});
-
-test('logic-eval executes inline SolverProgram bodies and emits structured output', async () => {
-  const rootDir = await createTempRuntimeRoot();
-  const runtime = new MRPVM(rootDir, { deterministic: {} });
-
-  const effects = await executeLogicEval({
-    runtime,
-    targetFamily: 'solution',
-    body: JSON.stringify({
-      result_mode: 'structured',
-      program_steps: [
-        { op: 'createSolver', varName: 'g', className: 'GraphProblem', options: {} },
-        { op: 'solverCall', varName: 'g', method: 'node', args: ['A'] },
-        { op: 'solverCall', varName: 'g', method: 'node', args: ['B'] },
-        { op: 'solverCall', varName: 'g', method: 'edge', args: ['A', 'B'] },
-        { op: 'solverCall', varName: 'g', method: 'findPath', args: ['A', 'B'] },
-        { op: 'solverSolve', varName: 'g', resultName: 'path' },
-        { op: 'setFinal', value: ['ref', 'results.path.solution.path'] },
-      ],
-    }),
-    node: { dependencies: [] },
-    resolvedDependencies: new Map(),
-  });
-
-  assert.equal(effects.emittedVariants[0].familyId, 'solution');
-  assert.deepEqual(effects.emittedVariants[0].value, ['A', 'B']);
-  assert.equal(effects.emittedVariants[0].meta.logic_eval_mode, 'solver');
-});
-
-test('logic-eval can formalize a natural-language request through logicGeneratorLLM', async () => {
+test('logic-eval emits a structured rewrite brief for external reasoning interpreters', async () => {
   const rootDir = await createTempRuntimeRoot();
   const runtime = new MRPVM(rootDir, {
     deterministic: {},
     fakeAdapterConfig: {
-      scriptedResponses: {
-        'logicGeneratorLLM::default::Find a path from A to B in a tiny graph with one direct edge.': {
-          steps: [
-            { op: 'createSolver', varName: 'g', className: 'GraphProblem', options: {} },
-            { op: 'solverCall', varName: 'g', method: 'node', args: ['A'] },
-            { op: 'solverCall', varName: 'g', method: 'node', args: ['B'] },
-            { op: 'solverCall', varName: 'g', method: 'edge', args: ['A', 'B'] },
-            { op: 'solverCall', varName: 'g', method: 'findPath', args: ['A', 'B'] },
-            { op: 'solverSolve', varName: 'g', resultName: 'path' },
-            { op: 'setFinal', value: ['ref', 'results.path.solution.path'] },
-          ],
-        },
+      scriptedSequences: {
+        logicGeneratorLLM: [JSON.stringify({
+          status: 'rewrite_ready',
+          rewritten_problem: 'Assign owners under the stated constraints and preserve the requested sections.',
+          preferred_interpreters: ['HumanLikeReasoner'],
+          decomposition_hints: ['Solve the assignment first, then preserve the requested sections.'],
+          answer_requirements: ['Owner assignment', 'Quick wins', 'Parallel work'],
+        })],
       },
     },
   });
 
   const effects = await executeLogicEval({
     runtime,
-    targetFamily: 'solution',
-    body: JSON.stringify({
-      problem: 'Find a path from A to B in a tiny graph with one direct edge.',
-      result_mode: 'structured',
-    }),
+    targetFamily: 'reasoning_brief',
+    body: 'Determine a valid owner assignment and keep the requested sections explicit.',
     node: { dependencies: [] },
     resolvedDependencies: new Map(),
+    contextPackage: { markdown: '' },
+    kbResult: { callerProfile: null, selected: [] },
   });
 
-  assert.deepEqual(effects.emittedVariants[0].value, ['A', 'B']);
+  assert.equal(effects.failure, null);
+  assert.equal(effects.emittedVariants[0].familyId, 'reasoning_brief');
+  assert.equal(effects.emittedVariants[0].meta.logic_eval_mode, 'orchestrator');
+  assert.deepEqual(effects.emittedVariants[0].value.preferred_interpreters, ['HumanLikeReasoner']);
+  assert.match(effects.emittedVariants[0].value.rewritten_problem, /Assign owners/);
+});
+
+test('logic-eval falls back to a heuristic rewrite brief when no scripted LLM rewrite is available', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, { deterministic: {} });
+
+  const effects = await executeLogicEval({
+    runtime,
+    targetFamily: 'reasoning_brief',
+    body: 'Solve the lab assignment and the follow-up graph reachability question.',
+    node: { dependencies: [] },
+    resolvedDependencies: new Map(),
+    contextPackage: { markdown: '' },
+    kbResult: { callerProfile: null, selected: [] },
+  });
+
+  assert.equal(effects.failure, null);
+  assert.equal(effects.emittedVariants[0].meta.logic_eval_mode, 'orchestrator');
+  assert.ok(Array.isArray(effects.emittedVariants[0].value.preferred_interpreters));
+  assert.match(effects.emittedVariants[0].value.planner_hint, /HumanLikeReasoner/);
 });

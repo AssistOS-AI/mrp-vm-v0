@@ -20,7 +20,7 @@
       <section class="section">
         <h2>Architectural identity</h2>
         <p>MRP-VM v0 is specified as a runtime for local interpretive regimes rather than as a monolithic prompt wrapper. Tasks enter as natural language requests plus bounded context, then become a graph of SOP Lang declarations. Execution is mediated through native commands, external interpreters, family-based state, and auditable trace records.</p>
-        <p>The runtime-facing DS set lives in <a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> through <a href="specsLoader.html?spec=DS023-model-tier-and-routing-strategy.md">DS023</a>. These files define the implementation contract, and the repository now includes the corresponding runtime source tree, server adapter, declaration-style default KUs, and tests.</p>
+        <p>The runtime-facing DS set lives in <a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> through <a href="specsLoader.html?spec=DS031-document-scale-planner-guidance-and-coverage.md">DS031</a>. These files define the implementation contract, and the repository now includes the corresponding runtime source tree, server adapter, declaration-style default KUs, and tests.</p>
       </section>
 
       <section class="section">
@@ -35,7 +35,7 @@
           </article>
           <article class="card">
             <h3>State and commands</h3>
-            <p><a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> defines families, variants, representative resolution, and declaration insertion; <a href="specsLoader.html?spec=DS007-js-eval.md">DS007</a> through <a href="specsLoader.html?spec=DS012-credibility.md">DS012</a> define native command contracts.</p>
+            <p><a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> defines families, variants, representative resolution, and declaration insertion; <a href="specsLoader.html?spec=DS007-js-eval.md">DS007</a> through <a href="specsLoader.html?spec=DS012-credibility.md">DS012</a> define native command contracts. Within that surface, <a href="specsLoader.html?spec=DS008-logic-eval.md">DS008</a> now defines `logic-eval` as a rewrite-orchestration helper rather than the final reasoning runtime, and its rewrite briefs may target either reasoning interpreter.</p>
           </article>
           <article class="card">
             <h3>Knowledge and evaluation</h3>
@@ -43,11 +43,15 @@
           </article>
           <article class="card">
             <h3>Hosting and chat</h3>
-            <p><a href="specsLoader.html?spec=DS018-server-and-admin-model.md">DS018</a> and <a href="specsLoader.html?spec=DS022-server-api-and-chat-interface.md">DS022</a> define the top-level <code>server/</code> adapter, SDK entry points, native APIs, SSE trace streaming, API-key-backed authority, and the four-page operational UI covering a compact conversation-first Chat surface, a dedicated Traceability workspace, a KB Browser, and tab-structured Settings. The current UI exposes syntax-highlighted SOP inspection, a draggable execution graph whose edges follow node movement, a fullscreen tabbed node inspector, issued-key-first authentication settings with popup-based key creation, and compact model binding controls for both external LLM wrappers and internal stages such as <code>logicGeneratorLLM</code> and <code>formatterLLM</code>.</p>
+            <p><a href="specsLoader.html?spec=DS018-server-and-admin-model.md">DS018</a> and <a href="specsLoader.html?spec=DS022-server-api-and-chat-interface.md">DS022</a> define the top-level <code>server/</code> adapter, SDK entry points, native APIs, SSE trace streaming, API-key-backed authority, and the four-page operational UI covering a compact conversation-first Chat surface, a dedicated Traceability workspace, a KB Browser, and tab-structured Settings. The current UI exposes syntax-highlighted SOP inspection, a draggable execution graph whose edges follow node movement, a fullscreen tabbed node inspector with a fixed header and scrolling body, issued-key-first authentication settings with popup-based key creation, compact model binding controls for both external LLM wrappers and internal stages such as <code>logicGeneratorLLM</code> and <code>formatterLLM</code>, and an operator toggle for managed provider fallback when premium routing fails.</p>
           </article>
           <article class="card">
             <h3>LLM routing</h3>
             <p><a href="specsLoader.html?spec=DS013-llm-wrapper-interpreters.md">DS013</a> and <a href="specsLoader.html?spec=DS023-model-tier-and-routing-strategy.md">DS023</a> define the Achilles-backed adapter boundary, `LLMAgent` usage, model tiers, task tags, and profile-specific routing for wrapper interpreters.</p>
+          </article>
+          <article class="card">
+            <h3>Bounded reasoning</h3>
+            <p><a href="specsLoader.html?spec=DS020-external-interpreter-contract.md">DS020</a>, <a href="specsLoader.html?spec=DS026-human-like-reasoner.md">DS026</a>, <a href="specsLoader.html?spec=DS027-human-like-reasoner-guidance-and-coverage.md">DS027</a>, <a href="specsLoader.html?spec=DS028-advanced-reasoner.md">DS028</a>, <a href="specsLoader.html?spec=DS029-advanced-reasoner-guidance-and-coverage.md">DS029</a>, <a href="specsLoader.html?spec=DS030-document-scale-planner.md">DS030</a>, and <a href="specsLoader.html?spec=DS031-document-scale-planner-guidance-and-coverage.md">DS031</a> define the external interpreter contract, the implemented reasoning interpreters, the document-scale planning interpreter, and the KU, demo, and evaluation guidance that lets planning choose them deliberately while keeping inserted plans and generated program surfaces tied to documented APIs.</p>
           </article>
         </div>
       </section>
@@ -84,8 +88,12 @@
               <td>Planning prompt guidance must come from KU-managed prompt assets rather than from large hardcoded prompt bodies.</td>
             </tr>
             <tr>
+              <td>Reasoning routing</td>
+               <td>Planning should route directly to <code>HumanLikeReasoner</code> for finite exact reasoning, route directly to <code>AdvancedReasoner</code> for bounded advanced meta-reasoning, route directly to <code>DocumentScalePlanner</code> for bounded Markdown or JSON chunk workflows, and use <code>logic-eval</code> only when a rewrite brief is still needed.</td>
+            </tr>
+            <tr>
               <td>Server UI structure</td>
-              <td>Chat stays conversation-first with a compact session status bar and live <code>Thinking...</code> placeholder, while traceability, KB tuning, and tabbed settings remain on dedicated pages under <code>server/</code> with templates and CSS stored outside JavaScript.</td>
+               <td>Chat stays conversation-first with a compact session status bar and a live trace-driven in-progress placeholder, while traceability, KB tuning, and tabbed settings remain on dedicated pages under <code>server/</code> with templates and CSS stored outside JavaScript.</td>
             </tr>
           </tbody>
         </table>
@@ -93,7 +101,7 @@
 
       <section class="section">
         <h2>Current implementation boundary</h2>
-        <p>The repository now contains the runtime tree under <code>src/</code>, the top-level server and operational UI adapter under <code>server/</code>, the declaration-style default-KU assets under <code>data/default/</code>, and a modular native test suite under <code>tests/</code>. The current hosting surface distinguishes session origin, auth mode, effective role, and API-key-backed authority while keeping the SDK boundary intact.</p>
+        <p>The repository now contains the runtime tree under <code>src/</code>, including the dedicated <code>src/interpreters/human-like-reasoner/</code>, <code>src/interpreters/advanced-reasoner/</code>, and <code>src/interpreters/document-scale-planner/</code> runtimes, the top-level server and operational UI adapter under <code>server/</code>, the declaration-style default-KU assets under <code>data/default/</code>, the shared demo/eval catalog under <code>eval/</code>, and a modular native test suite under <code>tests/</code>. The current hosting surface distinguishes session origin, auth mode, effective role, and API-key-backed authority while keeping the SDK boundary intact.</p>
       </section>
     </div>
   </main>

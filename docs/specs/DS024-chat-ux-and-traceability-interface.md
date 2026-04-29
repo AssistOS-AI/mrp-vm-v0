@@ -42,7 +42,7 @@ The composer must expose:
 6. budget controls,
 7. a small list of predefined demo tasks that highlight different runtime commands and interpreters.
 
-While the runtime is working, the transcript shows an assistant placeholder bubble with animated `Thinking...` text until the final response arrives.
+While the runtime is working, the transcript shows one assistant placeholder bubble with animated status text derived from recent trace events. The text may rotate through short execution summaries, but it must stay compact and occupy the same conversation slot until the final response arrives.
 
 ### Traceability page
 
@@ -94,6 +94,8 @@ This tab renders the execution graph as a left-to-right workflow ordered by topo
 7. draggable nodes whose connector lines follow the current node positions,
 8. a fullscreen node inspector with tabbed sections for declaration, input, context, output, diagnostics, and KU references.
 
+Inside the fullscreen node inspector, the header and tab strip remain fixed and only the selected tab body scrolls. The modal must not grow vertically when switching tabs with longer content.
+
 The graph is not a textual edge list. It is a spatial workflow view that makes dependency structure obvious at a glance.
 
 ### KB Browser page
@@ -139,7 +141,8 @@ The models tab uses compact select controls for the default model and the routed
 2. expose one model select for each routed LLM target, including internal command stages such as `logicGeneratorLLM` and `formatterLLM`,
 3. show model tags inline inside select option labels,
 4. optionally filter the visible list by tag,
-5. avoid a separate candidate-model gallery once the select controls already reveal the catalog.
+5. avoid a separate candidate-model gallery once the select controls already reveal the catalog,
+6. expose one compact checkbox or equivalent control for managed provider fallback after provider failures.
 
 #### Interpreters tab
 

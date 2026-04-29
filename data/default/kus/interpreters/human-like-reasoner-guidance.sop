@@ -1,0 +1,61 @@
+@ku_human_like_reasoner_guidance text
+Choose HumanLikeReasoner when the request is a bounded reasoning task that benefits from explicit intermediate state and local solver composition rather than from one opaque prose answer.
+
+Use it for:
+- finite assignment and exclusion puzzles,
+- reachability, dependency, and path reasoning over explicit graphs,
+- bounded numeric reasoning over explicit finite ranges,
+- small search tasks with explicit state, goal, and move vocabulary,
+- mixed statements where one part is assignment-like and another part depends on graph or numeric consequences of that assignment.
+
+Accepted body shapes:
+- a direct natural-language reasoning task,
+- a structured rewrite brief from logic-eval,
+- a JSON envelope with fields such as problem, rewritten_problem, result_mode, program, or generator_profile.
+
+Good HumanLikeReasoner inputs:
+- name the entities, constraints, and target question clearly,
+- keep the task finite and inspectable,
+- separate exact reasoning from later prose polishing when needed,
+- preserve requested sections or answer format as answer_requirements inside the brief when the user asked for them.
+- prefer a direct route to AdvancedReasoner instead when the task depends on missing evidence, uncertainty, causal interpretation, normative review, or broader engine triage.
+
+Program-generation guidance:
+- generated programs should use the exact solver method names published by the HumanLikeReasoner prompt assets,
+- repository-owned examples prefer `rules.fact(...)` and `rules.rule(...)` for rule closure, not invented helper objects,
+- when the task is mixed, solve one bounded subproblem at a time and carry results through `ctx.storeResult(...)` or local variables.
+
+Avoid HumanLikeReasoner when:
+- the task is open-ended prose or brainstorming,
+- the problem depends on broad world knowledge rather than explicit finite structure,
+- the task is mainly about uncertainty, evidence quality, causal effect, legal interpretation, scientific synthesis, optimization routing, formal proof routing, pragmatic ambiguity, analogy, ethics, or creative evaluation,
+- the request is mainly stylistic writing,
+- unrestricted coding is the real need.
+@ku_human_like_reasoner_guidance:meta json
+{
+  "rev": 3,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "HumanLikeReasoner guidance",
+  "summary": "Use HumanLikeReasoner for bounded human-scale reasoning, especially finite assignment, graph, numeric, search, and mixed finite problems that should stay explicit and inspectable.",
+  "priority": 10,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "reasoning",
+    "interpreters"
+  ],
+  "commands": [],
+  "interpreters": [
+    "HumanLikeReasoner"
+  ],
+  "tags": [
+    "reasoning",
+    "guidance",
+    "bounded"
+  ],
+  "input_patterns": [
+    "solve|reachable|constraint|graph|path|domain|state|target|assignment|order|minimal|proof|reasoning"
+  ]
+}

@@ -36,7 +36,7 @@ Trace is separate from executable state. It may reference executable artifacts, 
 | `declarations_inserted` | inserted declaration hash, insertion source, new declaration ids |
 | `planning_triggered` | mode, trigger reason, blocked-region summary |
 | `planning_stopped` | outcome, accepted actions, rejected actions |
-| `request_stopped` | final outcome, stop reason, remaining blocked regions |
+| `request_stopped` | final outcome, stop reason, remaining blocked regions, and `error_message` when execution stops without a terminal response |
 
 The event schema must be stable enough that replay tools can parse it without command-specific guesswork.
 

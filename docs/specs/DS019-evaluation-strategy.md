@@ -34,7 +34,9 @@ Evaluation should focus on task families where structured execution is expected 
 2. tasks requiring explicit candidate comparison or bounded plurality,
 3. tasks requiring auditable retrieval and prompt governance,
 4. tasks requiring stable deterministic rendering or rule evaluation around model calls,
-5. tasks where replay, trace, or partial repair materially matter.
+5. tasks where replay, trace, or partial repair materially matter,
+6. bounded reasoning tasks where the configured runtime exposes visible class-specific behavior such as rule, constraint, graph, search, numeric, mixed-class composition, and the advanced reasoning families shipped by `AdvancedReasoner`,
+7. bounded document-analysis tasks where the configured runtime exposes explicit chunk planning, rollups, and declaration insertion through `DocumentScalePlanner`.
 
 ### Baselines and metrics
 
@@ -55,7 +57,7 @@ Metrics should include:
 7. repair success under bounded failure scenarios,
 8. ambiguity-resolution quality for plural families.
 
-The repository should maintain explicit repair-oriented evaluation cases rather than hiding repair behavior inside only generic task-family benchmarks. Repair is one of the main claimed strengths of the architecture and should be measured directly.
+The repository should maintain explicit repair-oriented evaluation cases rather than hiding repair behavior inside only generic task-family benchmarks. Repair is one of the main claimed strengths of the architecture and should be measured directly. When the repository ships multi-class reasoning interpreters or a declaration-inserting document planner, evaluation should include visible coverage for each shipped family across the shared demo/eval catalog plus focused unit coverage for the local reasoning APIs and structural-insertion behavior.
 
 ## Decisions & Questions
 
@@ -66,6 +68,10 @@ Response: The architecture claims value through explicit orchestration, bounded 
 Question #2: Why must evaluation include trace, replay, and stability metrics in addition to answer quality?
 
 Response: The runtime is not trying only to maximize textual output quality. It is also trying to make execution inspectable, repairable, and stable under change. Those traits need direct measurement or they will disappear behind purely answer-centric benchmarking.
+
+Question #3: Why separate shared end-to-end reasoning cases from focused reasoning-class unit tests?
+
+Response: The shared catalog proves that the configured runtime can route and present representative tasks end to end. Focused unit tests prove that the shipped local reasoning classes still obey their bounded contracts even when prompt generation is not involved. Both are needed to keep the evaluation story honest.
 
 ## Conclusion
 

@@ -42,7 +42,7 @@ pull in values computed earlier in this session when they are relevant.
 8. End with @response.
 9. Make dependencies explicit so the execution graph shows real edges.
 10. Only keep a single-step plan if the request is truly trivial.
-11. Use logic-eval for bounded symbolic reasoning, solver JSON envelopes, or small compatible legacy rule blocks; use writerLLM or deepLLM for prose validation or explanation.
+11. Use HumanLikeReasoner directly for clear bounded finite symbolic reasoning, AdvancedReasoner directly for bounded advanced meta-reasoning, DocumentScalePlanner directly for bounded Markdown or JSON analysis workflows, and logic-eval only when a rewrite brief is still needed before those downstream routes.
 12. Avoid picking a component whose KU guidance says the body shape is wrong for that surface.
 13. When the request asks for exact computation plus explanation, keep the exact solving step separate from the explanation or final response step.
 14. When the user specifies a response format, create intermediate families so the final assembly can preserve that format without re-solving the task.
@@ -50,17 +50,18 @@ pull in values computed earlier in this session when they are relevant.
 16. Every placeholder used in the final response must refer to a family that is either declared in this plan or intentionally reused from existing session state.
 17. Before finalizing, ensure there are no disconnected helper families, unused declarations, or multiple terminal outputs.
 18. If you reuse existing session families, connect them intentionally into the new response path instead of emitting unrelated new branches.
+19. If you choose a declaration-inserting interpreter such as DocumentScalePlanner, keep the initial graph connected through already-declared families. Make @response depend on that planner family rather than on a future undeclared target.
 
 --- OUTPUT ---
 Output the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.
 @ku_planning_continue_core:meta json
 {
-  "rev": 4,
+  "rev": 5,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
   "title": "planning_continue_core",
-  "summary": "Mandatory planner bootstrap for continuing sessions: reuse prior families intentionally, use the authoritative component catalog plus KUs for routing, and keep the resulting plan as one connected graph converging into @response.",
+  "summary": "Mandatory planner bootstrap for continuing sessions: reuse prior families intentionally, use the authoritative component catalog plus KUs for routing among bounded reasoners and DocumentScalePlanner, and keep the resulting plan as one connected graph converging into @response.",
   "priority": 20,
   "trust": "canonical",
   "domains": [

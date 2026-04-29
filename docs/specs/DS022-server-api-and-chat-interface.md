@@ -115,7 +115,7 @@ The chat page must behave like a modern messaging application. It should stay co
 
 1. **Session management**: create a new session, select an existing session from a compact header selector, and surface the active session identity, origin, effective role, last activity time, and status in the header rather than in a bulky first-page panel.
 2. **Message input**: send natural-language requests from a fixed composer anchored at the bottom, with advanced options opened through a compact popover placed immediately before the text input and structured as a small two-level menu.
-3. **Conversation rendering**: show message bubbles, timestamps, lightweight running/completed/error indicators, and an animated `Thinking...` placeholder while an assistant response is still in progress.
+3. **Conversation rendering**: show message bubbles, timestamps, lightweight running/completed/error indicators, and one animated in-progress assistant placeholder whose text is refreshed from recent trace events rather than staying a static `Thinking...` label for the entire request.
 4. **Assistant actions**: every assistant response must expose a `Details` or `Traceability` action that opens the dedicated traceability page for that request. Copy response and retry request actions are also expected.
 5. **Advanced options**: support text-file insertion into the input area, budget controls, and a small menu of predefined demo tasks that exercise distinct commands and interpreters. The demo-task catalog should come from repository-owned shared fixtures rather than duplicated browser-only constants.
 6. **System context visibility**: provide a compact summary of the current authority context without moving deep trace or KB content inline.
@@ -126,11 +126,13 @@ Raw SOP Lang, trace payloads, KU lists, and execution graphs must not be shown i
 
 The traceability page must focus on one request timeline at a time while allowing navigation across prior request or response pairs in the same session. It should present:
 
-1. a compact request timeline with previews of the originating user request and final assistant response,
+1. a compact request timeline with previews of the originating user request and final assistant response, or an explicit failure or stop-cause summary when no terminal response was captured,
 2. a dedicated detail workspace for the selected request, separate from the timeline rail,
 3. exactly three primary tabs: `SOP Lang`, `Variables`, and `Execution Graph`,
 4. no redundant request or outcome summary tiles above the main tab workspace,
 5. node-level inspection for executed declarations, including declaration definition, resolved runtime context, selected KUs, outputs, diagnostics, retries, timing, and execution layer information.
+
+The fullscreen node inspector must keep its header and tab strip fixed while the selected tab content scrolls inside the body region. Changing tabs must not cause the header area itself to grow unpredictably.
 
 The `Variables` tab must use a split layout:
 
@@ -170,7 +172,8 @@ Settings must remain separate from chat. The page must expose:
 8. issued API keys shown before key-creation controls on the Authentication tab,
 9. key creation performed through a popup flow rather than an inline creation form,
 10. no dedicated "Active API key" card, no full active-token rendering inside the page, and no header display of active key identity strings,
-11. clear permission messaging when controls are unavailable because the current authority context is not admin.
+11. clear permission messaging when controls are unavailable because the current authority context is not admin,
+12. a compact operator-facing toggle that enables or disables managed provider fallback from stronger tiers to lower-cost tiers after provider failures.
 
 ### Trace-to-UI mapping
 
@@ -191,7 +194,7 @@ DS014 defines the trace event types and minimum payloads. The chat UI and native
 | `declarations_inserted` | Show the inserted declaration text (truncated), insertion source, and new declaration IDs. Update the plan panel. |
 | `planning_triggered` | Show planning mode, trigger reason, and blocked-region summary. Mark request as "replanning". |
 | `planning_stopped` | Show planning outcome: accepted actions, rejected actions. Return to execution view or stop view. |
-| `request_stopped` | Replace the `Thinking...` placeholder with the final assistant response, show final outcome and stop reason, and persist that request in the traceability timeline. |
+| `request_stopped` | Replace the in-progress placeholder with the final assistant response when one exists; otherwise show the explicit stop cause or error summary, and persist that request in the traceability timeline. |
 
 The chat route may stay intentionally compact, but live request state must still be driven by the trace stream rather than by speculative client-side bookkeeping. The detailed plan, variable state, and execution-graph inspection surfaces live on the dedicated traceability page, which must remain reconstructable from persisted request snapshots plus trace-derived status updates when a user reconnects mid-request.
 

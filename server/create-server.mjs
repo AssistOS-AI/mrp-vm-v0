@@ -737,6 +737,7 @@ async function buildConfigView(runtime, policies, authStore, callerContext) {
   return {
     llm_adapter: config.llm.adapter,
     default_llm: config.llm.defaultModel,
+    llm_fallbacks: config.llm.fallbacks ?? { enabled: false },
     interpreter_mappings: Object.fromEntries(
       Object.entries(config.llm.profileBindings).map(([profile, binding]) => [profile, binding.model]),
     ),
@@ -791,6 +792,12 @@ function applyConfigPatch(runtime, policies, patch = {}) {
         ...binding,
       };
     }
+  }
+  if (patch.llm_fallbacks) {
+    runtime.runtimeConfig.llm.fallbacks = {
+      ...(runtime.runtimeConfig.llm.fallbacks ?? {}),
+      ...patch.llm_fallbacks,
+    };
   }
   if (patch.interpreters) {
     const interpreterCatalog = new Map(createInterpreterSnapshot(runtime).map((entry) => [entry.name, entry]));

@@ -5,10 +5,12 @@ MRP-VM v0 is a dependency-free Node.js `.mjs` runtime with:
 - SOP Lang parsing and graph execution
 - family-based state and trace persistence
 - native commands for planning, `js-eval`, `logic-eval`, `template-eval`, `analytic-memory`, `kb`, and `credibility`
+- external interpreters for `HumanLikeReasoner`, `AdvancedReasoner`, and `DocumentScalePlanner`
 - declaration-style SOP Lang KU assets and caller profiles under `data/default/`
 - AchillesAgentLib-aware LLM adapter routing through `LLMAgent`, with fake adapters used only when tests opt in explicitly
 - optional HTTP hosting adapter and `/chat` UI under `server/`
 - Node native tests under `tests/`
+- shared operator demos and evaluation cases under `eval/`
 
 Run the test suite with:
 

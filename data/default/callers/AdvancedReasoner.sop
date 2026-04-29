@@ -1,0 +1,48 @@
+@AdvancedReasoner text
+Use AdvancedReasoner for bounded meta-reasoning tasks where the runtime should reason explicitly about uncertainty, evidence quality, missing structure, normative review, or engine escalation instead of pretending the task is already a finite closed-world puzzle.
+Prefer it for abductive, probabilistic, causal, argumentative, belief-revision, legal, scientific, optimization-routing, formal-proof-routing, SMT-fragment, pragmatic, analogical, ethical, and creative-evaluation tasks when a bounded local pass is still useful.
+The body may be a direct natural-language problem, a structured rewrite brief produced by logic-eval, or a JSON envelope that pins result_mode, program, or generation settings.
+Prefer direct AdvancedReasoner routing when the task already clearly belongs to one of these advanced reasoning families. Prefer HumanLikeReasoner instead when the task is already a finite rule, constraint, graph, search, or numeric problem that should be solved exactly by local symbolic composition.
+The expected exit surface is a structured reasoner response returned through `ctx.returnResponse(...)`, not `ctx.emit(...)`.
+@AdvancedReasoner:meta json
+{
+  "rev": 1,
+  "ku_type": "caller_profile",
+  "scope": "default",
+  "status": "active",
+  "title": "AdvancedReasoner",
+  "summary": "Choose AdvancedReasoner for bounded advanced reasoning tasks that must expose evidence quality, certainty, review or engine-escalation guidance, and typed reasoning structure rather than only a finite exact solver result.",
+  "priority": 9,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "reasoning",
+    "interpreters"
+  ],
+  "commands": [],
+  "interpreters": [
+    "AdvancedReasoner"
+  ],
+  "tags": [
+    "reasoning",
+    "advanced",
+    "meta"
+  ],
+  "input_patterns": [
+    "uncertain|probabilistic|causal|legal|ethical|scientific|analogy|abductive|argument|evidence|hypothesis|review|engine|SMT|proof|optimization"
+  ],
+  "allowed_ku_types": [
+    "prompt_asset",
+    "content",
+    "caller_profile"
+  ],
+  "accepted_prompt_roles": [
+    "reasoning_program"
+  ],
+  "model_classes": [
+    "strong"
+  ],
+  "byte_budget": 8192,
+  "session_override_allowed": true,
+  "llm_fallback_policy": "allowed"
+}

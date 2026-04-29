@@ -1,0 +1,27 @@
+DONE review-reasoner-ds - Review DS008, DS020, DS026, DS027 and define the new AdvancedReasoner DS surfaces so the reasoner contracts, routing, and shared context rules match the implementation.
+DONE advancedreasoner-contract - Derive the shippable AdvancedReasoner v0 contract from the supplied specification, including local-vs-engine boundaries and result metadata.
+DONE advancedreasoner-runtime - Track the separate runtime implementation under src/interpreters/advanced-reasoner/ and its focused unit coverage.
+DONE expand-shared-reasoning-cases - Grow the shared chat/eval catalog to at least 15-20 useful small cases with mixed coverage.
+DONE demo-list-ui - Keep the chat demo list dense, high-contrast, and one-line readable while the case catalog expands.
+DONE fix-node-popup-ui - Finish the execution-graph popup layout fix with a stable tab header and contained tab bodies.
+
+DONE update-default-kus - Update planning, logic, HumanLikeReasoner, and AdvancedReasoner default KUs and caller profiles so routing and prompt assets reflect both reasoners.
+DONE modularize-logic-eval-src - Remove solver runtime code from src/logic-eval and keep only rewrite/orchestration helpers there.
+DONE unify-reasoner-context - Align HumanLikeReasoner and AdvancedReasoner around one coherent local execution-context discipline, with explicit differences only for result exit surfaces.
+DONE advancedreasoner-routing - Integrate AdvancedReasoner into planning and logic-eval recommendations without turning logic-eval back into a solver.
+DONE advancedreasoner-docs-tests - Add DS/docs updates plus runtime, integration, demo, and evaluation coverage for AdvancedReasoner.
+DONE expand-shared-eval-suite - Ensure shared evaluation covers the shipped HumanLikeReasoner and AdvancedReasoner families with small but informative cases.
+DONE improve-no-response-status - Replace generic "No response captured" text with explicit stop/failure causes in the UI.
+DONE add-llm-fallback-toggle - Add a settings-controlled fallback path when premium/deep routing fails.
+
+DONE documentplanner-contract - Derive the shippable DocumentScalePlanner v0 contract from the supplied specification, including supported input handles, chunking model, planning outcomes, and declaration-insertion semantics.
+DONE documentplanner-runtime - Implement DocumentScalePlanner under src/interpreters/document-scale-planner/ with deterministic markdown/json parsing, chunk planning, SOP rendering, and focused tests.
+DONE documentplanner-kus-routing - Add caller profiles and default KU guidance so planning can route large markdown/json analysis tasks to DocumentScalePlanner.
+DONE documentplanner-docs-review - Review affected DS files and add contiguous DocumentScalePlanner DS surfaces plus synchronized public docs.
+DONE documentplanner-eval-demo - Add shared chat/eval demo cases and evaluation coverage for DocumentScalePlanner, then run eval and record the remaining managed-LLM failures.
+PENDING managed-eval-hardening - Reduce remaining managed-eval prompt drift in planning/template assembly and HumanLikeReasoner generation; current issues are model-output instability rather than missing runtime wiring.
+IN_PROGRESS fix-chat-session-bootstrap - Stop auto-loading the previous session on refresh, clear stale browser session state, create a fresh session by default when auth is available, and keep older sessions manual-only.
+IN_PROGRESS fix-chat-advanced-menu - Restore the chat advanced-options menu flow so demo examples and the three-dots input actions are usable again after the session bootstrap fix.
+
+DONE chat-live-progress - Replace the generic chat Thinking placeholder with live trace-derived progress text and a clearer animated pending state.
+DONE harden-humanlike-generation - Remove the unnecessary arrow-function ban and add compatibility coverage for remaining HumanLikeReasoner prompt/runtime drift.

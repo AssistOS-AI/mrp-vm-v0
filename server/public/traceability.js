@@ -36,6 +36,26 @@ function previewText(value, fallback, maxLength = 160) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 }
 
+function describeMissingResponse(item = {}) {
+  if (item.response_preview) {
+    return item.response_preview;
+  }
+  if (item.error_message) {
+    return item.error_message;
+  }
+  const stopReason = String(item.status || 'unknown');
+  if (stopReason === 'unknown_outcome') {
+    return 'No terminal response was captured before execution stopped.';
+  }
+  if (stopReason === 'execution_error') {
+    return 'Execution failed before a terminal response was produced.';
+  }
+  if (stopReason === 'active_request') {
+    return 'Another request is already active for this session.';
+  }
+  return `No response captured (${humanizeStatus(stopReason)}).`;
+}
+
 function formatDuration(durationMs) {
   const value = Number(durationMs);
   if (!Number.isFinite(value) || value < 0) {
@@ -76,7 +96,7 @@ function renderTimeline() {
         <span class="trace-timeline-id">#${escapeHtml(item.request_id.slice(-6))}</span>
       </div>
       <div class="trace-timeline-preview">${escapeHtml(previewText(item.request_preview, 'No request text.'))}</div>
-      <div class="trace-timeline-response muted small">${escapeHtml(previewText(item.response_preview, 'No response captured.', 110))}</div>
+      <div class="trace-timeline-response muted small">${escapeHtml(previewText(item.response_preview || describeMissingResponse(item), 'No response captured.', 110))}</div>
     </button>
   `).join('');
 }

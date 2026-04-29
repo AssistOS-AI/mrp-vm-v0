@@ -52,7 +52,7 @@ Non-LLM external interpreters remain first-class interpreters if they are invoke
 
 Detailed SMT direction, if adopted later, is specified separately in DS021 so that the general contract does not become solver-specific.
 
-The first implementation does not include solver-style interpreters in the baseline catalog. DS020 fixes the generic contract now so later solver work can attach to it cleanly.
+The baseline catalog now includes three concrete interpreter families above the generic DS020 skeleton: `HumanLikeReasoner`, whose detailed runtime contract is specified in DS026 and whose guidance and coverage obligations are specified in DS027; `AdvancedReasoner`, whose detailed runtime contract is specified in DS028 and whose guidance and coverage obligations are specified in DS029; and `DocumentScalePlanner`, whose detailed runtime contract is specified in DS030 and whose guidance and coverage obligations are specified in DS031. DS020 remains the generic contract layer above those concrete interpreters.
 
 ## Decisions & Questions
 
@@ -63,6 +63,18 @@ Response: The runtime scheduler, planning logic, and trace system need to know w
 Question #2: Why must interpreter contracts and capabilities be declared through default KUs?
 
 Response: Commands and interpreters should publish their preferred input shape and authority boundary through the same inspectable knowledge substrate used elsewhere in the runtime. Otherwise those contracts would become hidden implementation facts.
+
+Question #3: Why keep `HumanLikeReasoner` under the generic external-interpreter contract instead of creating a disconnected special case?
+
+Response: Even though it is solver-oriented, it still participates in the same runtime surfaces: planning choice, KU guidance, trace, enabled-state control, and bounded invocation. Keeping it under DS020 prevents a solver interpreter from bypassing the ordinary integration rules.
+
+Question #4: Why keep `AdvancedReasoner` under the same DS020 skeleton even though it returns richer bounded responses such as `needs_engine` and `needs_review`?
+
+Response: The richer response model changes the interpreter's local contract, not its registry role. `AdvancedReasoner` is still an external interpreter chosen by planning, governed by default KUs, traced by the same runtime, and enabled or disabled through the same registry surface. DS020 should therefore remain the common contract backbone while DS028 and DS029 define the richer interpreter-specific semantics.
+
+Question #5: Why keep `DocumentScalePlanner` under DS020 even though it inserts declarations rather than only returning one plain value?
+
+Response: Declaration insertion is already part of the generic external-interpreter effect model. `DocumentScalePlanner` still has a registry contract, default KUs, planning selection rules, enabled-state control, and trace obligations like any other external interpreter. Its richer structural behavior belongs in its interpreter-specific DS files, not outside the DS020 backbone.
 
 ## Conclusion
 

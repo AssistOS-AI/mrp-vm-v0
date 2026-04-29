@@ -15,3 +15,5 @@ export { ManagedLlmAdapter } from './interpreters/llm-adapter.mjs';
 export { AchillesLlmAdapter } from './interpreters/achilles-llm-adapter.mjs';
 export { FakeLlmAdapter } from './interpreters/fake-llm-adapter.mjs';
 export { ExternalInterpreterRegistry } from './interpreters/external-interpreter-registry.mjs';
+export { executeAdvancedReasoner } from './interpreters/advanced-reasoner/index.mjs';
+export { executeDocumentScalePlanner } from './interpreters/document-scale-planner/index.mjs';

@@ -1,34 +1,16 @@
-import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { listChatDemoTasks } from '../eval/reasoning-cases.mjs';
 
 export async function loadDemoTasks(rootDir = process.cwd()) {
-  const candidates = [
-    path.join(rootDir, 'data', 'demo', 'chat-demos.json'),
-    new URL('../data/demo/chat-demos.json', import.meta.url),
-  ];
-  let raw = null;
-  for (const candidate of candidates) {
-    try {
-      raw = await readFile(candidate, 'utf8');
-      break;
-    } catch (error) {
-      if (error?.code !== 'ENOENT') {
-        throw error;
-      }
-    }
-  }
-  if (raw == null) {
-    throw new Error('Demo catalog could not be resolved from runtime root or repository data/demo.');
-  }
-  const payload = JSON.parse(raw);
-  if (!Array.isArray(payload)) {
-    throw new Error('Demo catalog must be a JSON array.');
-  }
-  return [...payload]
+  void rootDir;
+  return listChatDemoTasks()
     .map((entry) => ({
       order: Number(entry.order ?? 0),
       id: String(entry.id ?? '').trim(),
       title: String(entry.title ?? '').trim(),
+      summary: String(entry.summary ?? '').trim(),
+      reasoning_classes: Array.isArray(entry.reasoning_classes)
+        ? entry.reasoning_classes.map((item) => String(item ?? '').trim()).filter(Boolean)
+        : [],
       prompt: String(entry.prompt ?? ''),
     }))
     .filter((entry) => entry.id && entry.title && entry.prompt)

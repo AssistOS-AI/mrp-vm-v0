@@ -1,0 +1,61 @@
+@ku_advanced_reasoner_guidance text
+Choose AdvancedReasoner when the request is still bounded and inspectable, but the reasoning step must say something explicit about uncertainty, evidence quality, open-world risk, missing inputs, review requirements, or engine escalation.
+
+Use it for:
+- abductive hypothesis ranking over explicit observations,
+- probabilistic belief updates over tiny finite models,
+- causal-effect triage that may end in a cautious local finding or an engine recommendation,
+- argumentation, belief revision, legal applicability scans, and scientific evidence synthesis,
+- bounded optimization routing, formal-proof routing, tiny SMT fragments, pragmatic ambiguity checks, analogy scoring, ethical option comparison, and bounded creative-rubric evaluation.
+
+Accepted body shapes:
+- a direct natural-language advanced reasoning task,
+- a structured rewrite brief from logic-eval,
+- a JSON envelope with fields such as problem, rewritten_problem, result_mode, program, or generator_profile.
+
+Good AdvancedReasoner inputs:
+- name the observations, hypotheses, claims, options, or constraints explicitly,
+- preserve requested output sections and downstream answer requirements,
+- keep local reasoning bounded even when the conclusion may be "needs_engine" or "needs_review",
+- distinguish local structural analysis from claims that require external datasets, proof systems, legal review, or larger optimization engines.
+
+Program-generation guidance:
+- generated programs should create one `ExecutionContext`,
+- use the exact public method names published by the AdvancedReasoner prompt asset,
+- store useful intermediate artifacts with `ctx.storeResult(...)` or `ctx.assume(...)` when they improve traceability,
+- finish only with `ctx.returnResponse(ReasonerResponse.*(...))`,
+- prefer a conservative response status such as `partial`, `needs_clarification`, `needs_engine`, or `needs_review` when the bounded local pass cannot justify promotion safely.
+
+Avoid AdvancedReasoner when:
+- the task is already a finite rule, constraint, graph, search, or numeric problem that HumanLikeReasoner can solve directly,
+- the step is mainly polished prose or memo writing,
+- unrestricted coding is the real need,
+- the request is so vague that even a bounded advanced reasoning brief cannot be formed.
+@ku_advanced_reasoner_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "AdvancedReasoner guidance",
+  "summary": "Use AdvancedReasoner for bounded advanced reasoning tasks that should expose evidence quality, certainty, review boundaries, or engine escalation rather than only a finite exact solver answer.",
+  "priority": 10,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "reasoning",
+    "interpreters"
+  ],
+  "commands": [],
+  "interpreters": [
+    "AdvancedReasoner"
+  ],
+  "tags": [
+    "reasoning",
+    "guidance",
+    "advanced"
+  ],
+  "input_patterns": [
+    "uncertain|probabilistic|causal|legal|ethical|scientific|analogy|abductive|argument|evidence|hypothesis|review|engine|SMT|proof|optimization"
+  ]
+}

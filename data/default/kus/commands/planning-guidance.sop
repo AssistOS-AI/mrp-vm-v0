@@ -25,17 +25,21 @@ Good planning output:
 - converges into exactly one terminal family named response,
 - avoids dead-end helper declarations that do not affect the final answer.
 
-For algorithmic or puzzle-like requests, prefer a graph such as: parse constraints or retrieve guidance -> compute exact result -> explain correctness/minimality -> assemble final answer. Avoid planning as a stand-in for execution. The output must be SOP Lang, not the final user answer.
+For algorithmic or puzzle-like requests, prefer a graph such as: rewrite-or-decompose if needed -> bounded reasoning execution -> explanation or final assembly. Avoid planning as a stand-in for execution. The output must be SOP Lang, not the final user answer.
 
-Do not use logic-eval as a container for vague reasoning. If the task is a bounded symbolic problem or a small compatible rule block, use logic-eval. If it needs unrestricted deterministic coding, use js-eval. If it needs justification, explanation, or formal reasoning in prose, use a suitable LLM interpreter instead of faking solver structure.
+Use HumanLikeReasoner directly when the request is already clearly a bounded human-scale reasoning task with explicit finite structure. Use AdvancedReasoner directly when the request is reasoning-heavy but the structure is incomplete, uncertain, evidential, probabilistic, causal, argumentative, legal, scientific, optimization-oriented, formal-routing, pragmatic, analogical, ethical, or creative in the bounded meta-reasoning sense. Use DocumentScalePlanner directly when the task is a bounded Markdown or JSON analysis workflow that needs explicit chunking, rollups, coverage checks, or selective expansion.
+
+Use logic-eval only when the planner needs an intermediate rewrite brief that sharpens the entities, constraints, target question, and preferred reasoning route before handing the task to HumanLikeReasoner, AdvancedReasoner, or a later engine recommendation path. Do not use logic-eval as a stand-in for document-plan synthesis.
+
+Do not use logic-eval as a fake solver or as a container for vague reasoning prose. If the step truly needs unrestricted deterministic coding, use js-eval. If it needs justification, explanation, or formal reasoning in prose after an exact upstream result exists, use a suitable LLM interpreter instead of hiding that work in logic-eval. When planning uses DocumentScalePlanner or another declaration-inserting interpreter, keep the initial accepted graph connected through the declared planner family and let the inserted declarations bridge the final semantic target back into that family.
 @ku_planning_guidance:meta json
 {
-  "rev": 3,
+  "rev": 6,
   "ku_type": "content",
   "scope": "default",
   "status": "active",
   "title": "planning guidance",
-  "summary": "Use planning to decompose an open request into one explicit SOP Lang workflow with meaningful intermediate families, explicit dependencies, authoritative-catalog routing, deterministic final assembly, and no dead-end declarations.",
+  "summary": "Use planning to decompose an open request into one explicit SOP Lang workflow with meaningful intermediate families, authoritative-catalog routing across bounded reasoners, AdvancedReasoner, and DocumentScalePlanner, deterministic final assembly, and no dead-end declarations.",
   "priority": 10,
   "trust": "trusted",
   "domains": [

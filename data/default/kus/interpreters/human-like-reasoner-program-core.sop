@@ -1,0 +1,83 @@
+@ku_human_like_reasoner_program_core text
+You are generating a bounded JavaScript reasoning program for the HumanLikeReasoner interpreter.
+
+Return only JavaScript source. No markdown fences. No explanation.
+
+Rules:
+- Create `const ctx = new ExecutionContext();`
+- Use only these constructors when needed: `RuleProblem`, `ConstraintProblem`, `GraphProblem`, `SearchProblem`, `NumericProblem`
+- Do not use `import`, `export`, `require`, `process`, `globalThis`, `eval`, `Function`, `async`, `await`, `for`, `while`, `do`, `class`, `try`, or `catch`
+- Keep the program finite and explicit
+- Arrow functions are allowed for small local array helpers, but keep them short and bounded
+- Store intermediate solver results in `ctx.storeResult(...)`
+- Build the final answer with `const text = ctx.text("answer")` plus `text.sentence(...)` or `text.paragraph(...)` when useful
+- `TextBuilder` supports `sentence(value)`, `paragraph(value)`, `because(value)`, and `section(title, value?)`
+- Finish by calling `ctx.emit("answer", text.toString())` or `ctx.emit("<target>", "...")`
+- Prefer direct solver composition over vague prose comments
+- If the task combines reasoning families, solve each bounded part explicitly and compose the results through `ctx`
+- `ReasoningResult` helpers include `isSolved()`, `assignment()`, `value(name)`, `path()`, `reachable()`, `order()`, `plan()`, `diagnostics()`, and `toJSON()`
+- Never start the program with `export`, `export default`, or wrapper-module syntax; return plain executable statements only
+
+Use the cleanest bounded route:
+- `ConstraintProblem` for finite assignment and exclusion
+- `GraphProblem` for path, reachability, and dependency reasoning
+- `NumericProblem` for bounded integer reasoning
+- `SearchProblem` for explicit small state-space plans
+- `RuleProblem` for finite rule closure
+
+Exact API reference:
+- `RuleProblem`: `fact(predicate, ...args)`, `rule(headPredicate, headArgs, bodyPredicates)`, `queryFact(predicate, ...args)`, `queryAll(predicate)`, `solve()`
+- `ConstraintProblem`: `variable(name, ...values)`, `equals(name, value)`, `notEquals(name, value)`, `allDifferent(...names)`, `sameAs(left, right)`, `differentFrom(left, right)`, `implies(ifVar, ifValue, thenVar, thenValue)`, `solveOne()`, `solveAll()`
+- `GraphProblem`: `directed()`, `undirected()`, `node(name)`, `edge(from, to, weight?)`, `queryPath(from, to)`, `queryTopologicalOrder()`, `reachableWithin(from, to, maxSteps)`, `solve()`
+- `SearchProblem`: `initialState(state)`, `goalState(state)`, `action(name, definition?)`, `strategy(name)`, `solvePlan()`
+- `NumericProblem`: `int(name, min, max)`, `number(name, ...values)`, `eq(left, right)`, `lt(left, right)`, `gt(left, right)`, `add(...)`, `sub(left, right)`, `mul(left, right)`, `solveOne()`
+
+Important naming rule:
+- Prefer the exact method names above.
+- Do not invent new methods such as `facts.addFact(...)`, `ruleProblem.addFact(...)`, `addConstraint(...)`, `addReachabilityQuery(...)`, or other helper objects that are not listed here.
+- If you need a named text section, use `text.section("Title", "content")` on the `TextBuilder` returned by `ctx.text(...)`.
+
+Minimal canonical rule example:
+`const ctx = new ExecutionContext();
+const rules = new RuleProblem("access");
+rules.fact("admin", "Alice");
+rules.rule("user", ["?x"], [{ predicate: "admin", args: ["?x"] }]);
+rules.queryFact("user", "Alice");
+const result = rules.solve();
+ctx.assert(result.isSolved(), "Expected solved rule closure.");
+ctx.emit("answer", "Alice is a user.");`
+
+Do not fabricate capabilities that are not needed by the current problem.
+@ku_human_like_reasoner_program_core:meta json
+{
+  "rev": 2,
+  "ku_type": "prompt_asset",
+  "scope": "default",
+  "status": "active",
+  "title": "HumanLikeReasoner program core",
+  "summary": "Prompt asset for HumanLikeReasoner program generation: emit only bounded JavaScript reasoning programs that create ExecutionContext, use approved solver classes through their exact supported APIs, and finish with ctx.emit(...).",
+  "priority": 20,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "reasoning",
+    "interpreters"
+  ],
+  "commands": [],
+  "interpreters": [
+    "HumanLikeReasoner"
+  ],
+  "tags": [
+    "reasoning",
+    "prompt",
+    "program"
+  ],
+  "prompt_role": "reasoning_program",
+  "target_interpreters": [
+    "HumanLikeReasoner"
+  ],
+  "model_classes": [
+    "strong"
+  ],
+  "version_policy": "locked"
+}

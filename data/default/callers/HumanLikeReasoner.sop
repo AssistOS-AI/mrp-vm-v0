@@ -1,0 +1,47 @@
+@HumanLikeReasoner text
+Use HumanLikeReasoner for bounded human-scale reasoning tasks that should be solved through an explicit generated reasoning program plus inspectable local solvers.
+Prefer it for finite assignment, graph reachability, bounded numeric reasoning, small search problems, and mixed tasks where one statement combines several of those reasoning families.
+The body may be a direct natural-language problem, a structured rewrite brief produced by logic-eval, or a JSON envelope that pins result_mode, program, or generation settings.
+Prefer direct HumanLikeReasoner routing when the task is already clearly a bounded reasoning problem. Prefer AdvancedReasoner instead when the task becomes incomplete, probabilistic, causal, evidential, legal, scientific, normative, interpretive, or otherwise too open-world for a finite local solver profile.
+@HumanLikeReasoner:meta json
+{
+  "rev": 2,
+  "ku_type": "caller_profile",
+  "scope": "default",
+  "status": "active",
+  "title": "HumanLikeReasoner",
+  "summary": "Choose HumanLikeReasoner for bounded human-scale reasoning and mixed finite problems that should run through an explicit generated reasoning program plus inspectable local solvers, not for open-world advanced reasoning.",
+  "priority": 9,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "reasoning",
+    "interpreters"
+  ],
+  "commands": [],
+  "interpreters": [
+    "HumanLikeReasoner"
+  ],
+  "tags": [
+    "reasoning",
+    "bounded",
+    "compositional"
+  ],
+  "input_patterns": [
+    "solve|reachable|constraint|graph|path|domain|state|target|assignment|order|minimal|proof|reasoning"
+  ],
+  "allowed_ku_types": [
+    "prompt_asset",
+    "content",
+    "caller_profile"
+  ],
+  "accepted_prompt_roles": [
+    "reasoning_program"
+  ],
+  "model_classes": [
+    "strong"
+  ],
+  "byte_budget": 6144,
+  "session_override_allowed": true,
+  "llm_fallback_policy": "allowed"
+}

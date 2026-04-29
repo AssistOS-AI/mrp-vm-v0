@@ -68,6 +68,17 @@
             </div>
             <div id="interpreter-model-bindings" class="settings-binding-grid"></div>
           </section>
+          <section class="inset-card stack settings-checkbox-card">
+            <div class="stack compact">
+              <div class="eyebrow">Fallback</div>
+              <h4>Provider failure fallback</h4>
+              <div class="muted small settings-help-copy">When enabled, managed LLM calls retry from premium to standard to fast models after a provider failure instead of stopping immediately.</div>
+            </div>
+            <label class="settings-checkbox-row">
+              <input id="llm-fallback-enabled" type="checkbox">
+              <span>Enable managed LLM fallback on provider failure</span>
+            </label>
+          </section>
         </form>
       </section>
 

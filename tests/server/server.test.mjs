@@ -99,6 +99,7 @@ test('server exposes native session and request APIs plus /chat', async () => {
     const config = await fetch(`${baseUrl}/api/config`).then((response) => response.json());
     assert.equal(config.default_llm, 'write');
     assert.equal(config.llm_adapter, 'fake');
+    assert.equal(config.llm_fallbacks.enabled, false);
     assert.equal(config.interpreter_mappings.plannerLLM, 'plan');
     assert.ok(config.model_routing_targets.some((entry) => entry.name === 'logicGeneratorLLM'));
     assert.ok(config.model_routing_targets.some((entry) => entry.name === 'formatterLLM'));
@@ -113,6 +114,9 @@ test('server exposes native session and request APIs plus /chat', async () => {
       },
       body: JSON.stringify({
         default_llm: 'deep',
+        llm_fallbacks: {
+          enabled: true,
+        },
         interpreter_mappings: {
           plannerLLM: 'deep',
           writerLLM: 'fast',
@@ -122,6 +126,7 @@ test('server exposes native session and request APIs plus /chat', async () => {
       }),
     }).then((response) => response.json());
     assert.equal(updatedConfig.default_llm, 'deep');
+    assert.equal(updatedConfig.llm_fallbacks.enabled, true);
     assert.equal(updatedConfig.interpreter_mappings.plannerLLM, 'deep');
     assert.equal(updatedConfig.profile_bindings.writerLLM.model, 'fast');
     assert.equal(updatedConfig.profile_bindings.logicGeneratorLLM.model, 'deep');

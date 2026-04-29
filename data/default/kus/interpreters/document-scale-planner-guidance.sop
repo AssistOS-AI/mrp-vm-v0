@@ -1,0 +1,55 @@
+@ku_document_scale_planner_guidance text
+Choose DocumentScalePlanner when the task is a bounded document-analysis problem over explicit Markdown or JSON content and the runtime should keep chunking, rollups, and validation inspectable in SOP Lang.
+
+Use it for:
+- chapter-, section-, paragraph-, or table-level analysis of Markdown notes, memos, or reports,
+- record- or path-scoped analysis of JSON documents that already live in a family or inline envelope,
+- idea extraction, chapter profiling, summarization, claim extraction, or similar repeated per-unit semantic passes that later need global rollups,
+- selective document expansion where a first pass should identify which paths deserve deeper processing.
+
+Accepted body shapes:
+- a mixed text body that includes an explicit `document_ref ~family` line and then a JSON envelope,
+- a natural-language body that names the source reference and the requested operation clearly,
+- a pure inline envelope for tests or controlled execution with fields such as document_text, document_json, operation, granularity, path, text_field, final_target, max_declarations_per_plan, and max_tokens_per_chunk.
+
+Good DocumentScalePlanner inputs:
+- keep the source document explicit as Markdown text, JSON text, or a direct family reference,
+- specify one bounded operation such as extract_ideas or chapter_profile,
+- choose one inspectable granularity such as chapter, section, paragraph, table, or record,
+- preserve requested output sections in the user objective so downstream writerLLM rollups can keep them visible,
+- keep the initial plan connected by making @response depend on the planner family rather than on a future undeclared final target.
+
+Avoid DocumentScalePlanner when:
+- the task is already a small one-shot writing request over a short excerpt,
+- the work is primarily finite symbolic reasoning that belongs in HumanLikeReasoner,
+- the work is primarily bounded advanced meta-reasoning that belongs in AdvancedReasoner,
+- the document is not available as explicit Markdown or JSON input,
+- the requested plan would exceed configured declaration budgets and should first be narrowed or profiled at a coarser granularity.
+@ku_document_scale_planner_guidance:meta json
+{
+  "rev": 1,
+  "ku_type": "content",
+  "scope": "default",
+  "status": "active",
+  "title": "DocumentScalePlanner guidance",
+  "summary": "Use DocumentScalePlanner for explicit Markdown or JSON analysis tasks that need inspectable chunking, rollups, coverage checks, and structural declaration insertion rather than one opaque document prompt.",
+  "priority": 10,
+  "trust": "trusted",
+  "domains": [
+    "runtime",
+    "planning",
+    "interpreters"
+  ],
+  "commands": [],
+  "interpreters": [
+    "DocumentScalePlanner"
+  ],
+  "tags": [
+    "document",
+    "guidance",
+    "planning"
+  ],
+  "input_patterns": [
+    "markdown|json|chapter|section|paragraph|table|document|report|memo|extract ideas|profile"
+  ]
+}

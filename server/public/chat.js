@@ -16,6 +16,7 @@ import {
   setApiKey,
   statusClass,
 } from './shared.js';
+import { deriveChatAuthState, hasValidatedApiKey } from './chat-auth-state.mjs';
 
 const state = {
   auth: null,
@@ -25,6 +26,7 @@ const state = {
   demoTasks: [],
   eventSource: null,
   pendingRequest: null,
+  pendingProgressTicker: null,
   sessionId: null,
   sessions: [],
   dropdownOpen: false,
@@ -39,6 +41,158 @@ function humanizeStatus(status) {
   return String(status || 'idle').replace(/_/g, ' ');
 }
 
+function formatDuration(durationMs) {
+  const value = Number(durationMs);
+  if (!Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  if (value < 1000) {
+    return `${Math.round(value)}ms`;
+  }
+  return `${(value / 1000).toFixed(value >= 10_000 ? 0 : 1)}s`;
+}
+
+function summarizeFailure(event) {
+  const failure = event.failure ?? {};
+  return failure.message
+    || event.error_message
+    || `${event.failure_kind ?? 'execution_error'} from ${event.originating_component ?? failure.origin ?? 'unknown'}`;
+}
+
+function describeMissingResponse(item = {}) {
+  if (item.error_message) {
+    return item.error_message;
+  }
+  const stopReason = String(item.stop_reason || item.status || 'unknown');
+  if (stopReason === 'unknown_outcome') {
+    return 'No terminal response was captured before execution stopped.';
+  }
+  if (stopReason === 'execution_error') {
+    return 'Execution failed before a terminal response was produced.';
+  }
+  if (stopReason === 'active_request') {
+    return 'Another request is already active for this session.';
+  }
+  return `No response captured (${humanizeStatus(stopReason)}).`;
+}
+
+function pushPendingProgress(message) {
+  if (!state.pendingRequest || !message) {
+    return;
+  }
+  const text = String(message).trim();
+  if (!text) {
+    return;
+  }
+  const messages = Array.isArray(state.pendingRequest.liveMessages)
+    ? [...state.pendingRequest.liveMessages]
+    : [];
+  if (messages.at(-1) !== text) {
+    messages.push(text);
+  }
+  state.pendingRequest = {
+    ...state.pendingRequest,
+    liveMessages: messages.slice(-10),
+    liveMessageIndex: Math.max(0, messages.length - 1),
+  };
+}
+
+function ensurePendingProgressTicker() {
+  if (state.pendingProgressTicker) {
+    return;
+  }
+  state.pendingProgressTicker = window.setInterval(() => {
+    const pending = state.pendingRequest;
+    if (!pending || !Array.isArray(pending.liveMessages) || pending.liveMessages.length < 2) {
+      return;
+    }
+    state.pendingRequest = {
+      ...pending,
+      liveMessageIndex: ((pending.liveMessageIndex ?? 0) + 1) % pending.liveMessages.length,
+    };
+    renderConversation(state.currentDetails);
+  }, 2400);
+}
+
+function clearPendingProgressTicker() {
+  if (!state.pendingProgressTicker) {
+    return;
+  }
+  window.clearInterval(state.pendingProgressTicker);
+  state.pendingProgressTicker = null;
+}
+
+function currentPendingProgressText(pendingRequest = state.pendingRequest) {
+  const messages = pendingRequest?.liveMessages;
+  if (Array.isArray(messages) && messages.length > 0) {
+    const index = Math.max(0, Math.min(pendingRequest.liveMessageIndex ?? (messages.length - 1), messages.length - 1));
+    return messages[index];
+  }
+  return 'Waiting for trace updates...';
+}
+
+function renderPendingBody(pendingRequest = state.pendingRequest) {
+  const liveText = currentPendingProgressText(pendingRequest);
+  const updateCount = Array.isArray(pendingRequest?.liveMessages) ? pendingRequest.liveMessages.length : 0;
+  const meta = updateCount > 0
+    ? `${humanizeStatus(pendingRequest?.status || 'running')} • ${updateCount} live update${updateCount === 1 ? '' : 's'}`
+    : `${humanizeStatus(pendingRequest?.status || 'running')} • live trace pending`;
+  return `
+    <div class="thinking-indicator" aria-live="polite">
+      <span class="thinking-signal" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="thinking-live-text">${escapeHtml(liveText)}</span>
+    </div>
+    <div class="thinking-meta">${escapeHtml(meta)}</div>
+  `;
+}
+
+function summarizeTraceEvent(event) {
+  if (!event || typeof event !== 'object') {
+    return '';
+  }
+  switch (event.event) {
+    case 'request_started': {
+      const budgets = event.budgets ?? {};
+      return `Start • request ${event.request_id ?? 'active'} • steps ${budgets.steps_remaining ?? '?'} • planning ${budgets.planning_remaining ?? '?'}`;
+    }
+    case 'planning_triggered':
+      return `Planning • ${humanizeStatus(event.mode ?? event.trigger_reason ?? 'started')}`;
+    case 'planning_stopped': {
+      const declarations = String(event.planned_declarations ?? '');
+      const declarationCount = (declarations.match(/^@/gm) ?? []).length;
+      return `Planning done • SOP ${declarations.length} chars • ${declarationCount} decls`;
+    }
+    case 'command_invoked':
+    case 'interpreter_invoked': {
+      const name = event.command_id ?? event.interpreter_id ?? 'unknown';
+      const prefix = event.event === 'command_invoked' ? 'Command' : 'Interpreter';
+      return `${prefix} • ${name} for @${event.target_family ?? 'unknown'}`;
+    }
+    case 'variant_emitted': {
+      const source = event.source_component ?? event.command_id ?? event.interpreter_id ?? 'step';
+      const duration = formatDuration(event.execution_timing?.duration_ms);
+      const emittedTarget = event.target_family ?? ((event.family_ids || []).join(', ') || 'output');
+      return `${source} emitted @${emittedTarget}${duration ? ` in ${duration}` : ''}`;
+    }
+    case 'declarations_inserted': {
+      const source = event.insertion_source ?? event.source_component ?? 'step';
+      const inserted = Array.isArray(event.inserted_texts) ? event.inserted_texts.join('\n\n') : '';
+      const declarationCount = (inserted.match(/^@/gm) ?? []).length;
+      const duration = formatDuration(event.execution_timing?.duration_ms);
+      return `${source} inserted ${declarationCount} decl${declarationCount === 1 ? '' : 's'}${duration ? ` in ${duration}` : ''}`;
+    }
+    case 'failure_recorded': {
+      const source = event.originating_component ?? event.failure?.origin ?? 'step';
+      const duration = formatDuration(event.execution_timing?.duration_ms);
+      return `${source} failed${duration ? ` in ${duration}` : ''} • ${summarizeFailure(event)}`;
+    }
+    case 'request_stopped':
+      return `Stop • ${humanizeStatus(event.stop_reason || 'completed')}${event.error_message ? ` • ${event.error_message}` : ''}`;
+    default:
+      return '';
+  }
+}
+
 function getActiveSessionRecord() {
   return state.sessions.find((item) => item.session_id === state.sessionId) || null;
 }
@@ -48,6 +202,7 @@ function teardownStream() {
     state.eventSource.close();
     state.eventSource = null;
   }
+  clearPendingProgressTicker();
 }
 
 function scrollConversationToEnd(behavior = 'auto') {
@@ -89,6 +244,28 @@ function setAdvancedPanel(panel) {
 
 function showAuthModal(show) {
   el('auth-modal').classList.toggle('visible', show);
+}
+
+function authBlocksSessionActions() {
+  return deriveChatAuthState(state.auth, getApiKey()).blocksSessionActions;
+}
+
+function resetSessionStateForAuthBlock() {
+  teardownStream();
+  state.sessionId = null;
+  state.sessions = [];
+  state.currentDetails = null;
+  state.pendingRequest = null;
+  setActiveSessionId('');
+  renderConversationMeta();
+  renderConversation();
+}
+
+async function requireChatAuth(message = 'Select or create a valid API key first.') {
+  await ensureAuthFlow();
+  if (authBlocksSessionActions()) {
+    throw new Error(message);
+  }
 }
 
 function updateSelectorButton() {
@@ -136,7 +313,19 @@ function renderConversationMeta() {
 function renderDemoTasks() {
   const container = el('demo-task-list');
   container.innerHTML = state.demoTasks.map((task) => `
-    <button class="ghost demo-task-btn" type="button" data-demo-task="${escapeHtml(task.id)}">${escapeHtml(task.title)}</button>
+    <button class="ghost demo-task-btn" type="button" data-demo-task="${escapeHtml(task.id)}" title="${escapeHtml(task.title)} — ${escapeHtml(task.summary || '')}">
+      <span class="demo-task-line">
+        <span class="demo-task-main">
+          <span class="demo-task-title">${escapeHtml(task.title)}</span>
+          <span class="demo-task-summary">${escapeHtml(task.summary || '')}</span>
+        </span>
+        <span class="demo-task-badges">
+          ${(Array.isArray(task.reasoning_classes) ? task.reasoning_classes : []).map((label) => `
+            <span class="badge">${escapeHtml(label)}</span>
+          `).join('')}
+        </span>
+      </span>
+    </button>
   `).join('');
 }
 
@@ -211,10 +400,7 @@ function renderConversation(details = state.currentDetails || {}) {
         label: 'Assistant',
         meta: `<span class="badge ${statusClass(state.pendingRequest?.status || 'running')}">${escapeHtml(humanizeStatus(state.pendingRequest?.status || 'running'))}</span>`,
         body: `
-          <div class="thinking-indicator" aria-live="polite">
-            <span>Thinking...</span>
-            <span class="thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-          </div>
+          ${renderPendingBody(state.pendingRequest)}
         `,
         pending: true,
         timestamp: '',
@@ -226,7 +412,7 @@ function renderConversation(details = state.currentDetails || {}) {
       role: 'assistant',
       label: 'Assistant',
       meta: `<span class="badge ${statusClass(item.stop_reason || 'unknown')}">${escapeHtml(humanizeStatus(item.stop_reason || 'unknown'))}</span>`,
-      body: formatMessageBody(item.response || '(no response captured)'),
+      body: formatMessageBody(item.response || describeMissingResponse(item)),
       timestamp: formatDate(item.created_at),
       actions: `
         <button class="icon-btn" data-action="details" data-request-id="${escapeHtml(item.request_id)}" title="View traceability">
@@ -257,16 +443,13 @@ function renderConversation(details = state.currentDetails || {}) {
       label: 'Assistant',
       meta: `<span class="badge ${statusClass(state.pendingRequest.status || 'running')}">${escapeHtml(humanizeStatus(state.pendingRequest.status || 'running'))}</span>`,
       body: `
-        <div class="thinking-indicator" aria-live="polite">
-          <span>Thinking...</span>
-          <span class="thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-        </div>
+        ${renderPendingBody(state.pendingRequest)}
       `,
       pending: true,
     }));
   }
 
-  scrollConversationToEnd(history.length > 0 ? 'smooth' : 'auto');
+  scrollConversationToEnd(state.pendingRequest ? 'auto' : history.length > 0 ? 'smooth' : 'auto');
 }
 
 function syncPendingFromDetails(details) {
@@ -310,6 +493,10 @@ async function loadSession(sessionId, options = {}) {
 
 async function refreshSessions(options = {}) {
   const { autoLoad = true } = options;
+  if (authBlocksSessionActions()) {
+    resetSessionStateForAuthBlock();
+    return;
+  }
   const payload = await fetchJson('/api/sessions');
   state.sessions = payload.sessions || [];
   renderSessionDropdown(state.sessions);
@@ -335,6 +522,7 @@ async function refreshSessions(options = {}) {
 }
 
 async function createSession() {
+  await requireChatAuth();
   const created = await fetchJson('/api/sessions', {
     method: 'POST',
     headers: {
@@ -350,6 +538,7 @@ async function createSession() {
 }
 
 async function reloadActiveSession() {
+  await requireChatAuth();
   if (!state.sessionId) {
     notify('No session is selected.', 'error');
     return;
@@ -395,7 +584,18 @@ function openStream(requestId) {
     params.set('api_key', apiKey);
   }
   state.eventSource = new EventSource(`/api/sessions/${state.sessionId}/requests/${requestId}/stream?${params.toString()}`);
-  for (const eventName of ['request_started', 'planning_triggered', 'failure_recorded', 'request_stopped']) {
+  ensurePendingProgressTicker();
+  for (const eventName of [
+    'request_started',
+    'planning_triggered',
+    'planning_stopped',
+    'command_invoked',
+    'interpreter_invoked',
+    'variant_emitted',
+    'declarations_inserted',
+    'failure_recorded',
+    'request_stopped',
+  ]) {
     state.eventSource.addEventListener(eventName, async (event) => {
       const payload = JSON.parse(event.data);
       const liveStatus = payload.stop_reason || payload.final_outcome || (eventName === 'planning_triggered' ? 'planning' : 'running');
@@ -403,7 +603,10 @@ function openStream(requestId) {
         state.pendingRequest = {
           ...state.pendingRequest,
           status: liveStatus,
+          liveMessages: state.pendingRequest.liveMessages ?? [],
+          liveMessageIndex: state.pendingRequest.liveMessageIndex ?? 0,
         };
+        pushPendingProgress(summarizeTraceEvent(payload));
       }
       updateSessionRecord({
         status: eventName === 'request_stopped' ? (payload.stop_reason || 'idle') : liveStatus,
@@ -425,6 +628,7 @@ async function submitRequest(event) {
   event.preventDefault();
   clearNotice();
   try {
+    await requireChatAuth();
     const requestText = el('request-input').value.trim();
     if (!requestText) {
       notify('Write a request first.', 'error');
@@ -453,6 +657,8 @@ async function submitRequest(event) {
       request_text: requestText,
       created_at: new Date().toISOString(),
       status: 'running',
+      liveMessages: ['Queued • waiting for request start'],
+      liveMessageIndex: 0,
     };
     state.currentDetails = state.currentDetails || { request_history: [] };
     updateSessionRecord({
@@ -503,26 +709,18 @@ async function refreshAuthSummary() {
 async function ensureAuthFlow() {
   await refreshAuthSummary();
   renderSavedAuthKeys();
-  const bootstrap = state.auth.bootstrap;
   const currentKey = getApiKey();
+  const uiState = deriveChatAuthState(state.auth, currentKey);
   el('chat-api-key-input').value = currentKey;
-  el('chat-bootstrap-key').disabled = !bootstrap.bootstrap_admin_available || bootstrap.has_api_keys;
-
-  if (bootstrap.has_api_keys && !currentKey) {
-    el('auth-modal-title').textContent = 'API key required';
-    el('auth-modal-status').textContent = 'Select or paste an API key. Saved local keys appear below for quick switching.';
-    showAuthModal(true);
-    return;
+  el('chat-bootstrap-key').disabled = uiState.bootstrapDisabled;
+  el('auth-modal-title').textContent = uiState.title;
+  el('auth-modal-status').textContent = uiState.status;
+  showAuthModal(uiState.modalVisible);
+  if (uiState.modalVisible) {
+    setAdvancedOpen(false);
+    setDropdownOpen(false);
+    resetSessionStateForAuthBlock();
   }
-
-  if (!bootstrap.has_api_keys && !currentKey) {
-    el('auth-modal-title').textContent = 'Create bootstrap admin key';
-    el('auth-modal-status').textContent = 'No server API keys exist yet. Create the first admin key and store it locally in this browser.';
-    showAuthModal(true);
-    return;
-  }
-
-  showAuthModal(false);
 }
 
 async function applyAuthKey({ remember = false } = {}) {
@@ -534,7 +732,13 @@ async function applyAuthKey({ remember = false } = {}) {
   }
   setApiKey(token, { remember, label });
   await ensureAuthFlow();
+  if (!hasValidatedApiKey(state.auth)) {
+    return;
+  }
   await refreshSessions({ autoLoad: false });
+  if (!state.sessionId) {
+    await createSession();
+  }
 }
 
 async function bootstrapAuthKey() {
@@ -551,6 +755,13 @@ async function bootstrapAuthKey() {
   el('chat-api-key-input').value = payload.api_key;
   el('chat-api-key-label').value = payload.record.label;
   await ensureAuthFlow();
+  if (!hasValidatedApiKey(state.auth)) {
+    return;
+  }
+  await refreshSessions({ autoLoad: false });
+  if (!state.sessionId) {
+    await createSession();
+  }
 }
 
 async function insertTextFilesIntoInput(fileList) {
@@ -720,20 +931,17 @@ function attachEventHandlers() {
 async function init() {
   attachEventHandlers();
   await loadDemoTasks();
-  state.sessionId = localStorage.getItem('mrpvm.activeSessionId');
+  setActiveSessionId('');
+  state.sessionId = null;
   updateComposerStatus();
   await ensureAuthFlow();
+  if (authBlocksSessionActions()) {
+    renderConversationMeta();
+    renderConversation();
+    return;
+  }
   await refreshSessions({ autoLoad: false });
-  if (state.sessionId && state.sessions.some((item) => item.session_id === state.sessionId)) {
-    await loadSession(state.sessionId);
-    return;
-  }
-  if (state.sessions.length > 0) {
-    await loadSession(state.sessions[0].session_id);
-    return;
-  }
-  updateSelectorButton();
-  renderConversation();
+  await createSession();
 }
 
 init().catch((error) => notify(error.message, 'error'));

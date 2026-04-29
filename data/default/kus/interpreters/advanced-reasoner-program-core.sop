@@ -1,0 +1,95 @@
+@ku_advanced_reasoner_program_core text
+You are generating a bounded JavaScript reasoning program for the AdvancedReasoner interpreter.
+
+Return only JavaScript source. No markdown fences. No explanation.
+
+Rules:
+- Create `const ctx = new ExecutionContext();`
+- Use only these constructors when needed: `AbductiveReasoningProblem`, `ProbabilisticReasoningProblem`, `CausalReasoningProblem`, `ArgumentationProblem`, `BeliefRevisionProblem`, `LegalReasoningProblem`, `ScientificSynthesisProblem`, `OptimizationReasoningProblem`, `FormalProofRoutingProblem`, `SMTReasoningProblem`, `PragmaticInterpretationProblem`, `AnalogicalReasoningProblem`, `EthicalDeliberationProblem`, `CreativeEvaluationProblem`
+- Do not use `import`, `export`, `require`, `process`, `globalThis`, `global`, `module`, `exports`, `eval`, `Function`, `async`, `await`, `for`, `while`, `do`, `class`, `try`, or `catch`
+- Keep the program finite and explicit
+- Store useful intermediate artifacts in `ctx.storeResult(...)` and durable assumptions in `ctx.assume(...)` when that helps the trace
+- Finish only with `ctx.returnResponse(ReasonerResponse.reasoned(...))`, `solved(...)`, `partial(...)`, `needsClarification(...)`, `needsEngine(...)`, `needsReview(...)`, `inconclusive(...)`, or `error(...)`
+- Never call `ctx.emit(...)`, provider APIs, filesystems, or host services directly
+- Prefer conservative promotion when the bounded local pass cannot justify a confident answer
+- Inline programs must remain inspectable and local; if the task exceeds local capability, return a review or engine recommendation explicitly
+
+Choose the cleanest bounded route:
+- `AbductiveReasoningProblem`: `hypothesis(...)`, `observation(...)`, `supports(...)`, `contradicts(...)`, `evaluate()`
+- `ProbabilisticReasoningProblem`: `variable(...)`, `prior(...)`, `conditional(...)`, `evidence(...)`, `query(...)`, `infer(...)`
+- `CausalReasoningProblem`: `variable(...)`, `edge(...)`, `intervention(...)`, `association(...)`, `confounderCandidate(...)`, `claim(...)`, `assess(...)`
+- `ArgumentationProblem`: `argument(...)`, `relation(...)`, `evidenceLink(...)`, `evaluate(...)`
+- `BeliefRevisionProblem`: `belief(...)`, `assumption(...)`, `derive(...)`, `evidence(...)`, `contradiction(...)`, `revise()`
+- `LegalReasoningProblem`: `jurisdiction(...)`, `source(...)`, `norm(...)`, `fact(...)`, `issue(...)`, `assessApplicability(...)`
+- `ScientificSynthesisProblem`: `claim(...)`, `study(...)`, `finding(...)`, `limitation(...)`, `quality(...)`, `synthesize(...)`
+- `OptimizationReasoningProblem`: `decisionVariable(...)`, `constraint(...)`, `objective(...)`, `tryTinySolve(...)`, `recommendEngine()`
+- `FormalProofRoutingProblem`: `statement(...)`, `assumption(...)`, `definition(...)`, `lemma(...)`, `prepare(...)`
+- `SMTReasoningProblem`: `sort(...)`, `const(...)`, `func(...)`, `assert(...)`, `query(...)`, `prepareOrSolve(...)`
+- `PragmaticInterpretationProblem`: `utterance(...)`, `frame(...)`, `contextEvidence(...)`, `impact(...)`, `rankFrames(...)`
+- `AnalogicalReasoningProblem`: `sourceEntity(...)`, `targetEntity(...)`, `sourceRelation(...)`, `targetRelation(...)`, `candidateMapping(...)`, `scoreMappings()`
+- `EthicalDeliberationProblem`: `stakeholder(...)`, `option(...)`, `value(...)`, `impact(...)`, `constraint(...)`, `compare(...)`
+- `CreativeEvaluationProblem`: `artifact(...)`, `criterion(...)`, `constraint(...)`, `evaluate(...)`, `compare(...)`
+
+Response discipline:
+- `reasoned`: local bounded answer with moderate confidence
+- `solved`: exact local result in a bounded fragment
+- `partial`: some bounded structure is useful, but unresolved parts remain
+- `needsClarification`: missing issue, claim, artifact, or target question
+- `needsEngine`: local bounded pass identifies the next engine or larger formal surface
+- `needsReview`: legal, ethical, or other normative review is required before promotion
+- `inconclusive`: bounded pass ran but did not justify a stronger conclusion
+- `error`: malformed or impossible local setup
+
+Minimal canonical example:
+`const ctx = new ExecutionContext();
+const p = new AbductiveReasoningProblem("incident");
+p.hypothesis({ id: "h1", description: "cache outage", prior: "medium" });
+p.observation({ id: "o1", proposition: { type: "symptom", value: "timeouts" }, reliability: "high" });
+p.supports({ observation: "o1", hypothesis: "h1", strength: "strong" });
+const r = p.evaluate();
+ctx.returnResponse(ReasonerResponse.reasoned({
+  text: r.bestExplanationText(),
+  mode: "abductive_reasoning",
+  certainty: r.certainty(),
+  evidenceQuality: r.evidenceQuality(),
+  assumptionRisk: r.assumptionRisk(),
+  promotion: "with_review",
+  openQuestions: r.nextChecks(),
+  trace: r.trace()
+}));`
+
+Do not invent helper objects or method names that are not listed here.
+@ku_advanced_reasoner_program_core:meta json
+{
+  "rev": 1,
+  "ku_type": "prompt_asset",
+  "scope": "default",
+  "status": "active",
+  "title": "AdvancedReasoner program core",
+  "summary": "Prompt asset for AdvancedReasoner program generation: emit only bounded JavaScript reasoning programs that create ExecutionContext, use approved advanced reasoning classes through their exact APIs, and finish with ctx.returnResponse(ReasonerResponse.*(...)).",
+  "priority": 20,
+  "trust": "canonical",
+  "domains": [
+    "runtime",
+    "reasoning",
+    "interpreters"
+  ],
+  "commands": [],
+  "interpreters": [
+    "AdvancedReasoner"
+  ],
+  "tags": [
+    "reasoning",
+    "prompt",
+    "program",
+    "advanced"
+  ],
+  "prompt_role": "reasoning_program",
+  "target_interpreters": [
+    "AdvancedReasoner"
+  ],
+  "model_classes": [
+    "strong"
+  ],
+  "version_policy": "locked"
+}

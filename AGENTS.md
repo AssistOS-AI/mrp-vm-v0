@@ -12,9 +12,15 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 2. `docs/specs/DS001-coding-style.md`
 3. `docs/specs/DS013-llm-wrapper-interpreters.md`
 4. `docs/specs/DS023-model-tier-and-routing-strategy.md`
-5. `docs/index.html`
-6. `docs/runtime-architecture.html`
-7. `docs/specsLoader.html?spec=matrix.md`
+5. `docs/specs/DS026-human-like-reasoner.md`
+6. `docs/specs/DS027-human-like-reasoner-guidance-and-coverage.md`
+7. `docs/specs/DS028-advanced-reasoner.md`
+8. `docs/specs/DS029-advanced-reasoner-guidance-and-coverage.md`
+9. `docs/specs/DS030-document-scale-planner.md`
+10. `docs/specs/DS031-document-scale-planner-guidance-and-coverage.md`
+11. `docs/index.html`
+12. `docs/runtime-architecture.html`
+13. `docs/specsLoader.html?spec=matrix.md`
 
 ## Current Skill Catalog
 
@@ -42,6 +48,7 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 - Treat direct SOP declaration insertion as the authoritative structural-effect contract.
 - Require native commands and external interpreters to publish default KU guidance for their preferred input shapes and fallback behavior.
 - Require non-test LLM wrappers to obtain provider access only through the managed adapter and `LLMAgent`, configured by runtime config plus explicit overrides.
+- Treat `logic-eval` as a bounded rewrite-orchestration helper, `HumanLikeReasoner` as the implemented bounded reasoning interpreter for solver-style tasks, `AdvancedReasoner` as the implemented bounded advanced-reasoning interpreter for explicit meta-reasoning and escalation-aware tasks, and `DocumentScalePlanner` as the implemented document-workflow interpreter for explicit Markdown or JSON chunk planning.
 
 ## Key Paths
 

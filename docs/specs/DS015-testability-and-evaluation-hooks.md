@@ -39,7 +39,7 @@ Test fixtures must be able to express:
 | Expected trace fragments | event types and critical payload assertions |
 | Expected context package | selected and pruned context items when relevant |
 
-Fixtures may be stored as JSON, YAML, or mixed text-plus-fixture assets, but the format must be machine-readable and stable. Repository-owned showcase prompts that also power the operator UI should live in reusable fixture assets (for example under `data/demo/`) rather than being duplicated separately inside browser code and automated tests.
+Fixtures may be stored as JSON, YAML, or mixed text-plus-fixture assets, but the format must be machine-readable and stable. Repository-owned showcase prompts that also power the operator UI should live in one reusable fixture catalog rather than being duplicated separately inside browser code and automated tests. In the current repository that shared catalog lives under `eval/` and feeds both the chat demo list and automated evaluation. For interpreter families such as `HumanLikeReasoner`, `AdvancedReasoner`, and `DocumentScalePlanner`, the repository-owned fixtures should include at least one visible example per shipped family or an explicit mixed-case matrix whose combined coverage makes every shipped family auditable.
 
 ### Inspection hooks
 
@@ -73,6 +73,10 @@ Response: MRP-VM execution depends on more than one text input. Families, KUs, a
 Question #3: Why must inspection hooks be explicit instead of letting tests reach into runtime internals however they want?
 
 Response: Testability should not rely on accidental object shapes or private module knowledge. Named inspection hooks preserve encapsulation while still making the key runtime surfaces observable under test.
+
+Question #4: Why should the chat demo catalog and the automated evaluation catalog share one source of truth?
+
+Response: The operator-facing demos are part of the repository's claimed capability surface. If the chat UI and the automated evaluation suite diverge, the project would effectively advertise one reasoning matrix while testing another. A shared catalog keeps demos, tests, and review claims aligned.
 
 ## Conclusion
 

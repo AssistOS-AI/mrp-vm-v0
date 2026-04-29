@@ -1,47 +1,46 @@
 @ku_logic_guidance text
-Choose logic-eval when the step is a bounded symbolic reasoning problem that should stay inspectable after formalization.
+Choose logic-eval when the planner needs help rewriting or decomposing a bounded reasoning request before handing it to an external reasoning interpreter.
 
 Use it for:
-- graph, path, reachability, and ordering problems,
-- finite constraint and assignment problems,
-- bounded search or state-transition problems,
-- finite rule/fact deduction,
-- bounded numeric reasoning over explicit intervals,
-- small legacy guards that still fit use/when/then blocks.
+- logic-heavy requests where the planner knows the task is finite but does not yet know the cleanest reasoning route,
+- mixed requests that need the entities, constraints, and exact target question rewritten into a sharper solver brief,
+- situations where the next stage should be a dedicated external reasoning interpreter rather than an overloaded planner step.
 
 Accepted body shapes:
-- a natural-language problem statement with clear finite entities, constraints, targets, and $family references,
-- a JSON envelope with fields such as problem, result_mode, program_steps or steps, and optional formatting instructions,
-- a short legacy rule block for compatibility when explicit when/then syntax is still the best local fit.
+- a natural-language problem statement that should be rewritten into a bounded reasoning brief,
+- a JSON envelope that already contains problem, preferred_interpreters, answer_requirements, or decomposition_hints,
+- a direct reference to an earlier family whose structured value should become the next-stage reasoning brief.
 
-Good logic-eval bodies:
-- keep the problem finite and explicit,
-- name the entities, domains, states, nodes, facts, or targets directly,
-- say what the solver must return,
-- use result_mode structured when downstream steps need machine-readable output,
-- keep explanation or prose formatting in a later writerLLM/template-eval step when that is cleaner.
+Good logic-eval outputs:
+- preserve the original task boundaries,
+- recommend one or more enabled external reasoning interpreters,
+- keep the rewritten problem finite and inspectable,
+- surface answer requirements that the downstream interpreter should preserve,
+- avoid pretending to solve the problem inside logic-eval itself,
+- make it obvious whether the next route should be HumanLikeReasoner, AdvancedReasoner, or a later specialized-engine escalation discovered by AdvancedReasoner.
 
-Choose logic-eval over js-eval when the reasoning should stay symbolic and auditable instead of becoming open procedural code. Choose js-eval when the step truly needs unrestricted data shaping, arbitrary loops, or exact deterministic coding beyond the logic-eval solver primitives.
+Prefer direct HumanLikeReasoner routing when the task already clearly fits a finite bounded solver shape. Prefer direct AdvancedReasoner routing when the task already clearly needs meta-reasoning over uncertainty, evidence quality, missing structure, normative review, or engine triage. Prefer direct DocumentScalePlanner routing when the task is really a bounded Markdown or JSON planning workflow rather than a reasoning-brief rewrite. Use logic-eval when the planner needs an intermediate orchestration brief so it does not have to encode all reasoning decomposition logic by itself.
 
 Avoid logic-eval when:
+- the task is already execution-ready for HumanLikeReasoner,
+- the task is really a document-scale planning request for DocumentScalePlanner,
 - the step is mainly polished prose or memo writing,
-- the request is open-ended brainstorming,
-- the body is pseudo-code masquerading as a solver specification,
-- the task needs host access or arbitrary scripting,
-- the problem is clearly unbounded or too vague to formalize honestly.
+- the task is unrestricted procedural code,
+- the request is too vague even for a bounded rewrite brief.
 @ku_logic_guidance:meta json
 {
-  "rev": 3,
+  "rev": 6,
   "ku_type": "content",
   "scope": "default",
   "status": "active",
   "title": "logic guidance",
-  "summary": "Use logic-eval for bounded symbolic reasoning such as graph, constraint, search, rule, and finite numeric problems, plus small legacy rule guards; avoid using it for open-ended prose or arbitrary scripting.",
+  "summary": "Use logic-eval as a bounded rewrite-orchestration helper for logic-heavy requests that need a structured brief and explicit routing toward HumanLikeReasoner, AdvancedReasoner, or later engine escalation, not as the final solver runtime or document-plan synthesizer.",
   "priority": 9,
   "trust": "trusted",
   "domains": [
     "runtime",
-    "logic"
+    "logic",
+    "planning"
   ],
   "commands": [
     "logic-eval"
@@ -49,12 +48,10 @@ Avoid logic-eval when:
   "interpreters": [],
   "tags": [
     "logic",
-    "guidance"
+    "guidance",
+    "orchestration"
   ],
   "input_patterns": [
-    "when\\s+.+",
-    "then\\s+.+",
-    "\"program_steps\"",
-    "solve|reachable|constraint|graph|path|domain|state|target"
+    "solve|reachable|constraint|graph|path|domain|state|target|assignment|order|minimal|proof|reasoning"
   ]
 }

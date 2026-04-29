@@ -14,20 +14,21 @@ plannerLLM should consume routing KUs carefully:
 - planning prompt assets define mandatory structural rules such as a final @response and explicit $family dependencies.
 - the runtime-owned component catalog is authoritative for valid command and interpreter names.
 - the emitted graph must converge into one final @response family with no unused declarations.
+- when an interpreter can insert declarations later, the initial accepted graph must still stay connected through already-declared families.
 
-For non-trivial requests, plannerLLM should prefer a graph with concrete intermediate families instead of a single opaque step. This is especially important when the user asks for exact computation plus explanation, proof plus final prose, or a requested answer format that should be assembled explicitly.
+For non-trivial requests, plannerLLM should prefer a graph with concrete intermediate families instead of a single opaque step. This is especially important when the user asks for exact computation plus explanation, proof plus final prose, a document-analysis plan that later inserts chunk workflows, or a requested answer format that should be assembled explicitly.
 
-Avoid using template-eval to paper over missing reasoning. If a response depends on explanation, proof, validation, or another contingent artifact, create that upstream family first and let the final assembly step consume it only after it exists.
+Avoid using template-eval to paper over missing reasoning. If a response depends on explanation, proof, validation, or another contingent artifact, create that upstream family first and let the final assembly step consume it only after it exists. When a declaration-inserting interpreter such as DocumentScalePlanner will create the final semantic target later, keep @response connected to the declared interpreter family and let the inserted declarations bridge the final target back into that family.
 
 Avoid plannerLLM when the task is already execution-ready or when the required output is a normal answer to the user.
 @ku_planner_llm_guidance:meta json
 {
-  "rev": 3,
+  "rev": 4,
   "ku_type": "content",
   "scope": "default",
   "status": "active",
   "title": "plannerLLM guidance",
-  "summary": "Use plannerLLM only for SOP Lang planning or repair, routing strictly through the authoritative component catalog plus KU guidance and producing one connected graph that converges into @response.",
+  "summary": "Use plannerLLM only for SOP Lang planning or repair, routing strictly through the authoritative component catalog plus KU guidance and producing one connected graph that converges into @response without future-family shortcuts.",
   "priority": 10,
   "trust": "trusted",
   "domains": [

@@ -120,6 +120,33 @@ function buildExecuteOptions(request) {
   return options;
 }
 
+function buildFallbackBindings(runtimeConfig, profileBinding) {
+  if (!runtimeConfig?.llm?.fallbacks?.enabled) {
+    return [];
+  }
+  const order = ['premium', 'standard', 'fast'];
+  const currentIndex = order.indexOf(profileBinding.tier);
+  if (currentIndex < 0 || currentIndex >= order.length - 1) {
+    return [];
+  }
+  const seen = new Set([`${profileBinding.tier}:${profileBinding.model}`]);
+  const fallbackBindings = [];
+  for (const tier of order.slice(currentIndex + 1)) {
+    const model = runtimeConfig?.llm?.modelTiers?.[tier];
+    const key = `${tier}:${model}`;
+    if (!model || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    fallbackBindings.push({
+      ...profileBinding,
+      tier,
+      model,
+    });
+  }
+  return fallbackBindings;
+}
+
 async function callAgent(agent, request) {
   const promptText = buildPromptText(request);
   if (typeof agent.executePrompt === 'function') {
@@ -177,29 +204,51 @@ export class AchillesLlmAdapter extends ManagedLlmAdapter {
   async invoke(payload) {
     const AgentClass = await this.loadAgentClass();
     const profileBinding = resolveLlmProfile(this.runtimeConfig, payload.profile);
-    const request = {
-      apiBaseUrl: this.runtimeConfig?.llm?.apiBaseUrl ?? null,
-      profile: payload.profile,
-      model: profileBinding.model,
-      modelTier: profileBinding.tier,
-      taskTag: profileBinding.taskTag,
-      expectedOutputMode: payload.expected_output_mode ?? 'plain_value',
-      promptAssets: normalizePromptAssets(payload.prompt_assets),
-      contextPackage: payload.context_package ?? '',
-      instruction: payload.instruction ?? '',
-      inputBudget: payload.input_budget ?? {},
-      outputBudget: payload.output_budget ?? {},
-      traceContext: payload.trace_context ?? {},
-      messages: buildMessages(payload, profileBinding),
+    const bindingAttempts = [profileBinding, ...buildFallbackBindings(this.runtimeConfig, profileBinding)];
+    let lastFailure = null;
+
+    for (const binding of bindingAttempts) {
+      const request = {
+        apiBaseUrl: this.runtimeConfig?.llm?.apiBaseUrl ?? null,
+        profile: payload.profile,
+        model: binding.model,
+        modelTier: binding.tier,
+        taskTag: binding.taskTag,
+        expectedOutputMode: payload.expected_output_mode ?? 'plain_value',
+        promptAssets: normalizePromptAssets(payload.prompt_assets),
+        contextPackage: payload.context_package ?? '',
+        instruction: payload.instruction ?? '',
+        inputBudget: payload.input_budget ?? {},
+        outputBudget: payload.output_budget ?? {},
+        traceContext: payload.trace_context ?? {},
+        messages: buildMessages(payload, binding),
+      };
+      const agent = new AgentClass({
+        apiBaseUrl: request.apiBaseUrl,
+        model: request.model,
+        modelTier: request.modelTier,
+        taskTag: request.taskTag,
+        profile: request.profile,
+      });
+      let normalized;
+      try {
+        const result = await callAgent(agent, request);
+        normalized = normalizeResult(result, request.expectedOutputMode);
+      } catch (error) {
+        normalized = {
+          status: 'provider_failure',
+          message: error?.message ?? 'Provider failure.',
+        };
+      }
+      if (normalized.status !== 'provider_failure') {
+        return normalized;
+      }
+      lastFailure = normalized;
+    }
+
+    return lastFailure ?? {
+      status: 'provider_failure',
+      message: 'Provider failure.',
     };
-    const agent = new AgentClass({
-      apiBaseUrl: request.apiBaseUrl,
-      model: request.model,
-      modelTier: request.modelTier,
-      taskTag: request.taskTag,
-      profile: request.profile,
-    });
-    const result = await callAgent(agent, request);
-    return normalizeResult(result, request.expectedOutputMode);
   }
 }

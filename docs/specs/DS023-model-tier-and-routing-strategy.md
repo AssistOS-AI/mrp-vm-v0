@@ -62,6 +62,15 @@ Each LLM wrapper profile must bind to a tier, a concrete model, and a task tag. 
 
 Hosts may override the concrete model per profile and may override the tier or task tag when a downstream environment needs different routing economics.
 
+### Managed provider fallback
+
+When the managed Achilles-backed adapter reports a provider failure for a routed profile, the runtime may retry that invocation against lower-cost tiers only when the runtime configuration explicitly enables fallback. The baseline fallback order is:
+
+1. `premium` -> `standard`
+2. `standard` -> `fast`
+
+`fast` is terminal and does not degrade further. Fallback is for provider availability failures, not for semantic refusals or normal completed answers. The settings surface may expose this behavior as one compact operator toggle, but the authoritative state still lives in runtime configuration.
+
 ### Achilles model discovery and tags
 
 When AchillesAgentLib is available, the settings surface must query it for the model catalog together with model metadata such as tier and tags. The server-facing model catalog must normalize those results into:
@@ -117,6 +126,10 @@ Response: Two invocations may share one wrapper profile but belong to very diffe
 Question #4: Why allow the settings UI to expose per-profile bindings even though they are internal runtime routing state?
 
 Response: Once operators need to pin different models for `plannerLLM`, `writerLLM`, `logicGeneratorLLM`, `formatterLLM`, or the other routed profiles, hiding those bindings entirely becomes artificial. The important constraint is not secrecy; it is UX discipline. The UI may expose one compact select per routed LLM target as long as it still routes through the authoritative runtime configuration and the shared discovered model catalog.
+
+Question #5: Why make provider fallback opt-in instead of always retrying lower tiers?
+
+Response: A silent downgrade can change cost, quality, or behavior in ways operators may want to control explicitly. An opt-in fallback keeps the routing policy inspectable while still giving deployments a practical recovery path when premium routes are temporarily unavailable.
 
 ## Conclusion
 

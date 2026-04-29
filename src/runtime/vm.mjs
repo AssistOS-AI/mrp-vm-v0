@@ -22,6 +22,9 @@ import { ExternalInterpreterRegistry } from '../interpreters/external-interprete
 import { AchillesLlmAdapter } from '../interpreters/achilles-llm-adapter.mjs';
 import { FakeLlmAdapter } from '../interpreters/fake-llm-adapter.mjs';
 import { createRuntimeConfig, resolveLlmProfile } from '../config/runtime-config.mjs';
+import { executeHumanLikeReasoner } from '../interpreters/human-like-reasoner/index.mjs';
+import { executeAdvancedReasoner } from '../interpreters/advanced-reasoner/index.mjs';
+import { executeDocumentScalePlanner } from '../interpreters/document-scale-planner/index.mjs';
 
 function cloneBudgets(budgets = {}) {
   return {
@@ -41,6 +44,33 @@ function buildExecutionTiming(startedAt, finishedAt) {
     duration_ms: Number.isFinite(startedAtMs) && Number.isFinite(finishedAtMs)
       ? Math.max(0, finishedAtMs - startedAtMs)
       : null,
+  };
+}
+
+function deriveUnknownOutcomeError(traceEvents = [], budgets = {}) {
+  const firstFailure = traceEvents.find((event) => event.event === 'failure_recorded');
+  const failure = firstFailure?.failure ?? firstFailure ?? null;
+  if (failure?.message || failure?.error_message) {
+    return {
+      code: String(failure.kind ?? failure.failure_kind ?? 'UNKNOWN_OUTCOME').toUpperCase(),
+      message: failure.message ?? failure.error_message,
+    };
+  }
+  if (Number(budgets.steps_remaining ?? 1) <= 0) {
+    return {
+      code: 'BUDGET_EXHAUSTED',
+      message: 'Execution exhausted the step budget before producing a terminal response.',
+    };
+  }
+  if (Number(budgets.structural_changes_remaining ?? 1) <= 0) {
+    return {
+      code: 'BUDGET_EXHAUSTED',
+      message: 'Execution exhausted the structural-change budget before producing a terminal response.',
+    };
+  }
+  return {
+    code: 'UNKNOWN_OUTCOME',
+    message: 'No terminal response variant was captured before execution stopped.',
   };
 }
 
@@ -83,9 +113,9 @@ function buildDefaultCommandRegistry(runtimeConfig = null) {
     enabled: commandEnabled('js-eval'),
   });
   registry.register('logic-eval', executeLogicEval, {
-    purpose: 'Run bounded symbolic reasoning through the logic-eval solver runtime or legacy local rules.',
-    input_contract: ['logic_problem_or_program', 'runtime_references'],
-    output_shapes: ['plain_value', 'structured_value', 'metadata_updates'],
+    purpose: 'Rewrite or decompose a logic-heavy step into a structured reasoning brief for external reasoning interpreters.',
+    input_contract: ['logic_problem_or_rewrite_request', 'runtime_references'],
+    output_shapes: ['structured_value', 'metadata_updates'],
     deterministic: false,
     category: 'native_command',
     source_kind: 'internal_command',
@@ -162,6 +192,48 @@ function buildDefaultExternalRegistry(options = {}) {
       enabled: runtimeConfig?.interpreterStates?.[profile] ?? true,
     });
   }
+
+  registry.register({
+    name: 'HumanLikeReasoner',
+    purpose: 'Solve bounded human-scale reasoning tasks through generated reasoning programs and explicit local solvers.',
+    input_contract: ['reasoning_problem_or_brief', 'runtime_references', 'knowledge_guidance'],
+    output_shapes: ['plain_value', 'structured_value'],
+    cost_class: 'expensive',
+    can_insert_declarations: false,
+    can_refuse: true,
+    uses_llm_adapter: true,
+    capability_profile: 'bounded_reasoning',
+    trace_requirements: ['interpreter_invoked'],
+    enabled: runtimeConfig?.interpreterStates?.HumanLikeReasoner ?? true,
+  }, (context) => executeHumanLikeReasoner(context, { llmAdapter }));
+
+  registry.register({
+    name: 'AdvancedReasoner',
+    purpose: 'Build typed advanced reasoning models, run bounded local heuristics, and recommend engines when local inference is insufficient.',
+    input_contract: ['reasoning_problem_or_brief', 'runtime_references', 'knowledge_guidance'],
+    output_shapes: ['plain_value', 'structured_value'],
+    cost_class: 'expensive',
+    can_insert_declarations: false,
+    can_refuse: true,
+    uses_llm_adapter: true,
+    capability_profile: 'advanced_reasoning',
+    trace_requirements: ['interpreter_invoked'],
+    enabled: runtimeConfig?.interpreterStates?.AdvancedReasoner ?? true,
+  }, (context) => executeAdvancedReasoner(context, { llmAdapter }));
+
+  registry.register({
+    name: 'DocumentScalePlanner',
+    purpose: 'Generate explicit chunk-oriented SOP plans for large markdown or JSON documents using deterministic local planning and controlled declaration insertion.',
+    input_contract: ['markdown_or_json_document_handle', 'document_planning_request', 'runtime_references'],
+    output_shapes: ['plain_value', 'structured_value', 'sop_proposal'],
+    cost_class: 'normal',
+    can_insert_declarations: true,
+    can_refuse: true,
+    uses_llm_adapter: false,
+    capability_profile: 'document_scale_planning',
+    trace_requirements: ['interpreter_invoked', 'declarations_inserted'],
+    enabled: runtimeConfig?.interpreterStates?.DocumentScalePlanner ?? true,
+  }, (context) => executeDocumentScalePlanner(context));
 
   return registry;
 }
@@ -918,6 +990,8 @@ export class MRPVM {
         epochNumber,
         reason: 'Resolve final response',
       });
+      const traceEvents = this.traceBuffers.get(requestId) ?? [];
+      const unknownOutcomeError = responseVariant ? null : deriveUnknownOutcomeError(traceEvents, request.budgets);
 
       const outcome = {
         session_id: sessionId,
@@ -926,6 +1000,7 @@ export class MRPVM {
         response_variant_id: responseVariant?.id ?? null,
         stop_reason: responseVariant ? 'completed' : 'unknown_outcome',
         remaining_budgets: request.budgets,
+        error: unknownOutcomeError,
       };
 
       await this.sessionManager.persistOutcome(sessionId, requestId, outcome);
@@ -935,7 +1010,7 @@ export class MRPVM {
         response: outcome.response,
         stop_reason: outcome.stop_reason,
         request_text: request.requestText,
-        error_message: null,
+        error_message: outcome.error?.message ?? null,
       });
       await this.emitTrace(sessionId, 'request_stopped', {
         session_id: sessionId,
@@ -943,6 +1018,7 @@ export class MRPVM {
         final_outcome: outcome.stop_reason,
         stop_reason: outcome.stop_reason,
         remaining_blocked_regions: [],
+        error_message: outcome.error?.message ?? null,
       });
       this.requestRecords.set(requestId, {
         ...this.requestRecords.get(requestId),

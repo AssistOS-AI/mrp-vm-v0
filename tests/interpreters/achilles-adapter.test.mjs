@@ -63,6 +63,34 @@ async function createFakeParentDirectoryAchillesModule(methodName = 'invoke') {
   return createFakeAchillesModuleAt(rootDir, moduleDir, methodName);
 }
 
+async function createFallbackAchillesModule() {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'mrp-vm-achilles-fallback-'));
+  const moduleDir = path.join(rootDir, 'AchillesAgentLib');
+  await mkdir(moduleDir, { recursive: true });
+  await writeFile(path.join(moduleDir, 'index.mjs'), [
+    'export class LLMAgent {',
+    '  constructor(options = {}) {',
+    '    this.options = options;',
+    '  }',
+    '  async invoke(request) {',
+    '    if (this.options.modelTier === "premium") {',
+    '      return { status: "provider_failure", message: "premium route unavailable" };',
+    '    }',
+    '    return {',
+    '      status: "success",',
+    '      output_mode: request.expectedOutputMode ?? "plain_value",',
+    '      value: `${this.options.modelTier}::${this.options.model}::${request.instruction}`',
+    '    };',
+    '  }',
+    '}',
+    '',
+  ].join('\n'), 'utf8');
+  return {
+    rootDir,
+    modulePath: path.join(moduleDir, 'index.mjs'),
+  };
+}
+
 test('createRuntimeConfig builds Achilles profile routing from manual overrides', async () => {
   const fake = await createFakeAchillesModule();
   const runtimeConfig = createRuntimeConfig({
@@ -169,4 +197,40 @@ test('AchillesLlmAdapter uses complete({ prompt, ... }) when the agent exposes c
   assert.equal(result.status, 'success');
   assert.match(result.value, /^writer-model::\[SYSTEM\]/);
   assert.match(result.value, /Write a crisp answer\./);
+});
+
+test('AchillesLlmAdapter falls back from premium to lower tiers when enabled', async () => {
+  const fake = await createFallbackAchillesModule();
+  const runtimeConfig = createRuntimeConfig({
+    baseDir: fake.rootDir,
+    manualOverrides: {
+      modelTiers: {
+        fast: 'mini-model',
+        standard: 'std-model',
+        premium: 'max-model',
+      },
+      llmFallbacks: {
+        enabled: true,
+      },
+      profileBindings: {
+        logicGeneratorLLM: {
+          tier: 'premium',
+          model: 'max-model',
+          taskTag: 'specification',
+        },
+      },
+    },
+  });
+  const adapter = new AchillesLlmAdapter(runtimeConfig);
+
+  const result = await adapter.invoke({
+    profile: 'logicGeneratorLLM',
+    prompt_assets: [],
+    context_package: '',
+    instruction: 'Produce a bounded reasoning program.',
+    expected_output_mode: 'plain_value',
+  });
+
+  assert.equal(result.status, 'success');
+  assert.equal(result.value, 'standard::std-model::Produce a bounded reasoning program.');
 });

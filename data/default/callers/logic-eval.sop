@@ -1,22 +1,23 @@
 @logic-eval text
-Use logic-eval for bounded symbolic reasoning that benefits from explicit formalization rather than arbitrary code.
-Prefer it for graph, path, reachability, ordering, constraint, search, finite rule, and bounded numeric problems, plus small legacy use/when/then guards that remain worth keeping as compatibility shorthand.
-The body may be a natural-language problem statement, or a JSON envelope with explicit program_steps when exact control is needed.
-Prefer result_mode structured when a downstream step needs machine-readable output, then let writerLLM or template-eval handle user-facing prose.
-Avoid logic-eval for memo writing, open-ended explanation, arbitrary scripting, or vague requests that cannot be bounded honestly.
+Use logic-eval when a plan needs a bounded reasoning-orchestration helper, not when it needs the final solved answer directly.
+logic-eval should read a logic-heavy request, produce a structured rewrite brief, recommend one or more external reasoning interpreters, and preserve the exact entities, constraints, answer requirements, and downstream routing cues for the next step.
+Prefer direct HumanLikeReasoner routing when the planner already understands that the task is a bounded human-scale reasoning problem. Prefer direct AdvancedReasoner routing when the task is already clearly uncertain, evidential, probabilistic, causal, argumentative, legal, scientific, optimization-oriented, formal-routing, pragmatic, analogical, ethical, or creative in the bounded meta-reasoning sense. Use logic-eval when the planner needs help rewriting or decomposing the request before handing it to an external reasoning interpreter.
+Do not use logic-eval as the synthesis surface for document-scale Markdown or JSON workflows. Those belong in DocumentScalePlanner when explicit chunking and rollups are required.
+Avoid logic-eval for final prose, memo writing, arbitrary scripting, document-plan synthesis, or as a duplicate solver runtime. The output should be a machine-usable orchestration brief, not the final user-facing answer.
 @logic-eval:meta json
 {
-  "rev": 3,
+  "rev": 6,
   "ku_type": "caller_profile",
   "scope": "default",
   "status": "active",
   "title": "logic-eval",
-  "summary": "Choose logic-eval for bounded symbolic reasoning and exact inspectable solver steps, including graph, constraint, search, rule, and finite numeric problems plus small legacy rule guards.",
+  "summary": "Choose logic-eval as a bounded orchestration helper that rewrites logic-heavy requests into structured briefs for external reasoning interpreters such as HumanLikeReasoner and AdvancedReasoner, not for document-plan synthesis.",
   "priority": 8,
   "trust": "canonical",
   "domains": [
     "runtime",
-    "logic"
+    "logic",
+    "planning"
   ],
   "commands": [
     "logic-eval"
@@ -24,14 +25,11 @@ Avoid logic-eval for memo writing, open-ended explanation, arbitrary scripting, 
   "interpreters": [],
   "tags": [
     "logic",
-    "rules"
+    "orchestration",
+    "rewrite"
   ],
   "input_patterns": [
-    "when\\s+.+",
-    "then\\s+.+",
-    "exists\\s+[A-Za-z_][A-Za-z0-9_]*",
-    "\"program_steps\"",
-    "solve|reachable|constraint|graph|path|domain|state|target"
+    "solve|reachable|constraint|graph|path|domain|state|target|assignment|order|minimal|proof|reasoning"
   ],
   "allowed_ku_types": [
     "content",
@@ -44,5 +42,9 @@ Avoid logic-eval for memo writing, open-ended explanation, arbitrary scripting, 
   "model_classes": [],
   "byte_budget": 4096,
   "session_override_allowed": true,
-  "llm_fallback_policy": "disallowed"
+  "llm_fallback_policy": "allowed",
+  "preferred_external_interpreters": [
+    "HumanLikeReasoner",
+    "AdvancedReasoner"
+  ]
 }

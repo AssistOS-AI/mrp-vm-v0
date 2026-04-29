@@ -145,6 +145,9 @@ function renderModels() {
     .map((model) => `<option value="${escapeHtml(model.id)}" ${model.id === selectedId ? 'selected' : ''}>${escapeHtml(modelLabel(model))}</option>`)
     .join('');
   renderTagRail('default-llm-tags', el('default-llm').value);
+  if (el('llm-fallback-enabled')) {
+    el('llm-fallback-enabled').checked = Boolean(state.config?.llm_fallbacks?.enabled);
+  }
   renderInterpreterModelBindings();
 }
 
@@ -334,6 +337,9 @@ function syncAuthority() {
   el('save-interpreters').disabled = !canEdit;
   el('default-llm').disabled = !canEdit;
   el('default-llm-tag-filter').disabled = !canEdit;
+  if (el('llm-fallback-enabled')) {
+    el('llm-fallback-enabled').disabled = !canEdit;
+  }
   if (el('open-create-key-modal')) {
     el('open-create-key-modal').disabled = auth.has_api_keys ? !canEdit : !auth.bootstrap_admin_available;
   }
@@ -406,6 +412,9 @@ async function saveModelSettings(event) {
       body: JSON.stringify({
         default_llm: el('default-llm').value,
         interpreter_mappings: interpreterMappings,
+        llm_fallbacks: {
+          enabled: Boolean(el('llm-fallback-enabled')?.checked),
+        },
       }),
     });
     notify('Model routing updated.');
