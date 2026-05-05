@@ -77,7 +77,7 @@ function renderTemplate(source, context) {
     throw new Error(`Unsupported template expression: ${expression}. Use $variable for simple placeholders or helpers like {{join ...}}.`);
   });
 
-  output = output.replace(/\$\{([A-Za-z_][A-Za-z0-9_.]*)\}|\$([A-Za-z_][A-Za-z0-9_.]*)/g, (_match, braced, simple) => {
+  output = output.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)\}|\$([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)/g, (_match, braced, simple) => {
     const path = braced ?? simple;
     const value = resolvePath(path, context);
     if (value === undefined) {
@@ -89,10 +89,42 @@ function renderTemplate(source, context) {
   return output;
 }
 
+function stripTemplateBodyWrapper(body) {
+  const text = String(body ?? '');
+  const match = text.match(/^\s*(?:template_body|template|body)\s*:\s*[|>]-?\s*\n([\s\S]*)$/);
+  if (!match) {
+    return text;
+  }
+  const lines = match[1].split('\n');
+  const nonEmptyLines = lines.filter((line) => line.trim().length > 0);
+  const sharedIndent = nonEmptyLines.reduce((minimum, line) => {
+    const indent = line.match(/^ */)?.[0].length ?? 0;
+    return Math.min(minimum, indent);
+  }, Number.POSITIVE_INFINITY);
+  const normalizedLines = Number.isFinite(sharedIndent)
+    ? lines.map((line) => (line.startsWith(' '.repeat(sharedIndent)) ? line.slice(sharedIndent) : line))
+    : lines;
+  return normalizedLines.join('\n').trimEnd();
+}
+
+function buildResolvedDependencyContext(resolvedDependencies = new Map()) {
+  const output = {};
+  for (const resolved of resolvedDependencies.values()) {
+    if (!resolved?.familyId) {
+      continue;
+    }
+    output[resolved.familyId] = resolved.value;
+  }
+  return output;
+}
+
 export async function executeTemplateEval(context) {
   const effects = createEmptyEffects();
-  const templateContext = context.runtime.createTemplateContext();
-  const rendered = renderTemplate(context.body, templateContext);
+  const templateContext = {
+    ...(typeof context.runtime?.createTemplateContext === 'function' ? context.runtime.createTemplateContext() : {}),
+    ...buildResolvedDependencyContext(context.resolvedDependencies),
+  };
+  const rendered = renderTemplate(stripTemplateBodyWrapper(context.body), templateContext);
   effects.emittedVariants.push({
     familyId: context.targetFamily,
     value: rendered,

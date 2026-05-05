@@ -10,6 +10,7 @@ import { RequestManager } from '../session/request-manager.mjs';
 import { KbStore } from '../storage/kb-store.mjs';
 import { TraceStore } from '../storage/trace-store.mjs';
 import { AnalyticStore } from '../storage/analytic-store.mjs';
+import { LlmCacheStore } from '../storage/llm-cache-store.mjs';
 import { CommandRegistry } from '../commands/registry.mjs';
 import { executePlanning } from '../commands/planning.mjs';
 import { executeJsEval } from '../commands/js-eval.mjs';
@@ -82,6 +83,20 @@ function commandLabel(declaration = {}) {
         ? ' & '
         : ', ',
   );
+}
+
+function summarizeRequestLlmCacheSnapshot(snapshot) {
+  const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
+  return {
+    candidate_count: items.length,
+    provider_candidate_count: items.filter((item) => item.source === 'provider').length,
+    cache_hit_count: items.filter((item) => item.source === 'cache').length,
+    promotable_count: items.filter((item) => item.source === 'provider' && item.response?.status === 'success').length,
+    promotion_status: snapshot?.promotion?.status ?? 'not_promoted',
+    promoted_entry_count: Array.isArray(snapshot?.promotion?.entry_ids) ? snapshot.promotion.entry_ids.length : 0,
+    promoted_at: snapshot?.promotion?.promoted_at ?? null,
+    stop_reason: snapshot?.stop_reason ?? null,
+  };
 }
 
 function buildDefaultCommandRegistry(runtimeConfig = null) {
@@ -258,11 +273,24 @@ export class MRPVM {
     this.kbStore = new KbStore(rootDir);
     this.traceStore = new TraceStore(rootDir);
     this.analyticStore = new AnalyticStore(rootDir);
+    this.llmCacheStore = new LlmCacheStore(this.runtimeConfig, this.tools);
+    const llmAdapter = options.llmAdapter
+      ?? (options.fakeAdapterConfig || this.runtimeConfig?.llm?.adapter === 'fake'
+        ? new FakeLlmAdapter({
+          ...(options.fakeAdapterConfig ?? {}),
+          cacheStore: this.llmCacheStore,
+          recordInvocation: (candidate) => this.recordRequestLlmInvocation(candidate),
+          now: () => this.tools.now(),
+        })
+        : new AchillesLlmAdapter(this.runtimeConfig, {
+          cacheStore: this.llmCacheStore,
+          recordInvocation: (candidate) => this.recordRequestLlmInvocation(candidate),
+          now: () => this.tools.now(),
+        }));
     this.commandRegistry = options.commandRegistry ?? buildDefaultCommandRegistry(this.runtimeConfig);
     this.externalInterpreters = options.externalInterpreters ?? buildDefaultExternalRegistry({
       runtimeConfig: this.runtimeConfig,
-      llmAdapter: options.llmAdapter,
-      fakeAdapterConfig: options.fakeAdapterConfig,
+      llmAdapter,
     });
     this.eventEmitter = new EventEmitter();
     this.sessionId = options.sessionId ?? null;
@@ -279,6 +307,7 @@ export class MRPVM {
     this.traceBufferLimit = options.traceBufferLimit ?? 100;
     this.traceBuffers = new Map();
     this.requestRecords = new Map();
+    this.requestLlmCacheCandidates = new Map();
     this.resetRequestState();
   }
 
@@ -435,6 +464,143 @@ export class MRPVM {
     return (this.traceBuffers.get(requestId) ?? []).filter((event) => Number(event.event_id ?? 0) > Number(afterEventId));
   }
 
+  recordRequestLlmInvocation(candidate) {
+    if (!candidate?.request_id) {
+      return;
+    }
+    const items = this.requestLlmCacheCandidates.get(candidate.request_id) ?? [];
+    items.push(candidate);
+    this.requestLlmCacheCandidates.set(candidate.request_id, items);
+  }
+
+  buildTraceContext(node, sessionId, requestId, epochNumber) {
+    return {
+      session_id: sessionId,
+      request_id: requestId,
+      epoch_id: epochNumber,
+      declaration_id: node.id,
+      target_family: node.targetFamily,
+      origin: node.declaration.commands?.[0] ?? null,
+    };
+  }
+
+  async persistRequestLlmCacheSnapshot(sessionId, requestId, stopReason) {
+    const existing = await this.sessionManager.loadRequestLlmCacheCandidates(sessionId, requestId);
+    const snapshot = {
+      session_id: sessionId,
+      request_id: requestId,
+      recorded_at: existing?.recorded_at ?? this.tools.now(),
+      updated_at: this.tools.now(),
+      stop_reason: stopReason,
+      promotion: existing?.promotion ?? {
+        status: 'not_promoted',
+        promoted_at: null,
+        entry_ids: [],
+        promoted_count: 0,
+        skipped_count: 0,
+      },
+      items: this.requestLlmCacheCandidates.get(requestId) ?? [],
+    };
+    await this.sessionManager.persistRequestLlmCacheCandidates(sessionId, requestId, snapshot);
+    this.requestLlmCacheCandidates.delete(requestId);
+    return snapshot;
+  }
+
+  async inspectRequestLlmCache(requestId, sessionId = this.sessionId) {
+    if (!sessionId) {
+      return {
+        session_id: null,
+        request_id: requestId,
+        items: [],
+        summary: summarizeRequestLlmCacheSnapshot(null),
+      };
+    }
+    const snapshot = await this.sessionManager.loadRequestLlmCacheCandidates(sessionId, requestId);
+    return {
+      session_id: sessionId,
+      request_id: requestId,
+      ...(snapshot ?? {
+        items: [],
+        stop_reason: null,
+        promotion: {
+          status: 'not_promoted',
+          promoted_at: null,
+          entry_ids: [],
+          promoted_count: 0,
+          skipped_count: 0,
+        },
+      }),
+      summary: summarizeRequestLlmCacheSnapshot(snapshot),
+    };
+  }
+
+  async promoteRequestLlmCache(requestId, sessionId = this.sessionId) {
+    if (!sessionId) {
+      throw new Error('No active session is available for cache promotion.');
+    }
+    const requestRecord = await this.inspectRequestPublic(requestId);
+    const outcome = requestRecord?.outcome ?? await this.sessionManager.loadRequestOutcome(sessionId, requestId);
+    if (!outcome) {
+      throw new Error(`Unknown request ${requestId}.`);
+    }
+    if (outcome.stop_reason !== 'completed') {
+      throw new Error('Only completed requests can be promoted into the LLM cache.');
+    }
+    const snapshot = await this.inspectRequestLlmCache(requestId, sessionId);
+    const promotable = (snapshot.items ?? []).filter((item) => item.source === 'provider' && item.response?.status === 'success');
+    const entryIds = [];
+    for (const candidate of promotable) {
+      const entry = await this.llmCacheStore.upsertFromCandidate(candidate);
+      if (entry) {
+        entryIds.push(entry.entry_id);
+      }
+    }
+    const updatedSnapshot = {
+      ...snapshot,
+      updated_at: this.tools.now(),
+      promotion: {
+        status: 'promoted',
+        promoted_at: this.tools.now(),
+        entry_ids: [...new Set(entryIds)],
+        promoted_count: entryIds.length,
+        skipped_count: Math.max(0, (snapshot.items ?? []).length - promotable.length),
+      },
+    };
+    await this.sessionManager.persistRequestLlmCacheCandidates(sessionId, requestId, updatedSnapshot);
+    const summary = summarizeRequestLlmCacheSnapshot(updatedSnapshot);
+    const existingRecord = this.requestRecords.get(requestId);
+    if (existingRecord) {
+      this.requestRecords.set(requestId, {
+        ...existingRecord,
+        llm_cache: summary,
+      });
+    }
+    return {
+      session_id: sessionId,
+      request_id: requestId,
+      promoted_entry_ids: updatedSnapshot.promotion.entry_ids,
+      promoted_count: updatedSnapshot.promotion.promoted_count,
+      skipped_count: updatedSnapshot.promotion.skipped_count,
+      summary,
+    };
+  }
+
+  async listLlmCacheEntries() {
+    return this.llmCacheStore.listEntries();
+  }
+
+  async getLlmCacheSummary() {
+    return this.llmCacheStore.getSummary();
+  }
+
+  async inspectLlmCacheEntry(entryId) {
+    return this.llmCacheStore.getEntry(entryId);
+  }
+
+  async deleteLlmCacheEntry(entryId) {
+    return this.llmCacheStore.deleteEntry(entryId);
+  }
+
   async buildInvocationContext(node, request, sessionId, requestId, epochNumber, bodyOverride = null) {
     const resolvedDependencies = new Map();
     for (const dependency of node.dependencies) {
@@ -502,6 +668,7 @@ export class MRPVM {
       contextPackage,
       kbResult,
       resolvedDependencies,
+      traceContext: this.buildTraceContext(node, sessionId, requestId, epochNumber),
     };
   }
 
@@ -756,7 +923,9 @@ export class MRPVM {
         family_state: [],
         request_text: request.requestText,
         created_at: this.tools.now(),
+        llm_cache: summarizeRequestLlmCacheSnapshot(null),
       });
+      this.requestLlmCacheCandidates.set(requestId, []);
 
       await this.sessionManager.createRequest(sessionId, requestId, {
         session_id: sessionId,
@@ -1003,6 +1172,7 @@ export class MRPVM {
         error: unknownOutcomeError,
       };
 
+      const llmCacheSnapshot = await this.persistRequestLlmCacheSnapshot(sessionId, requestId, outcome.stop_reason);
       await this.sessionManager.persistOutcome(sessionId, requestId, outcome);
       await this.sessionManager.appendRequestSummary(sessionId, {
         request_id: requestId,
@@ -1027,6 +1197,7 @@ export class MRPVM {
         family_state: this.stateStore.listFamilies(),
         plan_snapshot: request.planText,
         completed_at: this.tools.now(),
+        llm_cache: summarizeRequestLlmCacheSnapshot(llmCacheSnapshot),
       });
       return outcome;
     } catch (error) {
@@ -1051,6 +1222,7 @@ export class MRPVM {
           message: error.message,
         },
       };
+      const llmCacheSnapshot = await this.persistRequestLlmCacheSnapshot(sessionId, requestId, outcome.stop_reason);
       await this.sessionManager.persistOutcome(sessionId, requestId, outcome);
       await this.sessionManager.appendRequestSummary(sessionId, {
         request_id: requestId,
@@ -1083,6 +1255,7 @@ export class MRPVM {
         plan_snapshot: request?.planText ?? existingRecord.plan_snapshot ?? '',
         completed_at: this.tools.now(),
         error_message: error.message,
+        llm_cache: summarizeRequestLlmCacheSnapshot(llmCacheSnapshot),
       });
       return outcome;
     }
@@ -1122,6 +1295,7 @@ export class MRPVM {
       family_state: [],
       request_text: input.requestText,
       created_at: this.tools.now(),
+      llm_cache: summarizeRequestLlmCacheSnapshot(null),
     };
     this.requestRecords.set(requestId, record);
 
@@ -1183,6 +1357,7 @@ export class MRPVM {
       return null;
     }
 
+    const llmCache = await this.inspectRequestLlmCache(requestId, this.sessionId);
     return {
       request_id: requestId,
       session_id: this.sessionId,
@@ -1191,6 +1366,7 @@ export class MRPVM {
       plan_snapshot: await this.sessionManager.loadCurrentPlan(this.sessionId, requestId),
       family_state: await this.requestManager.loadFamilyState(this.sessionId, requestId),
       envelope: await this.sessionManager.loadRequestEnvelope(this.sessionId, requestId),
+      llm_cache: llmCache.summary,
     };
   }
 

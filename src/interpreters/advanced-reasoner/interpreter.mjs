@@ -25,12 +25,21 @@ import {
 function parseBodyJson(body) {
   const trimmed = String(body ?? '').trim();
   if (!trimmed || (!trimmed.startsWith('{') && !trimmed.startsWith('[') && !trimmed.startsWith('"'))) {
-    return { parsed: null, attempted: false };
+    return { parsed: null, attempted: false, error: null };
   }
-  return {
-    parsed: JSON.parse(trimmed),
-    attempted: true,
-  };
+  try {
+    return {
+      parsed: JSON.parse(trimmed),
+      attempted: true,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      parsed: null,
+      attempted: true,
+      error,
+    };
+  }
 }
 
 function resolveReferenceEntry(context, token) {
@@ -99,6 +108,31 @@ function normalizeResultMode(value) {
   return value === 'structured' ? 'structured' : 'text';
 }
 
+function normalizeReferencedEnvelope(referenced, fallbackText) {
+  return {
+    problem: referenced.rewritten_problem ?? referenced.problem ?? fallbackText,
+    rewriteBrief: referenced,
+    resultMode: normalizeResultMode(referenced.result_mode),
+    program: referenced.program ?? referenced.reasoner_program ?? null,
+    generatorProfile: referenced.generator_profile ?? 'logicGeneratorLLM',
+  };
+}
+
+function parseJsonWithResolvedReferences(body, context) {
+  const trimmed = String(body ?? '').trim();
+  if (!trimmed.includes('$')) {
+    return null;
+  }
+  const replaced = trimmed.replace(/\$[A-Za-z_][A-Za-z0-9_:]*/g, (token) => {
+    const resolved = resolveReferenceEntry(context, token);
+    return resolved ? JSON.stringify(resolved.value) : token;
+  });
+  if (replaced === trimmed) {
+    return null;
+  }
+  return JSON.parse(replaced);
+}
+
 function normalizeReferenceAlias(token) {
   return String(token ?? '')
     .replace(/^[^a-zA-Z0-9]+/, '')
@@ -154,19 +188,24 @@ function normalizeEnvelope(context) {
   const trimmed = String(context.body ?? '').trim();
   const directReference = resolveReferenceEntry(context, trimmed);
   if (directReference && typeof directReference.value === 'object' && directReference.value !== null) {
-    const referenced = directReference.value;
-    return {
-      problem: referenced.rewritten_problem ?? referenced.problem ?? canonicalText(referenced),
-      rewriteBrief: referenced,
-      resultMode: normalizeResultMode(referenced.result_mode),
-      program: referenced.program ?? referenced.reasoner_program ?? null,
-      generatorProfile: referenced.generator_profile ?? 'logicGeneratorLLM',
-    };
+    return normalizeReferencedEnvelope(directReference.value, canonicalText(directReference.value));
   }
 
-  const { parsed, attempted } = parseBodyJson(trimmed);
+  const labeledReferenceMatch = trimmed.match(/^(?:reasoning_problem_or_brief|reasoning_problem|logic_problem_or_rewrite_request)\s*:\s*(\$[A-Za-z_][A-Za-z0-9_:]*)\s*$/);
+  if (labeledReferenceMatch) {
+    const referenced = resolveReferenceEntry(context, labeledReferenceMatch[1]);
+    if (referenced && typeof referenced.value === 'object' && referenced.value !== null) {
+      return normalizeReferencedEnvelope(referenced.value, canonicalText(referenced.value));
+    }
+  }
+
+  const { parsed, attempted, error } = parseBodyJson(trimmed);
   if (attempted) {
-    const materialized = materializeEmbeddedReferences(parsed, context);
+    const parsedValue = parsed ?? parseJsonWithResolvedReferences(trimmed, context);
+    if (!parsedValue) {
+      throw error;
+    }
+    const materialized = materializeEmbeddedReferences(parsedValue, context);
     if (typeof materialized === 'object' && materialized !== null && !Array.isArray(materialized)) {
       return {
         problem: materialized.rewritten_problem

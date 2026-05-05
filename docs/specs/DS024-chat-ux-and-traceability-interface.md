@@ -21,6 +21,7 @@ This specification defines the detailed user experience for the MRP-VM v0 interf
 3. **Selection before density**: Default views stay compact; detail appears only when the user selects a request, variable, node, or KU.
 4. **Trace clarity**: The execution path must be understandable visually, not only through raw JSON.
 5. **Authority clarity without key leakage**: The UI may show whether protected operations are writable, but it must not leak active key ids or identity strings into page headers.
+6. **One global header**: Chat, Traceability, Cache, KB Browser, and Settings share one common header navigation row. Page-local tabs remain below that header and must not become a second general menu row.
 
 ### Chat page
 
@@ -43,6 +44,8 @@ The composer must expose:
 7. a small list of predefined demo tasks that highlight different runtime commands and interpreters.
 
 While the runtime is working, the transcript shows one assistant placeholder bubble with animated status text derived from recent trace events. The text may rotate through short execution summaries, but it must stay compact and occupy the same conversation slot until the final response arrives.
+
+Completed assistant responses may also expose a small cache-promotion action for successful-request LLM work. This is an explicit system-control action, not an automatic side effect of viewing the message.
 
 ### Traceability page
 
@@ -123,6 +126,23 @@ The right side contains:
 The editor must remain to the right of the tree on wide screens rather than collapsing below it unnecessarily.
 On wide screens the tree rail should use a conservative default width rather than consuming roughly one third of the screen, and the UI may expose a drag handle so operators can resize that rail when deeper nesting needs more room.
 
+### Cache page
+
+The Cache page uses:
+
+1. a summary row,
+2. a filter row,
+3. a two-column main area with cache-entry list on the left and cache-entry detail on the right.
+
+The detail view must expose:
+
+1. normalized instruction text,
+2. normalized context package text,
+3. cached response payload,
+4. prompt-asset details,
+5. source-request history,
+6. a delete action that is visibly disabled when the current authority context cannot mutate the shared cache.
+
 ### Settings page
 
 The settings page uses exactly three tabs:
@@ -181,6 +201,10 @@ Question #3: Why insist on a graphical left-to-right execution graph instead of 
 
 Response: Execution order and dependency shape are architectural facts, not incidental metadata. A workflow view makes the topological structure visible immediately in a way that flat cards or edge lists do not.
 
+Question #4: Why should cache inspection and shared-cache deletion live on a dedicated Cache page instead of inside the chat transcript?
+
+Response: Cache inspection is operationally useful but structurally different from ordinary conversation review. Keeping it on a dedicated page preserves a lightweight transcript while still giving operators full visibility into request and response payloads, prompt assets, and privileged destructive actions.
+
 ## Conclusion
 
-MRP-VM v0 should present a clean conversation surface, a precise traceability workspace, a genuinely navigable KB browser, and an authentication-aware settings surface that supports real operator workflows rather than placeholder controls.
+MRP-VM v0 should present a clean conversation surface, a precise traceability workspace, a dedicated shared-cache workspace, a genuinely navigable KB browser, and an authentication-aware settings surface that supports real operator workflows rather than placeholder controls.

@@ -50,13 +50,14 @@ Product-owned runtime data should default to this layout:
 1. `data/default/kus/` for bootstrap KUs and prompt assets.
 2. `data/default/callers/` for default caller-profile KUs.
 3. `data/kb/global/` for global curated KB artifacts.
-4. `data/sessions/<sessionId>/manifest.json` for session identity and policy state.
-5. `data/sessions/<sessionId>/trace/` for unified session trace streams.
-6. `data/sessions/<sessionId>/kb/` for session overlay KUs.
-7. `data/sessions/<sessionId>/history/` for compact request summaries.
-8. `data/sessions/<sessionId>/requests/<requestId>/` for `current-plan.sop`, request state, family-state files, and final outcome artifacts.
+4. `data/cache/llm/` for promoted shared LLM cache entries and index metadata.
+5. `data/sessions/<sessionId>/manifest.json` for session identity and policy state.
+6. `data/sessions/<sessionId>/trace/` for unified session trace streams.
+7. `data/sessions/<sessionId>/kb/` for session overlay KUs.
+8. `data/sessions/<sessionId>/history/` for compact request summaries.
+9. `data/sessions/<sessionId>/requests/<requestId>/` for `current-plan.sop`, request state, family-state files, request-local LLM cache candidates, and final outcome artifacts.
 
-DS001 provides the repository-level summary of that layout. DS011 owns the detailed KB and caller-profile subtrees, while DS016 owns the detailed session, request, plan, and family-state layout.
+DS001 provides the repository-level summary of that layout. DS011 owns the detailed KB and caller-profile subtrees, DS016 owns the detailed session, request, plan, and family-state layout, and DS032 owns the detailed shared LLM cache contract.
 
 The root package must expose repository-owned scripts for the baseline workflows. At minimum:
 

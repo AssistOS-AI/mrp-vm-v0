@@ -316,12 +316,59 @@ function ensureResponseDeclaration(declarations, nativeCommands, enabledInterpre
   });
 }
 
+function appendResponseDependencies(declarations) {
+  const responseIndex = declarations.findIndex((declaration) => declaration.target === 'response');
+  if (responseIndex === -1) {
+    return declarations;
+  }
+  const responseDeclaration = declarations[responseIndex];
+  const upstreamTargets = declarations
+    .slice(0, responseIndex)
+    .map((declaration) => declaration.target)
+    .filter((target) => target !== 'response');
+  if (upstreamTargets.length === 0) {
+    return declarations;
+  }
+  if (responseDeclaration.references.length > 0) {
+    return declarations;
+  }
+  const missingTargets = [upstreamTargets.at(-1)];
+
+  const dependencyAppendix = responseDeclaration.commands[0] === 'template-eval'
+    ? missingTargets.map((target) => `$${target}`).join('\n')
+    : [
+      missingTargets.length === 1
+        ? `Use $${missingTargets[0]} as a required source for the final answer.`
+        : 'Use the following required sources in the final answer:',
+      ...(missingTargets.length === 1 ? [] : missingTargets.map((target) => `- $${target}`)),
+    ].join('\n');
+  const body = String(responseDeclaration.body ?? '').trim();
+  const updatedDeclaration = {
+    ...responseDeclaration,
+    body: body
+      ? `${body}\n\n${dependencyAppendix}`
+      : dependencyAppendix,
+    references: responseDeclaration.references.concat(
+      missingTargets.map((target) => ({
+        kind: '$',
+        family: target,
+        variant: null,
+        raw: `$${target}`,
+      })),
+    ),
+  };
+
+  return declarations.map((declaration, index) => (index === responseIndex ? updatedDeclaration : declaration));
+}
+
 function normalizePlannedProgram(text, nativeCommands, enabledInterpreters) {
   const normalizedText = normalizeSopProposal(text, [...nativeCommands, ...enabledInterpreters]);
   try {
     const parsed = parsePlan(normalizedText);
     const normalizedDeclarations = normalizeDeclarations(parsed.declarations, nativeCommands, enabledInterpreters);
-    const finalizedDeclarations = ensureResponseDeclaration(normalizedDeclarations, nativeCommands, enabledInterpreters);
+    const finalizedDeclarations = appendResponseDependencies(
+      ensureResponseDeclaration(normalizedDeclarations, nativeCommands, enabledInterpreters),
+    );
     return renderPlan({
       declarations: finalizedDeclarations,
     });

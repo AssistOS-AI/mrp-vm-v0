@@ -18,9 +18,10 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 8. `docs/specs/DS029-advanced-reasoner-guidance-and-coverage.md`
 9. `docs/specs/DS030-document-scale-planner.md`
 10. `docs/specs/DS031-document-scale-planner-guidance-and-coverage.md`
-11. `docs/index.html`
-12. `docs/runtime-architecture.html`
-13. `docs/specsLoader.html?spec=matrix.md`
+11. `docs/specs/DS032-controlled-successful-request-llm-cache.md`
+12. `docs/index.html`
+13. `docs/runtime-architecture.html`
+14. `docs/specsLoader.html?spec=matrix.md`
 
 ## Current Skill Catalog
 
@@ -56,6 +57,7 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 - Runtime overview: `docs/runtime-architecture.html`
 - Specs entry point: `docs/specsLoader.html?spec=matrix.md`
 - Specs directory: `docs/specs/`
+- Shared LLM cache index: `data/cache/llm/index.json`
 - Server adapter and chat UI: `server/`
 - Server startup entry point: `server/start.mjs`
 - NPM scripts: `package.json`

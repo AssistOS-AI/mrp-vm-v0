@@ -6,6 +6,7 @@ export { RequestManager } from './session/request-manager.mjs';
 export { KbStore } from './storage/kb-store.mjs';
 export { TraceStore } from './storage/trace-store.mjs';
 export { AnalyticStore } from './storage/analytic-store.mjs';
+export { LlmCacheStore } from './storage/llm-cache-store.mjs';
 export { createDeterministicTools, createLiveTools } from './utils/deterministic.mjs';
 export { createRuntime, createSession, submitRequest, inspectSession, closeSession, RuntimeHost } from './sdk/runtime-host.mjs';
 export { MRPVM } from './runtime/vm.mjs';

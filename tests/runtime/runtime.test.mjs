@@ -69,3 +69,49 @@ test('runtime persists an execution_error outcome when an interpreter throws', a
   const persisted = await runtime.inspectRequestPublic(outcome.request_id);
   assert.equal(persisted.outcome.stop_reason, 'execution_error');
 });
+
+test('runtime promotes successful LLM calls into cache and reuses them on identical requests', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, {
+    deterministic: {},
+    manualOverrides: {
+      forceFakeLlm: true,
+    },
+    fakeAdapterConfig: {
+      scriptedSequences: {
+        plannerLLM: [
+          '@response writerLLM\nSay hello from cache.',
+          '@response writerLLM\nSay hello from cache.',
+        ],
+        writerLLM: [
+          'cached answer',
+          'uncached answer',
+        ],
+      },
+    },
+  });
+
+  const first = await runtime.startRequest({
+    requestText: 'Say hello from cache.',
+  });
+  const firstOutcome = await first.done;
+  assert.equal(firstOutcome.stop_reason, 'completed');
+  assert.equal(firstOutcome.response, 'cached answer');
+
+  const firstCache = await runtime.inspectRequestLlmCache(firstOutcome.request_id, firstOutcome.session_id);
+  assert.equal(firstCache.summary.promotable_count, 2);
+
+  const promoted = await runtime.promoteRequestLlmCache(firstOutcome.request_id, firstOutcome.session_id);
+  assert.equal(promoted.promoted_count, 2);
+
+  const second = await runtime.startRequest({
+    requestText: 'Say hello from cache.',
+  });
+  const secondOutcome = await second.done;
+  assert.equal(secondOutcome.stop_reason, 'completed');
+  assert.equal(secondOutcome.response, 'cached answer');
+
+  const cacheEntries = await runtime.listLlmCacheEntries();
+  assert.equal(cacheEntries.length, 2);
+  assert.ok(cacheEntries.some((entry) => Number(entry.hit_count ?? 0) > 0));
+});

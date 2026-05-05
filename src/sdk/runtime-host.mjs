@@ -111,6 +111,31 @@ export class RuntimeHost {
     this.sessions.delete(handle.session_id);
     return result;
   }
+
+  createProbeExecutor() {
+    return new MRPVM(this.rootDir, this.options);
+  }
+
+  async listLlmCacheEntries() {
+    return this.createProbeExecutor().listLlmCacheEntries();
+  }
+
+  async getLlmCacheSummary() {
+    return this.createProbeExecutor().getLlmCacheSummary();
+  }
+
+  async inspectLlmCacheEntry(entryId) {
+    return this.createProbeExecutor().inspectLlmCacheEntry(entryId);
+  }
+
+  async deleteLlmCacheEntry(entryId) {
+    return this.createProbeExecutor().deleteLlmCacheEntry(entryId);
+  }
+
+  async promoteRequestLlmCache(handleOrId, requestId) {
+    const handle = typeof handleOrId === 'string' ? await this.getSession(handleOrId) : handleOrId;
+    return handle.executor.promoteRequestLlmCache(requestId, handle.session_id);
+  }
 }
 
 export function createRuntime(rootDirOrConfig, options = {}) {

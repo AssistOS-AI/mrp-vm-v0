@@ -59,6 +59,8 @@ Metrics should include:
 
 The repository should maintain explicit repair-oriented evaluation cases rather than hiding repair behavior inside only generic task-family benchmarks. Repair is one of the main claimed strengths of the architecture and should be measured directly. When the repository ships multi-class reasoning interpreters or a declaration-inserting document planner, evaluation should include visible coverage for each shipped family across the shared demo/eval catalog plus focused unit coverage for the local reasoning APIs and structural-insertion behavior.
 
+When the repository enables the DS032 controlled LLM cache, repeated evaluation may explicitly promote only successful completed requests between attempts so later retries can reuse already-successful LLM work. Failed or incomplete requests must not be promoted into the shared cache merely to improve benchmark numbers.
+
 ## Decisions & Questions
 
 Question #1: Why is the configured VM instance the primary evaluation unit instead of a raw prompt-plus-model pair?
@@ -72,6 +74,10 @@ Response: The runtime is not trying only to maximize textual output quality. It 
 Question #3: Why separate shared end-to-end reasoning cases from focused reasoning-class unit tests?
 
 Response: The shared catalog proves that the configured runtime can route and present representative tasks end to end. Focused unit tests prove that the shipped local reasoning classes still obey their bounded contracts even when prompt generation is not involved. Both are needed to keep the evaluation story honest.
+
+Question #4: Why let repeated evaluation runs reuse only explicitly promoted successful-request cache entries?
+
+Response: The cache is part of the configured runtime once it is enabled, so it is fair to measure the system with that control surface active. The important safeguard is not to disable reuse entirely; it is to ensure that only successful completed requests are promoted, so evaluation does not hide unstable or broken generations behind indiscriminate memoization.
 
 ## Conclusion
 

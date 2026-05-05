@@ -102,3 +102,29 @@ test('HumanLikeReasoner generates and executes a mixed constraint-plus-graph rea
   assert.match(text, /Eligible technicians:/);
   assert.match(text, /Ben/);
 });
+
+test('HumanLikeReasoner materializes bare $references inside JSON envelopes before parsing', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, { deterministic: {} });
+  const program = [
+    'const ctx = new ExecutionContext();',
+    'const facts = ctx.input().rewrite_brief.facts;',
+    'ctx.emit("answer", facts.join(" -> "));',
+  ].join('\n');
+
+  const effects = await executeHumanLikeReasoner({
+    ...buildContext(runtime, `{\n  "rewritten_problem": "Use the referenced facts.",\n  "facts": $facts,\n  "program": ${JSON.stringify(program)}\n}`),
+    resolvedDependencies: new Map([
+      ['$facts', {
+        familyId: 'facts',
+        value: ['admin', 'approved'],
+      }],
+    ]),
+    node: {
+      dependencies: [{ raw: '$facts' }],
+    },
+  });
+
+  assert.equal(effects.failure, null);
+  assert.equal(String(effects.emittedVariants[0].value), 'admin -> approved');
+});

@@ -186,3 +186,35 @@ test('AdvancedReasoner runtime: preflight rejects ctx.emit as an exit surface', 
   assert.equal(effects.failure?.kind, 'contract_refusal');
   assert.match(String(effects.failure?.message), /emit/);
 });
+
+test('AdvancedReasoner runtime: materializes bare $references inside JSON envelopes before parsing', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, { deterministic: {} });
+  const program = [
+    'const ctx = new ExecutionContext();',
+    'const observations = ctx.input().rewrite_brief.observations;',
+    'ctx.returnResponse(ReasonerResponse.reasoned({',
+    '  text: observations.join(" | "),',
+    '  mode: "abductive_reasoning",',
+    '  certainty: "medium",',
+    '  evidenceQuality: "moderate",',
+    '  assumptionRisk: "low",',
+    '  promotion: "with_review",',
+    '  trace: ctx.trace(),',
+    '}));',
+  ].join('\n');
+
+  const effects = await executeAdvancedReasoner(buildContext(runtime, `{\n  "rewritten_problem": "Use the referenced observations.",\n  "observations": $observations,\n  "program": ${JSON.stringify(program)}\n}`, {
+    dependencies: ['$observations'],
+    resolvedDependencies: [[
+      '$observations',
+      {
+        familyId: 'observations',
+        value: ['cache_drift', 'gateway_ok'],
+      },
+    ]],
+  }));
+
+  assert.equal(effects.failure, null);
+  assert.match(String(findVariant(effects, 'answer')?.value), /cache_drift \| gateway_ok/);
+});

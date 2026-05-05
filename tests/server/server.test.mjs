@@ -166,7 +166,68 @@ test('server exposes native session and request APIs plus /chat', async () => {
     const chatPage = await fetch(`${baseUrl}/chat`).then((response) => response.text());
     assert.match(chatPage, /MRP-VM Chat/);
     assert.match(chatPage, /Traceability/);
+    assert.match(chatPage, /Cache/);
     assert.match(chatPage, /KB Browser/);
+  } finally {
+    server.close();
+    await once(server, 'close');
+  }
+});
+
+test('server exposes cache promotion and cache management endpoints', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const server = createServer({ rootDir, allowFakeLlm: true, runtimeOptions: { deterministic: {} } });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+
+  try {
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const session = await createSession(baseUrl);
+
+    const requestResponse = await fetch(`${baseUrl}/api/sessions/${session.session_id}/requests`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': session.session_id,
+      },
+      body: JSON.stringify({
+        request: 'Cache this response.',
+      }),
+    });
+    assert.equal(requestResponse.status, 202);
+    const started = await requestResponse.json();
+    await waitForOutcome(baseUrl, session.session_id, started.request_id);
+
+    const promoted = await fetch(`${baseUrl}/api/sessions/${session.session_id}/requests/${started.request_id}/cache/promote`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': session.session_id,
+      },
+      body: JSON.stringify({}),
+    }).then((response) => response.json());
+    assert.ok(promoted.promoted_count >= 1);
+
+    const cacheList = await fetch(`${baseUrl}/api/cache`, {
+      headers: { 'x-session-id': session.session_id },
+    }).then((response) => response.json());
+    assert.ok(cacheList.items.length >= 1);
+
+    const entryId = cacheList.items[0].entry_id;
+    const cacheEntry = await fetch(`${baseUrl}/api/cache/${entryId}`, {
+      headers: { 'x-session-id': session.session_id },
+    }).then((response) => response.json());
+    assert.equal(cacheEntry.entry_id, entryId);
+
+    const cachePage = await fetch(`${baseUrl}/cache`).then((response) => response.text());
+    assert.match(cachePage, /Stored LLM calls/);
+
+    const deleted = await fetch(`${baseUrl}/api/cache/${entryId}`, {
+      method: 'DELETE',
+      headers: { 'x-session-id': session.session_id },
+    }).then((response) => response.json());
+    assert.equal(deleted.deleted.entry_id, entryId);
   } finally {
     server.close();
     await once(server, 'close');

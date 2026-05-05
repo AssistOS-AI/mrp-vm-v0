@@ -156,6 +156,14 @@ export class SessionManager {
     return readText(path.join(this.getRequestPath(sessionId, requestId), 'current-plan.sop'), '');
   }
 
+  async persistRequestLlmCacheCandidates(sessionId, requestId, snapshot) {
+    await writeJson(path.join(this.getRequestPath(sessionId, requestId), 'llm-cache-candidates.json'), snapshot);
+  }
+
+  async loadRequestLlmCacheCandidates(sessionId, requestId) {
+    return readJson(path.join(this.getRequestPath(sessionId, requestId), 'llm-cache-candidates.json'));
+  }
+
   async deleteSession(sessionId) {
     await removePath(this.getSessionPath(sessionId));
   }

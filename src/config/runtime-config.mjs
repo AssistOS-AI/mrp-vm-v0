@@ -377,6 +377,17 @@ function resolveLlmFallbacks(env, manualOverrides) {
   };
 }
 
+function resolveLlmCacheConfig(env, manualOverrides, baseDir, dataDir) {
+  const override = manualOverrides.llmCache ?? {};
+  const directory = override.directory
+    ?? env.LLM_CACHE_DIR
+    ?? path.join(dataDir, 'cache', 'llm');
+  return {
+    enabled: override.enabled ?? (env.LLM_CACHE_ENABLED ? env.LLM_CACHE_ENABLED !== '0' : true),
+    directory: path.resolve(baseDir, directory),
+  };
+}
+
 export function createRuntimeConfig(options = {}) {
   const env = options.env ?? process.env;
   const manualOverrides = options.manualOverrides ?? {};
@@ -398,10 +409,12 @@ export function createRuntimeConfig(options = {}) {
   };
   const adapter = useFakeAdapter(manualOverrides, env) ? 'fake' : 'managed';
   const llmFallbacks = resolveLlmFallbacks(env, manualOverrides);
+  const dataDir = path.resolve(baseDir, manualOverrides.dataDir ?? env.ACHILLES_DATA_DIR ?? 'data');
+  const llmCache = resolveLlmCacheConfig(env, manualOverrides, baseDir, dataDir);
 
   return {
     baseDir,
-    dataDir: path.resolve(baseDir, manualOverrides.dataDir ?? env.ACHILLES_DATA_DIR ?? 'data'),
+    dataDir,
     sourceDir: path.resolve(baseDir, 'src'),
     testsDir: path.resolve(baseDir, 'tests'),
     llm: {
@@ -413,6 +426,7 @@ export function createRuntimeConfig(options = {}) {
       taskTags,
       profileBindings: buildProfileBindings(env, manualOverrides, modelTiers, taskTags),
       fallbacks: llmFallbacks,
+      cache: llmCache,
     },
     dependencies,
     manualOverrides: {

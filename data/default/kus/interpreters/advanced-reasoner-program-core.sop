@@ -39,6 +39,9 @@ Response discipline:
 - `needsReview`: legal, ethical, or other normative review is required before promotion
 - `inconclusive`: bounded pass ran but did not justify a stronger conclusion
 - `error`: malformed or impossible local setup
+- `ProbabilisticReasoningProblem.variable(...)` must always receive an object with `id` and a non-empty `domain` array
+- `CausalReasoningProblem.confounderCandidate(...)` must always receive both `variable` and a non-empty human-readable `reason`
+- When causal structure is underspecified, it is acceptable to return `needsEngine` or `partial` after recording the bounded probabilistic or confounder analysis explicitly
 
 Minimal canonical example:
 `const ctx = new ExecutionContext();
@@ -58,10 +61,69 @@ ctx.returnResponse(ReasonerResponse.reasoned({
   trace: r.trace()
 }));`
 
+Minimal probabilistic example:
+`const ctx = new ExecutionContext();
+const probabilistic = new ProbabilisticReasoningProblem("rolloutSignal");
+probabilistic.variable({ id: "rollout_effective", domain: ["yes", "no"] });
+probabilistic.variable({ id: "diagnostic_test", domain: ["positive", "negative"] });
+probabilistic.prior({ variable: "rollout_effective", distribution: { yes: 0.4, no: 0.6 } });
+probabilistic.conditional({
+  child: "diagnostic_test",
+  parents: ["rollout_effective"],
+  table: {
+    "rollout_effective=yes": { positive: 0.8, negative: 0.2 },
+    "rollout_effective=no": { positive: 0.3, negative: 0.7 }
+  }
+});
+probabilistic.evidence({ variable: "diagnostic_test", value: "positive", reliability: "assumed_exact" });
+probabilistic.query({ variable: "rollout_effective" });
+const posterior = probabilistic.infer({ method: "exact_enumeration", maxJointStates: 32 });
+ctx.returnResponse(ReasonerResponse.reasoned({
+  text: posterior.posteriorText("rollout_effective"),
+  mode: "probabilistic_reasoning",
+  certainty: posterior.certainty(),
+  evidenceQuality: posterior.evidenceQuality(),
+  assumptionRisk: posterior.assumptionRisk(),
+  promotion: "with_review",
+  trace: posterior.trace()
+}));`
+
+Minimal causal-caution example:
+`const ctx = new ExecutionContext();
+const causal = new CausalReasoningProblem("activationLift");
+causal.variable({ id: "onboarding_change", role: "treatment", observed: true });
+causal.variable({ id: "activation_rate", role: "outcome", observed: true });
+causal.association({
+  x: "onboarding_change",
+  y: "activation_rate",
+  description: "activation increased after the onboarding rollout",
+  source: "given"
+});
+causal.confounderCandidate({
+  variable: "marketing_spend",
+  reason: "marketing spend changed during the same observation window",
+  observed: true
+});
+causal.claim({ treatment: "onboarding_change", outcome: "activation_rate", claimType: "causal_effect" });
+const causalResult = causal.assess({ requiredStandard: "causal_effect", allowLocalDAGCheck: true });
+ctx.returnResponse(ReasonerResponse.needsEngine({
+  text: causalResult.cautionText(),
+  mode: "causal_reasoning",
+  recommendedEngine: "CausalEngine",
+  reason: causalResult.engineReason(),
+  requiredInputs: causalResult.requiredInputs(),
+  openQuestions: causalResult.openQuestions(),
+  certainty: causalResult.certainty(),
+  evidenceQuality: causalResult.evidenceQuality(),
+  assumptionRisk: causalResult.assumptionRisk(),
+  promotion: "no",
+  trace: causalResult.trace()
+}));`
+
 Do not invent helper objects or method names that are not listed here.
 @ku_advanced_reasoner_program_core:meta json
 {
-  "rev": 1,
+  "rev": 2,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",

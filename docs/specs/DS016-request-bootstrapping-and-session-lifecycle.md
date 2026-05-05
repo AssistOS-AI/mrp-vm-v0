@@ -66,6 +66,7 @@ The baseline filesystem layout is:
 | `data/sessions/<sessionId>/history/request-summaries.jsonl` | Compact summaries of completed requests |
 | `data/sessions/<sessionId>/analytics/checkpoints.jsonl` | Reloadable analytic-memory checkpoints |
 | `data/sessions/<sessionId>/requests/<requestId>/envelope.json` | Initial request envelope |
+| `data/sessions/<sessionId>/requests/<requestId>/llm-cache-candidates.json` | Request-local successful LLM call capture plus cache-promotion status |
 | `data/sessions/<sessionId>/requests/<requestId>/current-plan.sop` | Current accepted plan snapshot |
 | `data/sessions/<sessionId>/requests/<requestId>/epochs/epoch-0001.sop` | Optional per-epoch plan snapshots |
 | `data/sessions/<sessionId>/requests/<requestId>/state/families/<familyId>/family.meta.json` | Family metadata snapshot |
@@ -81,8 +82,9 @@ When a request stops, the runtime must:
 
 1. persist final request outcome and remaining blocked regions if any,
 2. flush all trace events durably before marking the request closed,
-3. keep session-scoped overlays and analytic checkpoints only if policy allows them to survive request end,
-4. clear scheduler-active ownership of the session so another request may start later.
+3. persist request-local LLM cache candidates and their promotion metadata when LLM-backed work occurred,
+4. keep session-scoped overlays and analytic checkpoints only if policy allows them to survive request end,
+5. clear scheduler-active ownership of the session so another request may start later.
 
 A session ends only by explicit close, policy-driven expiration, or destructive administrative cleanup.
 

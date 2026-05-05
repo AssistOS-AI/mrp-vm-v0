@@ -166,3 +166,33 @@ test('planning retries when the planner emits a disconnected graph with unused d
   assert.match(inspection.plan_snapshot, /@explanation deepLLM/);
   assert.doesNotMatch(inspection.plan_snapshot, /@deadend writerLLM/);
 });
+
+test('planning auto-connects a response that omitted its upstream dependency', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, {
+    deterministic: {},
+    fakeAdapterConfig: {
+      scriptedSequences: {
+        plannerLLM: [[
+          '@bounded_reasoning deepLLM',
+          'Solve the bounded reasoning task and preserve the requested sections.',
+          '',
+          '@response writerLLM',
+          'Present the final user-facing answer with the requested sections.',
+        ].join('\n')],
+        deepLLM: ['Connected bounded reasoning answer'],
+        writerLLM: ['Final answer from connected response'],
+      },
+    },
+  });
+
+  const outcome = await runtime.submitRequest({
+    requestText: 'Solve a bounded reasoning task and keep the final answer sectioned.',
+  });
+
+  assert.equal(outcome.stop_reason, 'completed');
+  assert.equal(String(outcome.response), 'Final answer from connected response');
+
+  const inspection = await runtime.inspectRequestPublic(outcome.request_id);
+  assert.match(inspection.plan_snapshot, /\$bounded_reasoning/);
+});

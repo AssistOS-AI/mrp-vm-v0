@@ -3,8 +3,10 @@ import {
   el,
   escapeHtml,
   fetchJson,
+  loadAuthContext,
   notify,
   queryParam,
+  renderSystemContext,
 } from './shared.js';
 
 const SCOPE_ORDER = ['default', 'global', 'session'];
@@ -263,7 +265,11 @@ async function loadKb() {
 }
 
 async function loadAuth() {
-  state.auth = await fetchJson('/api/auth/context');
+  state.auth = await loadAuthContext();
+  renderSystemContext(el('kb-system-context'), {
+    session_origin: state.auth?.caller?.session_origin,
+    can_edit_global_state: state.auth?.caller?.role === 'admin',
+  });
 }
 
 async function saveKu(event) {

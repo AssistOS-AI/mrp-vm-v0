@@ -42,6 +42,44 @@ function summarizeText(value, maxLength = 180) {
   return `${textValue.slice(0, maxLength - 3)}...`;
 }
 
+function filterCacheEntries(entries, searchParams) {
+  const query = searchParams.get('q')?.toLowerCase().trim() ?? '';
+  if (!query) {
+    return entries;
+  }
+  return entries.filter((entry) => {
+    const haystack = [
+      entry.entry_id,
+      entry.profile,
+      entry.model_class,
+      entry.expected_output_mode,
+      entry.instruction,
+      entry.context_package,
+      entry.response?.value,
+      ...(entry.prompt_assets ?? []).flatMap((asset) => [asset.ku_id, asset.title, asset.summary, asset.content]),
+      ...(entry.source_requests ?? []).flatMap((request) => [request.session_id, request.request_id, request.model, request.model_tier, request.task_tag]),
+    ].join(' ').toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
+function toCacheListItem(entry) {
+  return {
+    entry_id: entry.entry_id,
+    profile: entry.profile,
+    model_class: entry.model_class,
+    expected_output_mode: entry.expected_output_mode,
+    hit_count: Number(entry.hit_count ?? 0),
+    created_at: entry.created_at ?? null,
+    updated_at: entry.updated_at ?? null,
+    last_hit_at: entry.last_hit_at ?? null,
+    prompt_asset_count: Array.isArray(entry.prompt_assets) ? entry.prompt_assets.length : 0,
+    source_request_count: Array.isArray(entry.source_requests) ? entry.source_requests.length : 0,
+    instruction_preview: summarizeText(entry.instruction ?? '', 140),
+    response_preview: summarizeText(entry.response?.value ?? '', 160),
+  };
+}
+
 function extractApiKey(request, url) {
   const headerToken = request.headers['x-api-key'];
   if (headerToken) {
@@ -941,6 +979,10 @@ export function createServer(options = {}) {
         await servePage(response, 'traceability.html');
         return;
       }
+      if (request.method === 'GET' && url.pathname === '/cache') {
+        await servePage(response, 'cache.html');
+        return;
+      }
       if (request.method === 'GET' && url.pathname === '/kb-browser') {
         await servePage(response, 'kb-browser.html');
         return;
@@ -980,6 +1022,39 @@ export function createServer(options = {}) {
           items: await demoTasksPromise,
         });
         return;
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/cache') {
+        const entries = filterCacheEntries(await runtime.listLlmCacheEntries(), url.searchParams);
+        json(response, 200, {
+          summary: await runtime.getLlmCacheSummary(),
+          items: entries.map(toCacheListItem),
+        });
+        return;
+      }
+
+      if (parts[0] === 'api' && parts[1] === 'cache' && parts.length === 3) {
+        if (request.method === 'GET') {
+          const entry = await runtime.inspectLlmCacheEntry(parts[2]);
+          if (!entry) {
+            notFound(response);
+            return;
+          }
+          json(response, 200, entry);
+          return;
+        }
+        if (request.method === 'DELETE') {
+          if (!requireAdmin(response, callerContext)) {
+            return;
+          }
+          const deleted = await runtime.deleteLlmCacheEntry(parts[2]);
+          if (!deleted) {
+            notFound(response);
+            return;
+          }
+          json(response, 200, { deleted });
+          return;
+        }
       }
 
       if (request.method === 'POST' && url.pathname === '/api/auth/bootstrap-key') {
@@ -1161,6 +1236,11 @@ export function createServer(options = {}) {
           return;
         }
 
+        if (parts[5] === 'cache' && parts.length === 6) {
+          json(response, 200, await session.executor.inspectRequestLlmCache(requestId, session.session_id));
+          return;
+        }
+
         if (parts[5] === 'plan') {
           const details = await session.executor.inspectRequestPublic(requestId);
           text(response, 200, details?.plan_snapshot ?? '');
@@ -1213,6 +1293,18 @@ export function createServer(options = {}) {
           });
           return;
         }
+      }
+
+      if (request.method === 'POST' && parts[0] === 'api' && parts[1] === 'sessions' && parts[3] === 'requests' && parts[5] === 'cache' && parts[6] === 'promote' && parts.length === 7) {
+        const session = await requireSessionAccess(runtime, response, callerContext, parts[2]);
+        if (!session) {
+          return;
+        }
+        if (!requireAdmin(response, callerContext)) {
+          return;
+        }
+        json(response, 200, await session.executor.promoteRequestLlmCache(parts[4], session.session_id));
+        return;
       }
 
       if (request.method === 'GET' && parts[0] === 'api' && parts[1] === 'sessions' && parts[3] === 'kb' && parts.length === 4) {

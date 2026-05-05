@@ -423,6 +423,11 @@ function renderConversation(details = state.currentDetails || {}) {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
         ` : ''}
+        ${item.response && item.stop_reason === 'completed' ? `
+          <button class="icon-btn" data-action="cache" data-request-id="${escapeHtml(item.request_id)}" title="Promote successful LLM calls into cache">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+        ` : ''}
         <button class="icon-btn" data-action="retry" data-request-id="${escapeHtml(item.request_id)}" title="Retry request">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
         </button>
@@ -547,6 +552,21 @@ async function reloadActiveSession() {
   await refreshSessions({ autoLoad: false });
   await loadSession(state.sessionId, { allowReconnect: true });
   notify('Session reloaded.');
+}
+
+async function promoteRequestCache(requestId) {
+  const result = await fetchJson(`/api/sessions/${state.sessionId}/requests/${requestId}/cache/promote`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({}),
+  });
+  if (result.promoted_count > 0) {
+    notify(`Promoted ${result.promoted_count} LLM cache item(s).`);
+    return;
+  }
+  notify('Cache promotion finished, but there were no new provider-backed items to store.');
 }
 
 async function logoutFromChat() {
@@ -871,6 +891,10 @@ function attachEventHandlers() {
     if (actionButton.dataset.action === 'copy') {
       await copyText(selected.response ?? '');
       notify('Response copied.');
+      return;
+    }
+    if (actionButton.dataset.action === 'cache') {
+      promoteRequestCache(requestId).catch((error) => notify(error.message, 'error'));
       return;
     }
     if (actionButton.dataset.action === 'retry') {

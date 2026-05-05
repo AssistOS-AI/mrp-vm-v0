@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MRP-VM Cache</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-band">
+      <div class="brand"><strong>MRP-VM</strong></div>
+      <nav class="nav-links">
+        <a href="/chat">Chat</a>
+        <a href="/traceability">Traceability</a>
+        <a class="active" href="/cache">Cache</a>
+        <a href="/kb-browser">KB Browser</a>
+        <a href="/settings">Settings</a>
+      </nav>
+      <div class="header-right">
+        <div id="cache-system-context" class="row wrap"></div>
+      </div>
+    </div>
+  </header>
+  <div id="page-notice" class="notice"></div>
+  <main class="page-shell page-shell--cache">
+    <section class="cache-page stack">
+      <div id="cache-summary" class="cache-summary-row"></div>
+      <div class="cache-filters">
+        <input id="cache-search" placeholder="Search profile, instruction, response, request id, prompt asset...">
+        <button id="cache-refresh" type="button">Refresh</button>
+      </div>
+      <div class="cache-shell">
+        <section class="cache-list-panel">
+          <div class="kb-panel-header">
+            <div class="stack compact">
+              <div class="eyebrow">Cache</div>
+              <h3>Stored LLM calls</h3>
+            </div>
+            <div id="cache-filtered-count" class="muted small"></div>
+          </div>
+          <div id="cache-list" class="cache-list"></div>
+        </section>
+        <section class="cache-detail-panel">
+          <div class="kb-panel-header">
+            <div class="stack compact">
+              <div class="eyebrow">Details</div>
+              <h3>Cache entry</h3>
+            </div>
+          </div>
+          <div id="cache-detail" class="cache-detail stack"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/assets/cache.js"></script>
+</body>
+</html>

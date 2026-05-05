@@ -1,4 +1,5 @@
 import { ManagedLlmAdapter } from './llm-adapter.mjs';
+import { buildCacheLookupKey, createCacheCandidateRecord } from './llm-cache-support.mjs';
 
 export class FakeLlmAdapter extends ManagedLlmAdapter {
   constructor(options = {}) {
@@ -8,6 +9,9 @@ export class FakeLlmAdapter extends ManagedLlmAdapter {
       Object.entries(options.scriptedSequences ?? {}).map(([profile, responses]) => [profile, [...responses]]),
     );
     this.defaultBehavior = options.defaultBehavior ?? 'echo';
+    this.cacheStore = options.cacheStore ?? null;
+    this.recordInvocation = options.recordInvocation ?? null;
+    this.now = options.now ?? (() => new Date().toISOString());
   }
 
   setResponse(key, response) {
@@ -65,39 +69,75 @@ export class FakeLlmAdapter extends ManagedLlmAdapter {
   }
 
   async invoke(payload) {
-    const scripted = this.resolveScripted(payload);
-    if (scripted !== null) {
-      return this.normalizeResult(payload, scripted);
+    const lookupKey = buildCacheLookupKey(payload);
+    const cachedEntry = await this.cacheStore?.resolveByLookupKey(lookupKey);
+    if (cachedEntry) {
+      const updatedEntry = await this.cacheStore.noteHit(cachedEntry.entry_id);
+      const cachedResult = {
+        status: cachedEntry.response?.status ?? 'success',
+        output_mode: cachedEntry.response?.output_mode ?? payload.expected_output_mode ?? 'plain_value',
+        value: cachedEntry.response?.value ?? null,
+        message: cachedEntry.response?.message ?? null,
+        cache_hit: true,
+        cache_entry_id: cachedEntry.entry_id,
+        cache_lookup_key: lookupKey,
+      };
+      await this.recordInvocation?.(createCacheCandidateRecord({
+        payload,
+        binding: null,
+        normalizedResult: cachedResult,
+        source: 'cache',
+        lookupKey,
+        traceContext: payload.trace_context ?? {},
+        capturedAt: this.now(),
+      }));
+      return {
+        ...cachedResult,
+        cache_hit_count: updatedEntry?.hit_count ?? cachedEntry.hit_count ?? 0,
+      };
     }
 
-    if (payload.profile === 'plannerLLM') {
-      return {
+    let normalizedResult = null;
+    const scripted = this.resolveScripted(payload);
+    if (scripted !== null) {
+      normalizedResult = this.normalizeResult(payload, scripted);
+    } else if (payload.profile === 'plannerLLM') {
+      normalizedResult = {
         status: 'success',
         output_mode: 'sop_proposal',
         value: `@response writerLLM\n${payload.instruction}`,
       };
-    }
-
-    if (payload.profile === 'codeGeneratorLLM') {
-      return {
+    } else if (payload.profile === 'codeGeneratorLLM') {
+      normalizedResult = {
         status: 'success',
         output_mode: 'code_block',
         value: `return ${JSON.stringify(payload.instruction)};`,
       };
-    }
-
-    if (this.defaultBehavior === 'echo') {
-      return {
+    } else if (this.defaultBehavior === 'echo') {
+      normalizedResult = {
         status: 'success',
         output_mode: payload.expected_output_mode ?? 'plain_value',
         value: `${payload.profile}:${payload.instruction}`,
       };
+    } else {
+      normalizedResult = {
+        status: 'success',
+        output_mode: payload.expected_output_mode ?? 'plain_value',
+        value: payload.instruction,
+      };
     }
 
-    return {
-      status: 'success',
-      output_mode: payload.expected_output_mode ?? 'plain_value',
-      value: payload.instruction,
-    };
+    if (normalizedResult.status === 'success') {
+      await this.recordInvocation?.(createCacheCandidateRecord({
+        payload,
+        binding: null,
+        normalizedResult,
+        source: 'provider',
+        lookupKey,
+        traceContext: payload.trace_context ?? {},
+        capturedAt: this.now(),
+      }));
+    }
+    return normalizedResult;
   }
 }

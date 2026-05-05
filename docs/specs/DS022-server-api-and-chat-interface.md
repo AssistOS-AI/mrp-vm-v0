@@ -62,11 +62,16 @@ The server must expose a native programmatic API for full MRP-VM functionality. 
 | `GET` | `/api/sessions/:id/requests/:rid/plan` | Get the current accepted plan snapshot (`current-plan.sop` content). |
 | `GET` | `/api/sessions/:id/requests/:rid/state` | Get current family state: families, variants, representatives, statuses. |
 | `GET` | `/api/sessions/:id/requests/:rid/trace` | Get trace events for this request, optionally filtered by event type. |
+| `GET` | `/api/sessions/:id/requests/:rid/cache` | Inspect request-local LLM cache candidates and promotion status. |
+| `POST` | `/api/sessions/:id/requests/:rid/cache/promote` | Promote the completed request's successful LLM calls into the shared cache (privileged control). |
 | `GET` | `/api/sessions/:id/requests/:rid/stream` | SSE or WebSocket stream of live trace events for the active request. |
 | `GET` | `/api/sessions/:id/kb` | List session-scoped KUs. |
 | `POST` | `/api/sessions/:id/kb` | Upsert a session KU (create, fork, or update). |
 | `POST` | `/api/kb/promote` | Promote a session KU to global scope (admin only). |
 | `GET` | `/api/kb/global` | List global KUs. |
+| `GET` | `/api/cache` | List shared LLM cache entries and summary state. |
+| `GET` | `/api/cache/:entryId` | Inspect one shared LLM cache entry. |
+| `DELETE` | `/api/cache/:entryId` | Delete one shared LLM cache entry (admin only). |
 | `GET` | `/api/config` | Get current VM configuration: active interpreters, LLM mappings, policies. |
 | `PUT` | `/api/config` | Update VM configuration (admin only). |
 | `GET` | `/api/models` | Return the discovered model catalog and tags for settings. |
@@ -94,14 +99,17 @@ The compatibility layer must not expose MRP-VM's internal structure (families, e
 
 ### UI information architecture
 
-The repository-owned server UI must expose four primary routes:
+The repository-owned server UI must expose five primary routes:
 
 1. `/chat`
 2. `/traceability`
-3. `/kb-browser`
-4. `/settings`
+3. `/cache`
+4. `/kb-browser`
+5. `/settings`
 
 `/chat` is the default landing page. The UI may share styles and helper modules, but each page must remain a dedicated surface with its own clear responsibility rather than collapsing all operational state into one transcript view.
+
+All five routes must share the same general header navigation so route changes happen through one stable surface rather than through page-specific duplicate menu rows.
 
 The repository baseline must also expose `npm run server` as the canonical way to launch that top-level `server/` surface for local use.
 
@@ -116,7 +124,7 @@ The chat page must behave like a modern messaging application. It should stay co
 1. **Session management**: create a new session, select an existing session from a compact header selector, and surface the active session identity, origin, effective role, last activity time, and status in the header rather than in a bulky first-page panel.
 2. **Message input**: send natural-language requests from a fixed composer anchored at the bottom, with advanced options opened through a compact popover placed immediately before the text input and structured as a small two-level menu.
 3. **Conversation rendering**: show message bubbles, timestamps, lightweight running/completed/error indicators, and one animated in-progress assistant placeholder whose text is refreshed from recent trace events rather than staying a static `Thinking...` label for the entire request.
-4. **Assistant actions**: every assistant response must expose a `Details` or `Traceability` action that opens the dedicated traceability page for that request. Copy response and retry request actions are also expected.
+4. **Assistant actions**: every assistant response must expose a `Details` or `Traceability` action that opens the dedicated traceability page for that request. Copy response, retry request, and successful-request cache-promotion actions are also expected.
 5. **Advanced options**: support text-file insertion into the input area, budget controls, and a small menu of predefined demo tasks that exercise distinct commands and interpreters. The demo-task catalog should come from repository-owned shared fixtures rather than duplicated browser-only constants.
 6. **System context visibility**: provide a compact summary of the current authority context without moving deep trace or KB content inline.
 
@@ -157,6 +165,16 @@ The KB Browser must be a dedicated inspection and editing surface for default, g
 7. action buttons such as `Save` and `Default` placed below the editor surface,
 8. direct editing and creation of session KUs,
 9. direct editing and creation of global KUs under admin authority.
+
+### Cache page
+
+The Cache page must be a dedicated inspection and management surface for the DS032 shared LLM cache. It must support:
+
+1. a compact summary row for entry count, hit count, and promoted-request count,
+2. search across profile, request text, response text, prompt assets, and source-request ids,
+3. a left searchable list of cache entries,
+4. a right detail view showing normalized request text, bounded context, response payload, prompt assets, and source-request history,
+5. deletion of shared cache entries through a privileged control rather than through hidden background mutation.
 
 ### Settings page
 
@@ -260,6 +278,10 @@ Question #3: Why must the chat UI prioritize plan and state over transcript hist
 
 Response: MRP-VM's value is in explicit, inspectable execution. A transcript-only view would hide the plan, the family state, and the trace — the very things that make the system auditable. The UI should show what the runtime is doing, not just what it said.
 
+Question #4: Why should cache promotion and cache inspection live in explicit server endpoints instead of remaining internal runtime hooks only?
+
+Response: DS032 makes cache reuse part of the configured runtime, not just an internal optimization. Once operators need to inspect, promote, and delete shared cache entries, the server has to expose those surfaces deliberately. Hiding them would make the cache hard to audit and would contradict the repository's inspectable-runtime posture.
+
 Question #4: Why does the trace-to-UI mapping require the UI to use trace as the single source of truth?
 
 Response: If the UI maintained independent state, it could diverge from the actual runtime state after errors, reconnections, or mid-request joins. Trace replay guarantees that the UI always reflects the authoritative execution record.
@@ -288,4 +310,4 @@ Response: Allow anonymous chat-only sessions, but continue to require admin-back
 
 ## Conclusion
 
-MRP-VM v0 must expose its execution surfaces through a clean SDK, a native API for full functionality, an optional OpenAI-compatible API for integration convenience, and a server-owned four-page UI that keeps chat simple while moving deep inspection, KB tuning, settings, and authority management into dedicated operational surfaces. Trace events from DS014 remain the single source of truth for execution presentation.
+MRP-VM v0 must expose its execution surfaces through a clean SDK, a native API for full functionality, an optional OpenAI-compatible API for integration convenience, and a server-owned five-page UI that keeps chat simple while moving deep inspection, cache control, KB tuning, settings, and authority management into dedicated operational surfaces. Trace events from DS014 remain the single source of truth for execution presentation.

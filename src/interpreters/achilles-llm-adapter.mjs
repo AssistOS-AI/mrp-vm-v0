@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { ManagedLlmAdapter } from './llm-adapter.mjs';
 import { resolveLlmProfile } from '../config/runtime-config.mjs';
+import { buildCacheLookupKey, createCacheCandidateRecord, normalizePromptAssets } from './llm-cache-support.mjs';
 
 function pickAgentClass(moduleNamespace) {
   if (typeof moduleNamespace?.LLMAgent === 'function') {
@@ -13,15 +14,6 @@ function pickAgentClass(moduleNamespace) {
     return moduleNamespace.default;
   }
   return null;
-}
-
-function normalizePromptAssets(promptAssets = []) {
-  return promptAssets.map((entry) => ({
-    ku_id: entry.kuId ?? entry.ku_id,
-    title: entry.meta?.title ?? entry.title ?? entry.kuId ?? entry.ku_id,
-    summary: entry.meta?.summary ?? entry.summary ?? '',
-    content: entry.content ?? entry.value ?? '',
-  }));
 }
 
 function buildMessages(payload, profileBinding) {
@@ -177,9 +169,12 @@ async function callAgent(agent, request) {
 }
 
 export class AchillesLlmAdapter extends ManagedLlmAdapter {
-  constructor(runtimeConfig) {
+  constructor(runtimeConfig, options = {}) {
     super();
     this.runtimeConfig = runtimeConfig;
+    this.cacheStore = options.cacheStore ?? null;
+    this.recordInvocation = options.recordInvocation ?? null;
+    this.now = options.now ?? (() => new Date().toISOString());
     this.agentClassPromise = null;
   }
 
@@ -204,6 +199,33 @@ export class AchillesLlmAdapter extends ManagedLlmAdapter {
   async invoke(payload) {
     const AgentClass = await this.loadAgentClass();
     const profileBinding = resolveLlmProfile(this.runtimeConfig, payload.profile);
+    const lookupKey = buildCacheLookupKey(payload);
+    const cachedEntry = await this.cacheStore?.resolveByLookupKey(lookupKey);
+    if (cachedEntry) {
+      const updatedEntry = await this.cacheStore.noteHit(cachedEntry.entry_id);
+      const cachedResult = {
+        status: cachedEntry.response?.status ?? 'success',
+        output_mode: cachedEntry.response?.output_mode ?? payload.expected_output_mode ?? 'plain_value',
+        value: cachedEntry.response?.value ?? null,
+        message: cachedEntry.response?.message ?? null,
+        cache_hit: true,
+        cache_entry_id: cachedEntry.entry_id,
+        cache_lookup_key: lookupKey,
+      };
+      await this.recordInvocation?.(createCacheCandidateRecord({
+        payload,
+        binding: profileBinding,
+        normalizedResult: cachedResult,
+        source: 'cache',
+        lookupKey,
+        traceContext: payload.trace_context ?? {},
+        capturedAt: this.now(),
+      }));
+      return {
+        ...cachedResult,
+        cache_hit_count: updatedEntry?.hit_count ?? cachedEntry.hit_count ?? 0,
+      };
+    }
     const bindingAttempts = [profileBinding, ...buildFallbackBindings(this.runtimeConfig, profileBinding)];
     let lastFailure = null;
 
@@ -241,6 +263,17 @@ export class AchillesLlmAdapter extends ManagedLlmAdapter {
         };
       }
       if (normalized.status !== 'provider_failure') {
+        if (normalized.status === 'success') {
+          await this.recordInvocation?.(createCacheCandidateRecord({
+            payload,
+            binding,
+            normalizedResult: normalized,
+            source: 'provider',
+            lookupKey,
+            traceContext: payload.trace_context ?? {},
+            capturedAt: this.now(),
+          }));
+        }
         return normalized;
       }
       lastFailure = normalized;

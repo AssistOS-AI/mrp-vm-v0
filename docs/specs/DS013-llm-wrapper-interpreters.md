@@ -40,6 +40,8 @@ All non-test wrapper executions must obtain provider access through `LLMAgent` f
 
 The deterministic fake adapter remains valid only for tests, fixtures, and explicit local fallback. It must not become the hidden default architecture for production-facing wrapper work.
 
+The managed adapter must also support the DS032 cache boundary. It may satisfy an invocation from the shared cache only when the normalized invocation shape matches an explicitly promoted entry. Successful provider-backed completions must be captured as request-local candidates first so the parent request may promote them later after successful completion. The shared cache must not be populated automatically on every successful provider call.
+
 ### Profiles
 
 The required wrapper profiles are:
@@ -108,6 +110,10 @@ Response: LLM wrappers share prompt governance, model classes, and provider acce
 Question #4: Why does DS013 insist on `LLMAgent` through AchillesAgentLib instead of direct provider SDK usage?
 
 Response: The managed `LLMAgent` path centralizes credentials, provider transport, model routing, and task metadata in one auditable boundary. Without that boundary, every wrapper would become its own provider client and the DS-level control surface would fragment immediately.
+
+Question #5: Why does DS013 place cache lookup and request-local capture inside the managed adapter boundary instead of inside each wrapper profile?
+
+Response: The cache key is defined by the normalized invocation shape shared across wrapper calls: profile, prompt assets, bounded context, instruction, and output mode. If each wrapper implemented caching separately, the repository would duplicate key logic, miss cross-profile consistency, and lose one of the main reasons the managed adapter exists as a shared control surface.
 
 ## Conclusion
 

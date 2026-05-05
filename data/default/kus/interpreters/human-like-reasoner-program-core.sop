@@ -31,6 +31,8 @@ Exact API reference:
 - `GraphProblem`: `directed()`, `undirected()`, `node(name)`, `edge(from, to, weight?)`, `queryPath(from, to)`, `queryTopologicalOrder()`, `reachableWithin(from, to, maxSteps)`, `solve()`
 - `SearchProblem`: `initialState(state)`, `goalState(state)`, `action(name, definition?)`, `strategy(name)`, `solvePlan()`
 - `NumericProblem`: `int(name, min, max)`, `number(name, ...values)`, `eq(left, right)`, `lt(left, right)`, `gt(left, right)`, `add(...)`, `sub(left, right)`, `mul(left, right)`, `solveOne()`
+- `GraphProblem.solve()`, `SearchProblem.solvePlan()`, and `NumericProblem.solveOne()` return `ReasoningResult`, so read answers through helpers such as `order()`, `plan()`, and `value(name)` rather than by guessing raw object fields
+- When the input is a structured rewrite brief, reuse its explicit entities, constraints, state model, and requested output sections instead of restating the whole task vaguely
 
 Important naming rule:
 - Prefer the exact method names above.
@@ -47,10 +49,58 @@ const result = rules.solve();
 ctx.assert(result.isSolved(), "Expected solved rule closure.");
 ctx.emit("answer", "Alice is a user.");`
 
+Minimal mixed graph + search example:
+`const ctx = new ExecutionContext();
+const graph = new GraphProblem("restart");
+graph.node("config_store");
+graph.node("api");
+graph.node("worker");
+graph.edge("config_store", "api");
+graph.edge("api", "worker");
+graph.queryTopologicalOrder();
+const orderResult = graph.solve();
+ctx.assert(orderResult.isSolved(), "Expected solved dependency order.");
+const search = new SearchProblem("restartPlan");
+search.initialState({ configReady: false, apiReady: false, workerReady: false });
+search.goalState({ workerReady: true });
+search.action("restartConfig", {
+  precondition: (state) => state.configReady === false,
+  apply: (state) => ({ ...state, configReady: true })
+});
+search.action("restartApi", {
+  precondition: (state) => state.configReady === true && state.apiReady === false,
+  apply: (state) => ({ ...state, apiReady: true })
+});
+search.action("restartWorker", {
+  precondition: (state) => state.apiReady === true && state.workerReady === false,
+  apply: (state) => ({ ...state, workerReady: true })
+});
+const planResult = search.solvePlan();
+ctx.assert(planResult.isSolved(), "Expected solved restart plan.");
+const text = ctx.text("answer");
+text.paragraph("Dependency hint:\\n- " + orderResult.order().join(" -> "));
+text.paragraph("Restart plan:\\n- " + planResult.plan().join("\\n- "));
+ctx.emit("answer", text.toString());`
+
+Minimal numeric example:
+`const ctx = new ExecutionContext();
+const numeric = new NumericProblem("allocation");
+numeric.int("alpha", 1, 9);
+numeric.int("beta", 1, 9);
+numeric.int("gamma", 1, 9);
+numeric.eq(numeric.add("alpha", "beta", "gamma"), 15);
+numeric.eq("gamma", numeric.add("beta", 2));
+numeric.eq("alpha", numeric.add("beta", 1));
+const result = numeric.solveOne();
+ctx.assert(result.isSolved(), "Expected solved numeric allocation.");
+const text = ctx.text("answer");
+text.paragraph("Solution:\\n- alpha=" + result.value("alpha") + ", beta=" + result.value("beta") + ", gamma=" + result.value("gamma"));
+ctx.emit("answer", text.toString());`
+
 Do not fabricate capabilities that are not needed by the current problem.
 @ku_human_like_reasoner_program_core:meta json
 {
-  "rev": 2,
+  "rev": 3,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
