@@ -85,11 +85,11 @@
             </tr>
             <tr>
               <td>Planning guidance</td>
-              <td>Planning prompt guidance must come from KU-managed prompt assets rather than from large hardcoded prompt bodies.</td>
+              <td>Planning prompt guidance must come from KU-managed prompt assets rather than from large hardcoded prompt bodies, and non-trivial plans should expose explicit solving or extraction, response-preparation, and final template-assembly phases instead of collapsing everything into one opaque response step.</td>
             </tr>
             <tr>
               <td>Reasoning routing</td>
-               <td>Planning should route directly to <code>HumanLikeReasoner</code> for finite exact reasoning, route directly to <code>AdvancedReasoner</code> for bounded advanced meta-reasoning, route directly to <code>DocumentScalePlanner</code> for bounded Markdown or JSON chunk workflows, and use <code>logic-eval</code> only when a rewrite brief is still needed.</td>
+               <td>Planning should prefer <code>js-eval</code> for exact deterministic sub-problems, route directly to <code>HumanLikeReasoner</code> only for bounded symbolic reasoning that still remains after that split, route directly to <code>AdvancedReasoner</code> for bounded advanced meta-reasoning, route directly to <code>DocumentScalePlanner</code> for bounded Markdown or JSON chunk workflows, and use <code>logic-eval</code> only when a rewrite brief is still needed. When <code>template-eval</code> is available, the final <code>@response</code> step should stay a deterministic template assembly rather than a direct reasoner call.</td>
             </tr>
              <tr>
                <td>Server UI structure</td>

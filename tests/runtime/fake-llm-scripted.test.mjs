@@ -16,8 +16,11 @@ test('fake LLM adapter can be scripted for multi-step planning', async () => {
     '@solution deepLLM',
     'Rezolvă problema pas cu pas și returnează răspunsul în formatul cerut.',
     '',
+    '@delivery writerLLM',
+    'Formatează clar și concis rezultatul din $solution fără să schimbi faptele sau pașii.',
+    '',
     '@response template-eval',
-    '$solution',
+    '$delivery',
   ].join('\n');
 
   const scriptedSolution = [
@@ -39,6 +42,7 @@ test('fake LLM adapter can be scripted for multi-step planning', async () => {
       scriptedSequences: {
         plannerLLM: [scriptedPlan],
         deepLLM: [scriptedSolution],
+        writerLLM: [scriptedSolution],
       },
     },
   });
@@ -50,6 +54,7 @@ test('fake LLM adapter can be scripted for multi-step planning', async () => {
 
   const inspection = await runtime.inspectRequestPublic(outcome.request_id);
   assert.match(inspection.plan_snapshot, /@solution deepLLM/);
+  assert.match(inspection.plan_snapshot, /@delivery writerLLM/);
   assert.match(inspection.plan_snapshot, /@response template-eval/);
 });
 
@@ -167,7 +172,7 @@ test('planning retries when the planner emits a disconnected graph with unused d
   assert.doesNotMatch(inspection.plan_snapshot, /@deadend writerLLM/);
 });
 
-test('planning auto-connects a response that omitted its upstream dependency', async () => {
+test('planning retries when the planner emits a direct response interpreter instead of explicit assembly', async () => {
   const rootDir = await createTempRuntimeRoot();
   const runtime = new MRPVM(rootDir, {
     deterministic: {},
@@ -179,9 +184,18 @@ test('planning auto-connects a response that omitted its upstream dependency', a
           '',
           '@response writerLLM',
           'Present the final user-facing answer with the requested sections.',
+        ].join('\n'), [
+          '@bounded_reasoning deepLLM',
+          'Solve the bounded reasoning task and preserve the requested sections.',
+          '',
+          '@delivery writerLLM',
+          'Prepare a well-structured answer draft from $bounded_reasoning while preserving the requested sections.',
+          '',
+          '@response template-eval',
+          '$delivery',
         ].join('\n')],
         deepLLM: ['Connected bounded reasoning answer'],
-        writerLLM: ['Final answer from connected response'],
+        writerLLM: ['Prepared bounded reasoning answer'],
       },
     },
   });
@@ -191,8 +205,11 @@ test('planning auto-connects a response that omitted its upstream dependency', a
   });
 
   assert.equal(outcome.stop_reason, 'completed');
-  assert.equal(String(outcome.response), 'Final answer from connected response');
+  assert.equal(String(outcome.response), 'Prepared bounded reasoning answer');
 
   const inspection = await runtime.inspectRequestPublic(outcome.request_id);
   assert.match(inspection.plan_snapshot, /\$bounded_reasoning/);
+  assert.match(inspection.plan_snapshot, /@delivery writerLLM/);
+  assert.match(inspection.plan_snapshot, /@response template-eval/);
+  assert.doesNotMatch(inspection.plan_snapshot, /@response writerLLM/);
 });

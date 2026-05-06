@@ -134,14 +134,18 @@ test('runtime executes a planner-generated document-scale plan end-to-end', asyn
             task: 'Preserve sections Key ideas, Source coverage, and Next focus.',
           }),
           '',
+          '@document_draft writerLLM',
+          'Using $document_plan, prepare a compact user-facing draft that preserves sections Key ideas, Source coverage, and Next focus.',
+          '',
           '@response template-eval',
-          '$document_plan',
+          '$document_draft',
         ].join('\n')],
         writerLLM: [
           'Key ideas:\n- Risky deploys now require a rehearsal.\n\nSource coverage:\n- Chunk 1.\n\nNext focus:\n- Compare rehearsal quality.',
           'Key ideas:\n- Incident notes now carry interpreter and SOP provenance.\n\nSource coverage:\n- Chunk 2.\n\nNext focus:\n- Standardize the provenance field.',
           'Key ideas:\n- Reliability chapter merged.\n\nSource coverage:\n- Group 1.\n\nNext focus:\n- Audit the rehearsal path.',
           'Key ideas:\n- Knowledge-hygiene chapter merged.\n\nSource coverage:\n- Group 2.\n\nNext focus:\n- Audit provenance completeness.',
+          'Key ideas:\n- Risky deploys now require a rehearsal.\n- Incident notes now carry interpreter and SOP provenance.\n\nSource coverage:\n- Both chapters were covered.\n\nNext focus:\n- Standardize rehearsal and provenance templates.',
           'Key ideas:\n- Risky deploys now require a rehearsal.\n- Incident notes now carry interpreter and SOP provenance.\n\nSource coverage:\n- Both chapters were covered.\n\nNext focus:\n- Standardize rehearsal and provenance templates.',
         ],
       },
@@ -161,5 +165,6 @@ test('runtime executes a planner-generated document-scale plan end-to-end', asyn
   const inspection = await runtime.inspectRequestPublic(outcome.request_id);
   assert.match(inspection.plan_snapshot, /@document_plan DocumentScalePlanner/);
   assert.match(inspection.plan_snapshot, /@ideas_global writerLLM/);
+  assert.match(inspection.plan_snapshot, /@document_draft writerLLM/);
   assert.match(inspection.plan_snapshot, /@document_plan template-eval/);
 });

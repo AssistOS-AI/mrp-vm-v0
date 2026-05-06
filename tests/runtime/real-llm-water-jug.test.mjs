@@ -81,7 +81,7 @@ test('real LLM solves the water jug problem', async (t) => {
     'Expected a non-trivial reasoning answer from the real LLM flow.',
   );
   const declarationCount = (inspection.plan_snapshot.match(/^@/gm) ?? []).length;
-  assert.ok(declarationCount >= 2, 'Expected a multi-step SOP plan.');
+  assert.ok(declarationCount >= 3, 'Expected a decomposed SOP plan with explicit response assembly.');
   assert.match(inspection.plan_snapshot, /HumanLikeReasoner|logic-eval/);
 
   const tracePath = path.join(rootDir, 'data', 'sessions', outcome.session_id, 'trace', 'session.jsonl');

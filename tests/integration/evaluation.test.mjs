@@ -18,6 +18,10 @@ test('evaluation harness compares configured runtime instances against a baselin
     createBaseline: async (testCase) => ({
       response: `${testCase.expected_response_prefix}${testCase.request}`,
     }),
+    compareResponses: async ({ testCase, runtimeOutcome }) => ({
+      equal: String(runtimeOutcome.response ?? '').startsWith(String(testCase.expected_response_prefix ?? '')),
+      message: null,
+    }),
     cases: [fixture],
   });
 

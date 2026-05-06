@@ -105,7 +105,16 @@ export class FakeLlmAdapter extends ManagedLlmAdapter {
       normalizedResult = {
         status: 'success',
         output_mode: 'sop_proposal',
-        value: `@response writerLLM\n${payload.instruction}`,
+        value: [
+          '@request_seed js-eval',
+          `return ${JSON.stringify(payload.instruction)};`,
+          '',
+          '@response_draft writerLLM',
+          'Using $request_seed, produce the final user-facing answer.',
+          '',
+          '@response template-eval',
+          '$response_draft',
+        ].join('\n'),
       };
     } else if (payload.profile === 'codeGeneratorLLM') {
       normalizedResult = {

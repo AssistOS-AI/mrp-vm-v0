@@ -110,6 +110,16 @@ For bounded reasoning and document-analysis work, planning must also distinguish
 3. direct routing to `DocumentScalePlanner` when the task is already clearly a bounded Markdown or JSON analysis workflow that should expand into explicit chunk, rollup, and validation declarations, and
 4. inserting `logic-eval` first when the planner needs a structured rewrite brief before handing the task to the external reasoning interpreter.
 
+For non-trivial requests, planning should ordinarily emit at least three declarations so the execution graph exposes:
+
+1. one or more solving, extraction, or exact-computation steps,
+2. one explicit response-preparation step that reshapes upstream results into user-facing structure, and
+3. one final `@response template-eval` step that deterministically assembles the delivered answer.
+
+When `template-eval` is available, the final `@response` declaration must use it rather than placing `HumanLikeReasoner`, `AdvancedReasoner`, `DocumentScalePlanner`, `logic-eval`, `js-eval`, or a prose interpreter directly on `response`. Upstream solver or interpreter outputs should land in intermediate families first so the final answer remains auditable and structurally stable.
+
+Planning should also prefer `js-eval` ahead of LLM-backed reasoning for any bounded sub-problem that is already a clean deterministic computation, transformation, parsing, filtering, or aggregation task. The reasoners remain appropriate for bounded symbolic or meta-reasoning fragments, but they must not become a catch-all route for work that could have been solved exactly and cheaply in `js-eval`.
+
 When planning selects an interpreter that may insert declarations later, the initially accepted graph must still remain connected and valid on its own. The initial `@response` step must therefore depend only on declared or intentionally reused families. If the later inserted workflow will produce the final semantic target, the inserted declarations must bridge that target back into an already-declared family rather than relying on an undeclared future dependency in the initial graph.
 
 ## Decisions & Questions

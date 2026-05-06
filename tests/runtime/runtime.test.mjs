@@ -80,8 +80,26 @@ test('runtime promotes successful LLM calls into cache and reuses them on identi
     fakeAdapterConfig: {
       scriptedSequences: {
         plannerLLM: [
-          '@response writerLLM\nSay hello from cache.',
-          '@response writerLLM\nSay hello from cache.',
+          [
+            '@greeting_seed js-eval',
+            'return "Say hello from cache."; ',
+            '',
+            '@greeting_draft writerLLM',
+            'Using $greeting_seed, phrase exactly the final answer for the user.',
+            '',
+            '@response template-eval',
+            '$greeting_draft',
+          ].join('\n'),
+          [
+            '@greeting_seed js-eval',
+            'return "Say hello from cache."; ',
+            '',
+            '@greeting_draft writerLLM',
+            'Using $greeting_seed, phrase exactly the final answer for the user.',
+            '',
+            '@response template-eval',
+            '$greeting_draft',
+          ].join('\n'),
         ],
         writerLLM: [
           'cached answer',
