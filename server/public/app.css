@@ -1956,7 +1956,7 @@ body {
   gap: 0;
   align-items: stretch;
   min-width: 100%;
-  width: max-content;
+  width: 100%;
 }
 
 .execution-graph-layer {
@@ -1967,12 +1967,34 @@ body {
   align-content: start;
 }
 
+.execution-graph-layer::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0.52rem;
+  bottom: 0.55rem;
+  width: 1px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(226, 232, 240, 0.96) 0 2px,
+    transparent 2px 6px
+  );
+  pointer-events: none;
+}
+
 .execution-graph-layer-label {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
+  justify-self: center;
+  text-align: center;
+  padding: 0 0.35rem;
+  background: rgba(247, 248, 250, 0.92);
+  position: relative;
+  z-index: 1;
 }
 
 .execution-graph-column {
@@ -1995,17 +2017,25 @@ body {
   content: '';
   position: absolute;
   left: 50%;
-  top: 0.8rem;
-  bottom: 0.8rem;
+  top: 0.95rem;
+  bottom: 0.65rem;
   width: 1px;
   transform: translateX(-50%);
-  background: rgba(110, 122, 150, 0.18);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(226, 232, 240, 0.75) 0 2px,
+    transparent 2px 6px
+  );
   transition: background 120ms ease, opacity 120ms ease;
 }
 
 .execution-graph-layer-divider:hover::before,
 .execution-graph-layer-divider.dragging::before {
-  background: rgba(37, 99, 235, 0.26);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(186, 230, 253, 0.95) 0 2px,
+    transparent 2px 6px
+  );
 }
 
 .execution-graph-node {
@@ -2106,9 +2136,9 @@ body {
 
 .graph-edge-path {
   fill: none;
-  stroke: #6e7a96;
+  stroke: #16a34a;
   stroke-width: 1.15;
-  opacity: 0.5;
+  opacity: 0.58;
   marker-end: url(#graph-arrow);
 }
 

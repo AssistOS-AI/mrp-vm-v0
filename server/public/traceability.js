@@ -271,16 +271,22 @@ function drawGraphEdges() {
   if (!inner || !svg) {
     return;
   }
+  const layers = inner.querySelector('.execution-graph-layers');
+  const scroll = inner.closest('.execution-graph-scroll');
   const nodes = new Map([...inner.querySelectorAll('[data-node-id]')].map((node) => [node.dataset.nodeId, node]));
   const innerRect = inner.getBoundingClientRect();
-  let maxRight = inner.clientWidth;
-  let maxBottom = inner.clientHeight;
+  const layersRect = layers?.getBoundingClientRect() ?? innerRect;
+  let maxRight = Math.max(
+    scroll?.clientWidth ?? inner.clientWidth,
+    layersRect.right - innerRect.left + 12,
+  );
+  let maxBottom = Math.max(inner.clientHeight, layersRect.bottom - innerRect.top + 24);
   for (const node of nodes.values()) {
     const rect = node.getBoundingClientRect();
-    maxRight = Math.max(maxRight, rect.right - innerRect.left + 48);
-    maxBottom = Math.max(maxBottom, rect.bottom - innerRect.top + 48);
+    maxRight = Math.max(maxRight, rect.right - innerRect.left + 28);
+    maxBottom = Math.max(maxBottom, rect.bottom - innerRect.top + 32);
   }
-  const width = Math.max(inner.scrollWidth, inner.clientWidth, maxRight);
+  const width = Math.max(maxRight, scroll?.clientWidth ?? inner.clientWidth);
   const height = Math.max(inner.scrollHeight, inner.clientHeight, maxBottom);
   inner.style.width = `${width}px`;
   inner.style.minHeight = `${height}px`;
@@ -307,7 +313,7 @@ function drawGraphEdges() {
   svg.innerHTML = `
     <defs>
       <marker id="graph-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-        <path d="M 0 0 L 10 5 L 0 10 z" fill="#6e7a96"></path>
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#16a34a"></path>
       </marker>
     </defs>
     ${edgeMarkup}
@@ -349,7 +355,7 @@ function computeDefaultGraphLayerWidths(layerCount) {
     return [];
   }
   const scroll = document.querySelector('#graph-tab .execution-graph-scroll');
-  const availableWidth = scroll?.clientWidth ?? 0;
+  const availableWidth = Math.max(0, (scroll?.clientWidth ?? 0) - 32);
   const totalDividerWidth = Math.max(0, layerCount - 1) * GRAPH_DIVIDER_WIDTH;
   const targetWidth = Math.max(availableWidth - totalDividerWidth, layerCount * GRAPH_LAYER_MIN_WIDTH);
   const baseWidth = Math.max(GRAPH_LAYER_MIN_WIDTH, Math.floor(targetWidth / layerCount));
@@ -365,6 +371,7 @@ function computeDefaultGraphLayerWidths(layerCount) {
 }
 
 function applyGraphLayerWidths(options = {}) {
+  const layers = document.querySelector('#graph-tab .execution-graph-layers');
   const layerNodes = [...document.querySelectorAll('#graph-tab .execution-graph-layer[data-layer-index]')];
   if (layerNodes.length === 0) {
     return;
@@ -382,6 +389,13 @@ function applyGraphLayerWidths(options = {}) {
     node.style.width = `${width}px`;
     node.style.flexBasis = `${width}px`;
   });
+  if (layers) {
+    const totalDividerWidth = Math.max(0, layerNodes.length - 1) * GRAPH_DIVIDER_WIDTH;
+    const totalLayerWidth = widths.reduce((sum, width) => sum + width, 0) + totalDividerWidth;
+    const scroll = document.querySelector('#graph-tab .execution-graph-scroll');
+    const availableWidth = Math.max(0, (scroll?.clientWidth ?? 0) - 32);
+    layers.style.width = totalLayerWidth <= availableWidth ? '100%' : `${totalLayerWidth}px`;
+  }
 }
 
 function graphNodeOffsetKey(nodeId) {
