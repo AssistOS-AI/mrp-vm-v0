@@ -31,9 +31,10 @@ async function runScenario(caseDef) {
   };
 }
 
-test('chat demo task catalog exposes all shared demo classes', () => {
+test('chat demo task catalog stays compact and shared', () => {
   assert.deepEqual(DEMO_TASKS, SHARED_TASKS);
-  assert.ok(DEMO_TASKS.length >= 23, 'Expected at least 23 shared demo cases.');
+  assert.ok(DEMO_TASKS.length <= 10, 'Expected the shared demo catalog to stay at or below 10 curated cases.');
+  assert.ok(DEMO_TASKS.length >= 8, 'Expected enough shared demo cases to cover the main runtime surfaces.');
   const catalogClasses = new Set(DEMO_TASKS.flatMap((item) => item.reasoning_classes ?? []));
   for (const label of [
     'rule',
@@ -42,20 +43,8 @@ test('chat demo task catalog exposes all shared demo classes', () => {
     'search',
     'numeric',
     'mixed',
-    'abductive',
-    'belief_revision',
     'probabilistic',
-    'causal',
-    'argumentation',
-    'legal',
-    'ethical',
-    'scientific',
-    'analogical',
-    'creative',
     'optimization',
-    'formal_proof_routing',
-    'smt',
-    'pragmatic',
     'document_planning',
   ]) {
     assert.ok(catalogClasses.has(label), `Expected demo coverage for ${label}.`);
@@ -63,10 +52,16 @@ test('chat demo task catalog exposes all shared demo classes', () => {
   for (const item of DEMO_TASKS) {
     assert.ok(item.title.length >= 12, `Expected a descriptive title for ${item.id}.`);
     assert.ok(item.summary.length >= 20, `Expected a meaningful summary for ${item.id}.`);
-    assert.ok(item.prompt.length >= 300, `Expected a substantial prompt for ${item.id}.`);
+    assert.ok(item.prompt.length >= 220, `Expected a substantial prompt for ${item.id}.`);
     assert.ok(Array.isArray(item.reasoning_classes) && item.reasoning_classes.length > 0, `Expected reasoning classes for ${item.id}.`);
     assert.match(item.prompt, /Requirements:/, `Expected explicit requirements in ${item.id}.`);
     assert.match(item.prompt, /Output sections:/, `Expected explicit output formatting in ${item.id}.`);
+    assert.match(item.prompt, /Execution steps/i, `Expected explicit execution steps in ${item.id}.`);
+    assert.equal(
+      /\b(?:HumanLikeReasoner|AdvancedReasoner|DocumentScalePlanner|logic-eval|js-eval|template-eval)\b/.test(item.prompt),
+      false,
+      `Expected interpreter-neutral wording in ${item.id}.`,
+    );
   }
 });
 

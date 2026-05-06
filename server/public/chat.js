@@ -6,6 +6,7 @@ import {
   fetchJson,
   formatDate,
   forgetApiKey,
+  getActiveSessionId,
   getApiKey,
   getSavedApiKeys,
   loadAuthContext,
@@ -507,6 +508,7 @@ async function refreshSessions(options = {}) {
   renderSessionDropdown(state.sessions);
 
   if (!state.sessions.length) {
+    setActiveSessionId('');
     state.sessionId = null;
     state.currentDetails = null;
     state.pendingRequest = null;
@@ -518,6 +520,7 @@ async function refreshSessions(options = {}) {
   const activeExists = state.sessionId && state.sessions.some((item) => item.session_id === state.sessionId);
   if (!activeExists) {
     state.sessionId = state.sessions[0].session_id;
+    setActiveSessionId(state.sessionId);
   }
 
   updateSelectorButton();
@@ -755,10 +758,7 @@ async function applyAuthKey({ remember = false } = {}) {
   if (!hasValidatedApiKey(state.auth)) {
     return;
   }
-  await refreshSessions({ autoLoad: false });
-  if (!state.sessionId) {
-    await createSession();
-  }
+  await refreshSessions({ autoLoad: true });
 }
 
 async function bootstrapAuthKey() {
@@ -778,10 +778,7 @@ async function bootstrapAuthKey() {
   if (!hasValidatedApiKey(state.auth)) {
     return;
   }
-  await refreshSessions({ autoLoad: false });
-  if (!state.sessionId) {
-    await createSession();
-  }
+  await refreshSessions({ autoLoad: true });
 }
 
 async function insertTextFilesIntoInput(fileList) {
@@ -955,8 +952,7 @@ function attachEventHandlers() {
 async function init() {
   attachEventHandlers();
   await loadDemoTasks();
-  setActiveSessionId('');
-  state.sessionId = null;
+  state.sessionId = getActiveSessionId() || null;
   updateComposerStatus();
   await ensureAuthFlow();
   if (authBlocksSessionActions()) {
@@ -964,8 +960,7 @@ async function init() {
     renderConversation();
     return;
   }
-  await refreshSessions({ autoLoad: false });
-  await createSession();
+  await refreshSessions({ autoLoad: true });
 }
 
 init().catch((error) => notify(error.message, 'error'));
