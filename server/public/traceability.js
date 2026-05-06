@@ -265,6 +265,11 @@ function truncateNodeLabel(value, length = 22) {
   return text.length > length ? `${text.slice(0, length - 3)}...` : text;
 }
 
+function getGraphViewportWidth() {
+  const scroll = document.querySelector('#graph-tab .execution-graph-scroll');
+  return Math.max(0, (scroll?.clientWidth ?? 0) - 32);
+}
+
 function drawGraphEdges() {
   const inner = el('execution-graph-inner');
   const svg = el('execution-graph-svg');
@@ -275,10 +280,14 @@ function drawGraphEdges() {
   const scroll = inner.closest('.execution-graph-scroll');
   const nodes = new Map([...inner.querySelectorAll('[data-node-id]')].map((node) => [node.dataset.nodeId, node]));
   const innerRect = inner.getBoundingClientRect();
+  const viewportWidth = getGraphViewportWidth() || scroll?.clientWidth || inner.clientWidth;
   const layersRect = layers?.getBoundingClientRect() ?? innerRect;
+  const layersWidth = layers
+    ? Math.max(layers.scrollWidth, Math.ceil(layersRect.width))
+    : viewportWidth;
   let maxRight = Math.max(
-    scroll?.clientWidth ?? inner.clientWidth,
-    layersRect.right - innerRect.left + 12,
+    viewportWidth,
+    layersWidth + 12,
   );
   let maxBottom = Math.max(inner.clientHeight, layersRect.bottom - innerRect.top + 24);
   for (const node of nodes.values()) {
@@ -286,9 +295,9 @@ function drawGraphEdges() {
     maxRight = Math.max(maxRight, rect.right - innerRect.left + 28);
     maxBottom = Math.max(maxBottom, rect.bottom - innerRect.top + 32);
   }
-  const width = Math.max(maxRight, scroll?.clientWidth ?? inner.clientWidth);
+  const width = Math.max(maxRight, viewportWidth);
   const height = Math.max(inner.scrollHeight, inner.clientHeight, maxBottom);
-  inner.style.width = `${width}px`;
+  inner.style.width = width <= viewportWidth ? '100%' : `${width}px`;
   inner.style.minHeight = `${height}px`;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.setAttribute('width', String(width));
@@ -354,8 +363,7 @@ function computeDefaultGraphLayerWidths(layerCount) {
   if (layerCount <= 0) {
     return [];
   }
-  const scroll = document.querySelector('#graph-tab .execution-graph-scroll');
-  const availableWidth = Math.max(0, (scroll?.clientWidth ?? 0) - 32);
+  const availableWidth = getGraphViewportWidth();
   const totalDividerWidth = Math.max(0, layerCount - 1) * GRAPH_DIVIDER_WIDTH;
   const targetWidth = Math.max(availableWidth - totalDividerWidth, layerCount * GRAPH_LAYER_MIN_WIDTH);
   const baseWidth = Math.max(GRAPH_LAYER_MIN_WIDTH, Math.floor(targetWidth / layerCount));
@@ -392,9 +400,8 @@ function applyGraphLayerWidths(options = {}) {
   if (layers) {
     const totalDividerWidth = Math.max(0, layerNodes.length - 1) * GRAPH_DIVIDER_WIDTH;
     const totalLayerWidth = widths.reduce((sum, width) => sum + width, 0) + totalDividerWidth;
-    const scroll = document.querySelector('#graph-tab .execution-graph-scroll');
-    const availableWidth = Math.max(0, (scroll?.clientWidth ?? 0) - 32);
-    layers.style.width = totalLayerWidth <= availableWidth ? '100%' : `${totalLayerWidth}px`;
+    const availableWidth = getGraphViewportWidth();
+    layers.style.width = `${Math.max(totalLayerWidth, availableWidth)}px`;
   }
 }
 
