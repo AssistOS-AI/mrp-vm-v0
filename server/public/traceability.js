@@ -20,11 +20,9 @@ const state = {
   activeVariableTab: 'value',
   activeNodeId: null,
   activeNodeTab: 'declaration',
-   graphLayerWidths: new Map(),
-   graphManualLayerLayouts: new Set(),
-   graphNodeOffsets: new Map(),
-   activeGraphLayerDrag: null,
-  activeGraphDrag: null,
+  graphLayerWidths: new Map(),
+  graphManualLayerLayouts: new Set(),
+  activeGraphLayerDrag: null,
 };
 
 const GRAPH_LAYER_MIN_WIDTH = 220;
@@ -405,107 +403,38 @@ function applyGraphLayerWidths(options = {}) {
   }
 }
 
-function graphNodeOffsetKey(nodeId) {
-  return `${state.requestId || 'request'}::${nodeId}`;
-}
-
-function getGraphNodeOffset(nodeId) {
-  return state.graphNodeOffsets.get(graphNodeOffsetKey(nodeId)) ?? { x: 0, y: 0 };
-}
-
-function applyGraphNodeOffset(node) {
-  const offset = getGraphNodeOffset(node.dataset.nodeId);
-  node.style.transform = offset.x || offset.y ? `translate(${offset.x}px, ${offset.y}px)` : '';
-}
-
-function applyStoredGraphNodeOffsets() {
-  document.querySelectorAll('#graph-tab [data-node-id]').forEach((node) => {
-    applyGraphNodeOffset(node);
-  });
-}
-
-function startGraphNodeDrag(event) {
-  if (event.button !== 0) {
-    return;
-  }
-  const node = event.target.closest('[data-node-id]');
-  if (!node) {
-    return;
-  }
-  const offset = getGraphNodeOffset(node.dataset.nodeId);
-  state.activeGraphDrag = {
-    node,
-    nodeId: node.dataset.nodeId,
-    pointerId: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
-    baseX: offset.x,
-    baseY: offset.y,
-    moved: false,
-  };
-  node.classList.add('dragging');
-}
-
-function updateGraphNodeDrag(event) {
-  const drag = state.activeGraphDrag;
-  if (!drag || drag.pointerId !== event.pointerId) {
-    return;
-  }
-  const deltaX = event.clientX - drag.startX;
-  const deltaY = event.clientY - drag.startY;
-  if (!drag.moved && Math.abs(deltaX) < 3 && Math.abs(deltaY) < 3) {
-    return;
-  }
-  drag.moved = true;
-  state.graphNodeOffsets.set(graphNodeOffsetKey(drag.nodeId), {
-    x: drag.baseX + deltaX,
-    y: drag.baseY + deltaY,
-  });
-  applyGraphNodeOffset(drag.node);
-  requestAnimationFrame(drawGraphEdges);
-}
-
-function stopGraphNodeDrag(event) {
-  const drag = state.activeGraphDrag;
-  if (!drag || drag.pointerId !== event.pointerId) {
-    return;
-  }
-  drag.node.classList.remove('dragging');
-  if (drag.moved) {
-    drag.node.dataset.justDragged = '1';
-    window.setTimeout(() => {
-      delete drag.node.dataset.justDragged;
-    }, 0);
-  }
-  state.activeGraphDrag = null;
-  requestAnimationFrame(drawGraphEdges);
-}
-
 function startGraphLayerDrag(event) {
   if (event.button !== 0) {
     return false;
   }
-  const divider = event.target.closest('[data-layer-divider-index]');
-  if (!divider) {
+  const label = event.target.closest('[data-layer-drag-index]');
+  if (!label) {
     return false;
   }
-  const index = Number(divider.dataset.layerDividerIndex);
+  const index = Number(label.dataset.layerDragIndex);
   const layerNodes = [...document.querySelectorAll('#graph-tab .execution-graph-layer[data-layer-index]')];
-  const leftLayer = layerNodes[index];
-  const rightLayer = layerNodes[index + 1];
+  if (layerNodes.length < 2) {
+    return false;
+  }
+  const pair = index >= layerNodes.length - 1
+    ? { leftIndex: layerNodes.length - 2, rightIndex: layerNodes.length - 1, anchor: 'right' }
+    : { leftIndex: index, rightIndex: index + 1, anchor: 'left' };
+  const leftLayer = layerNodes[pair.leftIndex];
+  const rightLayer = layerNodes[pair.rightIndex];
   if (!leftLayer || !rightLayer) {
     return false;
   }
   state.activeGraphLayerDrag = {
-    divider,
+    label,
     pointerId: event.pointerId,
-    leftIndex: index,
-    rightIndex: index + 1,
+    leftIndex: pair.leftIndex,
+    rightIndex: pair.rightIndex,
+    anchor: pair.anchor,
     startX: event.clientX,
     leftWidth: leftLayer.getBoundingClientRect().width,
     rightWidth: rightLayer.getBoundingClientRect().width,
   };
-  divider.classList.add('dragging');
+  label.classList.add('dragging');
   document.body.classList.add('is-resizing');
   state.graphManualLayerLayouts.add(graphRequestLayoutKey());
   event.preventDefault();
@@ -518,7 +447,8 @@ function updateGraphLayerDrag(event) {
     return;
   }
   const totalWidth = drag.leftWidth + drag.rightWidth;
-  const deltaX = event.clientX - drag.startX;
+  const rawDeltaX = event.clientX - drag.startX;
+  const deltaX = drag.anchor === 'right' ? -rawDeltaX : rawDeltaX;
   const nextLeftWidth = Math.min(
     totalWidth - GRAPH_LAYER_MIN_WIDTH,
     Math.max(GRAPH_LAYER_MIN_WIDTH, drag.leftWidth + deltaX),
@@ -538,7 +468,7 @@ function stopGraphLayerDrag(event) {
   if (!drag || drag.pointerId !== event.pointerId) {
     return;
   }
-  drag.divider.classList.remove('dragging');
+  drag.label.classList.remove('dragging');
   document.body.classList.remove('is-resizing');
   state.activeGraphLayerDrag = null;
   requestAnimationFrame(drawGraphEdges);
@@ -744,7 +674,7 @@ function renderGraph() {
           <div class="execution-graph-layers">
             ${graph.strata.map((layer) => `
               <div class="execution-graph-layer" data-layer-index="${escapeHtml(String(layer.layer))}">
-                <div class="execution-graph-layer-label">Layer ${layer.layer + 1}</div>
+                <div class="execution-graph-layer-label" data-layer-drag-index="${escapeHtml(String(layer.layer))}" title="Drag to resize this layer column">Layer ${layer.layer + 1}</div>
                 <div class="execution-graph-column">
                   ${layer.node_ids.map((nodeId) => {
                     const node = nodesById.get(nodeId);
@@ -765,9 +695,6 @@ function renderGraph() {
                   }).join('')}
                 </div>
               </div>
-              ${layer.layer === graph.strata.length - 1 ? '' : `
-                <div class="execution-graph-layer-divider" data-layer-divider-index="${escapeHtml(String(layer.layer))}" aria-hidden="true"></div>
-              `}
             `).join('')}
           </div>
         </div>
@@ -776,7 +703,6 @@ function renderGraph() {
   `;
 
   applyGraphLayerWidths({ forceAuto: !state.graphManualLayerLayouts.has(graphRequestLayoutKey()) });
-  applyStoredGraphNodeOffsets();
   requestAnimationFrame(drawGraphEdges);
 }
 
@@ -840,9 +766,6 @@ function attachHandlers() {
     if (!button) {
       return;
     }
-    if (button.dataset.justDragged === '1') {
-      return;
-    }
     const node = (state.payload?.execution_graph?.nodes || []).find((entry) => entry.id === button.dataset.nodeId);
     if (!node) {
       return;
@@ -868,22 +791,16 @@ function attachHandlers() {
     renderNodeModal();
   });
   el('graph-tab').addEventListener('pointerdown', (event) => {
-    if (startGraphLayerDrag(event)) {
-      return;
-    }
-    startGraphNodeDrag(event);
+    startGraphLayerDrag(event);
   });
   window.addEventListener('pointermove', (event) => {
     updateGraphLayerDrag(event);
-    updateGraphNodeDrag(event);
   });
   window.addEventListener('pointerup', (event) => {
     stopGraphLayerDrag(event);
-    stopGraphNodeDrag(event);
   });
   window.addEventListener('pointercancel', (event) => {
     stopGraphLayerDrag(event);
-    stopGraphNodeDrag(event);
   });
   window.addEventListener('resize', () => {
     if (!state.graphManualLayerLayouts.has(graphRequestLayoutKey())) {

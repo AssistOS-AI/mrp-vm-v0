@@ -1953,7 +1953,7 @@ body {
 .execution-graph-layers {
   position: relative;
   display: flex;
-  gap: 0;
+  gap: 28px;
   align-items: stretch;
   min-width: 100%;
   width: 100%;
@@ -1995,6 +1995,15 @@ body {
   background: rgba(247, 248, 250, 0.92);
   position: relative;
   z-index: 1;
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+  border-radius: 999px;
+}
+
+.execution-graph-layer-label.dragging {
+  background: rgba(219, 234, 254, 0.96);
+  color: #1d4ed8;
 }
 
 .execution-graph-column {
@@ -2002,40 +2011,6 @@ body {
   gap: 0.4rem;
   justify-items: center;
   min-height: 100%;
-}
-
-.execution-graph-layer-divider {
-  position: relative;
-  flex: 0 0 28px;
-  min-width: 28px;
-  cursor: col-resize;
-  touch-action: none;
-  user-select: none;
-}
-
-.execution-graph-layer-divider::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0.95rem;
-  bottom: 0.65rem;
-  width: 1px;
-  transform: translateX(-50%);
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(226, 232, 240, 0.75) 0 2px,
-    transparent 2px 6px
-  );
-  transition: background 120ms ease, opacity 120ms ease;
-}
-
-.execution-graph-layer-divider:hover::before,
-.execution-graph-layer-divider.dragging::before {
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(186, 230, 253, 0.95) 0 2px,
-    transparent 2px 6px
-  );
 }
 
 .execution-graph-node {
@@ -2053,21 +2028,15 @@ body {
   border-left: 3px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
-  cursor: grab;
+  cursor: pointer;
   user-select: none;
-  touch-action: none;
+  touch-action: manipulation;
   position: relative;
 }
 
 .execution-graph-node:hover {
   border-left-color: var(--accent);
   background: var(--accent-softer);
-}
-
-.execution-graph-node.dragging {
-  cursor: grabbing;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
-  border-left-color: var(--accent);
 }
 
 .execution-graph-node.status-failed,

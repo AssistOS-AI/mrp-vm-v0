@@ -95,10 +95,11 @@ This tab renders the execution graph as a left-to-right workflow ordered by topo
 5. ellipsis when labels are too long,
 6. explicit dependency arrows between layers,
 7. draggable nodes whose connector lines follow the current node positions,
-8. resizable layer columns whose separators can be dragged horizontally without breaking connector routing,
+8. resizable layer columns whose `Layer N` heading acts as the horizontal drag handle so the whole column adjusts together without exposing separate resize bars,
 9. subtle vertical dotted guides per layer, visually aligned with the layer heading so the column structure remains readable even when arrows are thin,
-10. a default width strategy that stretches the graph to the available viewport before introducing horizontal scrolling,
-11. a fullscreen node inspector with tabbed sections for declaration, input, context, output, diagnostics, and KU references.
+10. execution-graph nodes that open inspection details on click but are not themselves draggable,
+11. a default width strategy that stretches the graph to the available viewport before introducing horizontal scrolling,
+12. a fullscreen node inspector with tabbed sections for declaration, input, context, output, diagnostics, and KU references.
 
 Inside the fullscreen node inspector, the header and tab strip remain fixed and only the selected tab body scrolls. The modal must not grow vertically when switching tabs with longer content.
 
