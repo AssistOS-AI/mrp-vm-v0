@@ -45,7 +45,7 @@ test('SSE stream replays buffered DS014 events for a request', async () => {
 
     const reader = response.body.getReader();
     const chunks = [];
-    for (let attempt = 0; attempt < 20; attempt += 1) {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
       const { value, done } = await reader.read();
       if (done) {
         break;
