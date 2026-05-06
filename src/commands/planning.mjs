@@ -274,6 +274,50 @@ function renderPlan(parsed) {
   }).join('\n\n').trim();
 }
 
+function usesNarrativeRoute(routeName) {
+  return ['writerLLM', 'deepLLM', 'fastLLM'].includes(routeName);
+}
+
+function usesPreparationRoute(routeName) {
+  return routeName === 'template-eval' || usesNarrativeRoute(routeName);
+}
+
+function isSimpleReferenceOnlyBody(body) {
+  return /^\s*\$[A-Za-z_][A-Za-z0-9_:]*\s*$/.test(String(body ?? ''))
+    || /^\s*\$\{[A-Za-z_][A-Za-z0-9_:]*\}\s*$/.test(String(body ?? ''));
+}
+
+function requestLikelyNeedsStructuredWorkflow(requestText) {
+  const lower = String(requestText ?? '').toLowerCase().trim();
+  if (!lower) {
+    return true;
+  }
+  const structuralCues = [
+    'step',
+    'steps',
+    'pas',
+    'pasi',
+    'section',
+    'sections',
+    'format',
+    'formatted',
+    'structure',
+    'structured',
+    'template',
+    'explain',
+    'why',
+    'conclusion',
+    'summary',
+    'plan',
+    'checklist',
+    'table',
+    'compare',
+    'json',
+    'markdown',
+  ];
+  return structuralCues.some((cue) => lower.includes(cue)) || lower.split(/\s+/).length >= 12;
+}
+
 function ensureResponseDeclaration(declarations, nativeCommands, enabledInterpreters) {
   if (declarations.some((declaration) => declaration.target === 'response')) {
     return declarations;
@@ -381,7 +425,7 @@ function summarizeDiagnostics(diagnostics = []) {
   return diagnostics.join(' ');
 }
 
-function buildPlanValidation(normalizedPlanText) {
+function buildPlanValidation(normalizedPlanText, nativeCommands = [], enabledInterpreters = [], requestText = '') {
   const diagnostics = [];
   let parsed = null;
   try {
@@ -412,6 +456,7 @@ function buildPlanValidation(normalizedPlanText) {
   }
 
   const responseDeclarations = parsed.declarations.filter((declaration) => declaration.target === 'response');
+  const responseDeclaration = responseDeclarations[0] ?? null;
   if (responseDeclarations.length !== 1) {
     diagnostics.push(`The plan must contain exactly one @response declaration. Found ${responseDeclarations.length}.`);
   }
@@ -420,6 +465,20 @@ function buildPlanValidation(normalizedPlanText) {
   }
   if (parsed.declarations.length > 1 && responseDeclarations.length === 1 && responseDeclarations[0].references.length === 0) {
     diagnostics.push('The final @response declaration must depend on at least one earlier family when the plan has intermediate declarations.');
+  }
+  if (responseDeclaration && nativeCommands.includes('template-eval') && responseDeclaration.commands[0] !== 'template-eval') {
+    diagnostics.push('When template-eval is available, the final @response declaration must use template-eval rather than a solver or prose route directly.');
+  }
+  if (requestLikelyNeedsStructuredWorkflow(requestText) && nativeCommands.includes('template-eval') && parsed.declarations.length < 3) {
+    diagnostics.push('Non-trivial plans should contain at least three declarations so solving or extraction, response preparation, and final template assembly remain explicit.');
+  }
+  if (responseDeclaration && responseDeclaration.commands[0] === 'template-eval' && requestLikelyNeedsStructuredWorkflow(requestText)) {
+    const responseIndex = parsed.declarations.findIndex((declaration) => declaration.target === 'response');
+    const upstreamDeclarations = parsed.declarations.slice(0, responseIndex);
+    const hasPreparationStep = upstreamDeclarations.some((declaration) => usesPreparationRoute(declaration.commands[0]));
+    if (!hasPreparationStep && isSimpleReferenceOnlyBody(responseDeclaration.body)) {
+      diagnostics.push('Add an explicit response-preparation step before the final @response template. Do not feed a raw solver or deterministic result directly into the final response assembly.');
+    }
   }
 
   let graph = null;
@@ -478,11 +537,11 @@ function buildPlanValidation(normalizedPlanText) {
   };
 }
 
-function validatePlannedProgram(text, nativeCommands, enabledInterpreters) {
+function validatePlannedProgram(text, nativeCommands, enabledInterpreters, requestText = '') {
   const normalizedPlanText = normalizePlannedProgram(text, nativeCommands, enabledInterpreters);
   return {
     text: normalizedPlanText,
-    ...buildPlanValidation(normalizedPlanText),
+    ...buildPlanValidation(normalizedPlanText, nativeCommands, enabledInterpreters, requestText),
   };
 }
 
@@ -623,7 +682,7 @@ export async function executePlanning(context) {
     }
 
     const proposedPlanText = extractPlannerProposalText(adapterEffects);
-    const validation = validatePlannedProgram(proposedPlanText, nativeCommands, enabledInterpreters);
+    const validation = validatePlannedProgram(proposedPlanText, nativeCommands, enabledInterpreters, context.request.requestText);
     if (validation.valid) {
       effects.declarationInsertions.push({
         text: validation.text,
