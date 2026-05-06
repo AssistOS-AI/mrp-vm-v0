@@ -1939,7 +1939,7 @@ body {
 
 .execution-graph-inner {
   position: relative;
-  min-width: max-content;
+  min-width: 100%;
   padding: 0.3rem 0.3rem 0.8rem;
 }
 
@@ -1953,15 +1953,18 @@ body {
 .execution-graph-layers {
   position: relative;
   display: flex;
-  gap: 2.4rem;
-  align-items: flex-start;
+  gap: 0;
+  align-items: stretch;
+  min-width: 100%;
+  width: max-content;
 }
 
 .execution-graph-layer {
   position: relative;
   display: grid;
   gap: 0.55rem;
-  min-width: 214px;
+  min-width: 220px;
+  align-content: start;
 }
 
 .execution-graph-layer-label {
@@ -1975,10 +1978,38 @@ body {
 .execution-graph-column {
   display: grid;
   gap: 0.4rem;
+  justify-items: center;
+  min-height: 100%;
+}
+
+.execution-graph-layer-divider {
+  position: relative;
+  flex: 0 0 28px;
+  min-width: 28px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.execution-graph-layer-divider::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0.8rem;
+  bottom: 0.8rem;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(110, 122, 150, 0.18);
+  transition: background 120ms ease, opacity 120ms ease;
+}
+
+.execution-graph-layer-divider:hover::before,
+.execution-graph-layer-divider.dragging::before {
+  background: rgba(37, 99, 235, 0.26);
 }
 
 .execution-graph-node {
-  width: 214px;
+  width: min(100%, 240px);
   min-height: 68px;
   display: grid;
   gap: 0.15rem;
@@ -2076,8 +2107,8 @@ body {
 .graph-edge-path {
   fill: none;
   stroke: #6e7a96;
-  stroke-width: 1.6;
-  opacity: 0.85;
+  stroke-width: 1.15;
+  opacity: 0.5;
   marker-end: url(#graph-arrow);
 }
 

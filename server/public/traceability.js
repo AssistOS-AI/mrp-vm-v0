@@ -20,9 +20,15 @@ const state = {
   activeVariableTab: 'value',
   activeNodeId: null,
   activeNodeTab: 'declaration',
-  graphNodeOffsets: new Map(),
+   graphLayerWidths: new Map(),
+   graphManualLayerLayouts: new Set(),
+   graphNodeOffsets: new Map(),
+   activeGraphLayerDrag: null,
   activeGraphDrag: null,
 };
+
+const GRAPH_LAYER_MIN_WIDTH = 220;
+const GRAPH_DIVIDER_WIDTH = 28;
 
 function humanizeStatus(status) {
   return String(status || 'unknown').replace(/_/g, ' ');
@@ -308,6 +314,76 @@ function drawGraphEdges() {
   `;
 }
 
+function graphRequestLayoutKey() {
+  return state.requestId || 'request';
+}
+
+function graphLayerWidthKey(layerIndex) {
+  return `${graphRequestLayoutKey()}::layer:${layerIndex}`;
+}
+
+function getGraphLayerWidth(layerIndex) {
+  return state.graphLayerWidths.get(graphLayerWidthKey(layerIndex)) ?? null;
+}
+
+function setGraphLayerWidths(widths = []) {
+  widths.forEach((width, index) => {
+    state.graphLayerWidths.set(graphLayerWidthKey(index), Math.max(GRAPH_LAYER_MIN_WIDTH, Math.round(width)));
+  });
+}
+
+function hasStoredGraphLayerWidths(layerCount) {
+  if (layerCount <= 0) {
+    return false;
+  }
+  for (let index = 0; index < layerCount; index += 1) {
+    if (getGraphLayerWidth(index) == null) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function computeDefaultGraphLayerWidths(layerCount) {
+  if (layerCount <= 0) {
+    return [];
+  }
+  const scroll = document.querySelector('#graph-tab .execution-graph-scroll');
+  const availableWidth = scroll?.clientWidth ?? 0;
+  const totalDividerWidth = Math.max(0, layerCount - 1) * GRAPH_DIVIDER_WIDTH;
+  const targetWidth = Math.max(availableWidth - totalDividerWidth, layerCount * GRAPH_LAYER_MIN_WIDTH);
+  const baseWidth = Math.max(GRAPH_LAYER_MIN_WIDTH, Math.floor(targetWidth / layerCount));
+  const widths = Array.from({ length: layerCount }, () => baseWidth);
+  let remainder = targetWidth - (baseWidth * layerCount);
+  let index = 0;
+  while (remainder > 0 && widths.length > 0) {
+    widths[index] += 1;
+    remainder -= 1;
+    index = (index + 1) % widths.length;
+  }
+  return widths;
+}
+
+function applyGraphLayerWidths(options = {}) {
+  const layerNodes = [...document.querySelectorAll('#graph-tab .execution-graph-layer[data-layer-index]')];
+  if (layerNodes.length === 0) {
+    return;
+  }
+  const requestKey = graphRequestLayoutKey();
+  const shouldAutoSize = options.forceAuto
+    || !state.graphManualLayerLayouts.has(requestKey)
+    || !hasStoredGraphLayerWidths(layerNodes.length);
+  const widths = shouldAutoSize
+    ? computeDefaultGraphLayerWidths(layerNodes.length)
+    : layerNodes.map((_, index) => getGraphLayerWidth(index) ?? GRAPH_LAYER_MIN_WIDTH);
+  setGraphLayerWidths(widths);
+  layerNodes.forEach((node, index) => {
+    const width = widths[index] ?? GRAPH_LAYER_MIN_WIDTH;
+    node.style.width = `${width}px`;
+    node.style.flexBasis = `${width}px`;
+  });
+}
+
 function graphNodeOffsetKey(nodeId) {
   return `${state.requestId || 'request'}::${nodeId}`;
 }
@@ -381,6 +457,69 @@ function stopGraphNodeDrag(event) {
     }, 0);
   }
   state.activeGraphDrag = null;
+  requestAnimationFrame(drawGraphEdges);
+}
+
+function startGraphLayerDrag(event) {
+  if (event.button !== 0) {
+    return false;
+  }
+  const divider = event.target.closest('[data-layer-divider-index]');
+  if (!divider) {
+    return false;
+  }
+  const index = Number(divider.dataset.layerDividerIndex);
+  const layerNodes = [...document.querySelectorAll('#graph-tab .execution-graph-layer[data-layer-index]')];
+  const leftLayer = layerNodes[index];
+  const rightLayer = layerNodes[index + 1];
+  if (!leftLayer || !rightLayer) {
+    return false;
+  }
+  state.activeGraphLayerDrag = {
+    divider,
+    pointerId: event.pointerId,
+    leftIndex: index,
+    rightIndex: index + 1,
+    startX: event.clientX,
+    leftWidth: leftLayer.getBoundingClientRect().width,
+    rightWidth: rightLayer.getBoundingClientRect().width,
+  };
+  divider.classList.add('dragging');
+  document.body.classList.add('is-resizing');
+  state.graphManualLayerLayouts.add(graphRequestLayoutKey());
+  event.preventDefault();
+  return true;
+}
+
+function updateGraphLayerDrag(event) {
+  const drag = state.activeGraphLayerDrag;
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+  const totalWidth = drag.leftWidth + drag.rightWidth;
+  const deltaX = event.clientX - drag.startX;
+  const nextLeftWidth = Math.min(
+    totalWidth - GRAPH_LAYER_MIN_WIDTH,
+    Math.max(GRAPH_LAYER_MIN_WIDTH, drag.leftWidth + deltaX),
+  );
+  const nextRightWidth = totalWidth - nextLeftWidth;
+  const layerNodes = [...document.querySelectorAll('#graph-tab .execution-graph-layer[data-layer-index]')];
+  const widths = layerNodes.map((_, index) => getGraphLayerWidth(index) ?? GRAPH_LAYER_MIN_WIDTH);
+  widths[drag.leftIndex] = nextLeftWidth;
+  widths[drag.rightIndex] = nextRightWidth;
+  setGraphLayerWidths(widths);
+  applyGraphLayerWidths();
+  requestAnimationFrame(drawGraphEdges);
+}
+
+function stopGraphLayerDrag(event) {
+  const drag = state.activeGraphLayerDrag;
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+  drag.divider.classList.remove('dragging');
+  document.body.classList.remove('is-resizing');
+  state.activeGraphLayerDrag = null;
   requestAnimationFrame(drawGraphEdges);
 }
 
@@ -583,7 +722,7 @@ function renderGraph() {
           <svg id="execution-graph-svg" class="execution-graph-svg" aria-hidden="true"></svg>
           <div class="execution-graph-layers">
             ${graph.strata.map((layer) => `
-              <div class="execution-graph-layer">
+              <div class="execution-graph-layer" data-layer-index="${escapeHtml(String(layer.layer))}">
                 <div class="execution-graph-layer-label">Layer ${layer.layer + 1}</div>
                 <div class="execution-graph-column">
                   ${layer.node_ids.map((nodeId) => {
@@ -605,6 +744,9 @@ function renderGraph() {
                   }).join('')}
                 </div>
               </div>
+              ${layer.layer === graph.strata.length - 1 ? '' : `
+                <div class="execution-graph-layer-divider" data-layer-divider-index="${escapeHtml(String(layer.layer))}" aria-hidden="true"></div>
+              `}
             `).join('')}
           </div>
         </div>
@@ -612,6 +754,7 @@ function renderGraph() {
     </div>
   `;
 
+  applyGraphLayerWidths({ forceAuto: !state.graphManualLayerLayouts.has(graphRequestLayoutKey()) });
   applyStoredGraphNodeOffsets();
   requestAnimationFrame(drawGraphEdges);
 }
@@ -624,6 +767,7 @@ function renderTabs() {
       button.classList.add('active');
       el(button.dataset.tab).classList.add('active');
       if (button.dataset.tab === 'graph-tab') {
+        applyGraphLayerWidths({ forceAuto: !state.graphManualLayerLayouts.has(graphRequestLayoutKey()) });
         requestAnimationFrame(drawGraphEdges);
       }
     });
@@ -702,11 +846,28 @@ function attachHandlers() {
     state.activeNodeTab = tabButton.dataset.nodeTab;
     renderNodeModal();
   });
-  el('graph-tab').addEventListener('pointerdown', startGraphNodeDrag);
-  window.addEventListener('pointermove', updateGraphNodeDrag);
-  window.addEventListener('pointerup', stopGraphNodeDrag);
-  window.addEventListener('pointercancel', stopGraphNodeDrag);
+  el('graph-tab').addEventListener('pointerdown', (event) => {
+    if (startGraphLayerDrag(event)) {
+      return;
+    }
+    startGraphNodeDrag(event);
+  });
+  window.addEventListener('pointermove', (event) => {
+    updateGraphLayerDrag(event);
+    updateGraphNodeDrag(event);
+  });
+  window.addEventListener('pointerup', (event) => {
+    stopGraphLayerDrag(event);
+    stopGraphNodeDrag(event);
+  });
+  window.addEventListener('pointercancel', (event) => {
+    stopGraphLayerDrag(event);
+    stopGraphNodeDrag(event);
+  });
   window.addEventListener('resize', () => {
+    if (!state.graphManualLayerLayouts.has(graphRequestLayoutKey())) {
+      applyGraphLayerWidths({ forceAuto: true });
+    }
     requestAnimationFrame(drawGraphEdges);
   });
   document.addEventListener('keydown', (event) => {
