@@ -1,0 +1,28 @@
+@aspect_governance_constraints text
+Use this aspect when the task has policy, safety, trust, or governance implications that should constrain context selection.
+@aspect_governance_constraints:meta json
+{
+  "rev": 1,
+  "status": "approved",
+  "aspect_type": "axiological",
+  "title": "Governance constraints",
+  "summary": "Select KUs that define policy, safety, trust, or value-oriented constraints relevant to the request.",
+  "priority": 7,
+  "domains": ["runtime", "policy", "knowledge"],
+  "commands": ["planning", "kb", "credibility"],
+  "interpreters": ["AdvancedReasoner", "deepLLM"],
+  "tags": ["policy", "safety", "trust"],
+  "query_terms": ["policy", "safety", "trust", "constraint", "risk", "governance"]
+}
+@aspect_governance_constraints:definition text
+This aspect positions KUs by the values, policies, and governance constraints they express.
+@aspect_governance_constraints:inclusion text
+Include KUs that constrain what the runtime should do because of policy, safety, or trust requirements.
+@aspect_governance_constraints:exclusion text
+Exclude neutral descriptive KUs that do not change the acceptable action boundary.
+@aspect_governance_constraints:protocol text
+Prefer policy assets and other KUs whose guidance should remain visible whenever the request has safety, trust, or governance implications.
+@aspect_governance_constraints:role_vocabulary json
+["policy constraint", "safety note", "governance warning"]
+@aspect_governance_constraints:query_terms json
+["policy", "safety", "trust", "constraint", "risk", "governance"]

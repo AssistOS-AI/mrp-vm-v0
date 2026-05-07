@@ -1,0 +1,28 @@
+@aspect_execution_guidance text
+Use this aspect when the task needs operational guidance about how a command, interpreter, or prompt asset should be used in execution.
+@aspect_execution_guidance:meta json
+{
+  "rev": 1,
+  "status": "approved",
+  "aspect_type": "operational",
+  "title": "Execution guidance",
+  "summary": "Select KUs that prescribe how to use commands, interpreters, caller profiles, or prompt assets during execution.",
+  "priority": 10,
+  "domains": ["runtime", "planning", "knowledge"],
+  "commands": ["planning", "kb", "analytic-memory", "logic-eval", "js-eval", "template-eval", "credibility"],
+  "interpreters": ["HumanLikeReasoner", "AdvancedReasoner", "DocumentScalePlanner", "fastLLM", "deepLLM", "writerLLM", "plannerLLM", "codeGeneratorLLM"],
+  "tags": ["guidance", "execution", "routing"],
+  "query_terms": ["how", "use", "guidance", "execute", "planning", "routing", "prompt"]
+}
+@aspect_execution_guidance:definition text
+This aspect positions KUs by their direct usefulness as execution-time guidance.
+@aspect_execution_guidance:inclusion text
+Include KUs that tell the runtime when a component should be selected, what input shape it expects, or what output discipline it requires.
+@aspect_execution_guidance:exclusion text
+Exclude KUs that provide only abstract background without actionable execution guidance.
+@aspect_execution_guidance:protocol text
+Prefer caller profiles, prompt assets, and command/interpreter guidance KUs whose metadata or body directly constrains the next execution step.
+@aspect_execution_guidance:role_vocabulary json
+["primary guidance", "prompt asset", "routing cue"]
+@aspect_execution_guidance:query_terms json
+["guidance", "execution", "use", "routing", "prompt", "input", "output"]

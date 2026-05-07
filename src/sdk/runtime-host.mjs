@@ -132,6 +132,32 @@ export class RuntimeHost {
     return this.createProbeExecutor().deleteLlmCacheEntry(entryId);
   }
 
+  async inspectExplainableMemory(sessionId = null) {
+    const executor = sessionId
+      ? (await this.getSession(sessionId)).executor
+      : this.createProbeExecutor();
+    return executor.inspectExplainableMemory(sessionId);
+  }
+
+  async listExplainableMemoryAspects() {
+    return this.createProbeExecutor().listExplainableMemoryAspects();
+  }
+
+  async upsertExplainableMemoryAspect(input) {
+    return this.createProbeExecutor().upsertExplainableMemoryAspect(input);
+  }
+
+  async approveExplainableMemoryAspect(aspectId) {
+    return this.createProbeExecutor().approveExplainableMemoryAspect(aspectId);
+  }
+
+  async reindexExplainableMemory(sessionId = null) {
+    const executor = sessionId
+      ? (await this.getSession(sessionId)).executor
+      : this.createProbeExecutor();
+    return executor.reindexExplainableMemory(sessionId);
+  }
+
   async promoteRequestLlmCache(handleOrId, requestId) {
     const handle = typeof handleOrId === 'string' ? await this.getSession(handleOrId) : handleOrId;
     return handle.executor.promoteRequestLlmCache(requestId, handle.session_id);

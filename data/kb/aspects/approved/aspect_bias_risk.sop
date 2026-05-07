@@ -1,0 +1,28 @@
+@aspect_bias_risk text
+Use this aspect when the task should surface bias-sensitive or selection-risk context that a narrow technical retrieval might miss.
+@aspect_bias_risk:meta json
+{
+  "rev": 1,
+  "status": "approved",
+  "aspect_type": "bias_oriented",
+  "title": "Bias and selection risk",
+  "summary": "Select KUs that warn about interpretive bias, selection bias, or omission risk for the current task.",
+  "priority": 5,
+  "domains": ["runtime", "policy", "knowledge"],
+  "commands": ["planning", "kb", "credibility"],
+  "interpreters": ["AdvancedReasoner", "deepLLM"],
+  "tags": ["bias", "risk", "omission"],
+  "query_terms": ["bias", "selection", "omission", "caution", "risk"]
+}
+@aspect_bias_risk:definition text
+This aspect positions KUs by the interpretive or selection risks they help surface.
+@aspect_bias_risk:inclusion text
+Include KUs that warn about omitted context, selection bias, automation bias, or institutional bias.
+@aspect_bias_risk:exclusion text
+Exclude KUs that merely use the word bias without explaining a concrete interpretive risk.
+@aspect_bias_risk:protocol text
+Prefer KUs that should cause the runtime or operator to treat other evidence cautiously rather than taking it at face value.
+@aspect_bias_risk:role_vocabulary json
+["bias warning", "selection-risk note", "cautionary context"]
+@aspect_bias_risk:query_terms json
+["bias", "selection", "omission", "caution", "risk"]

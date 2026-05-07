@@ -360,6 +360,7 @@ export class ExplainableMemory {
       status,
       approved_aspects: snapshot.approvedAspects,
       candidate_aspects: snapshot.candidateAspects,
+      ku_records: snapshot.kuRecords,
     };
   }
 

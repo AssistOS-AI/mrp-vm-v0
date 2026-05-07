@@ -1,0 +1,28 @@
+@aspect_runtime_structure text
+Use this aspect when the task is primarily about runtime components, architectural entities, execution surfaces, or subsystem boundaries.
+@aspect_runtime_structure:meta json
+{
+  "rev": 1,
+  "status": "approved",
+  "aspect_type": "ontological",
+  "title": "Runtime structure",
+  "summary": "Select KUs that define runtime entities, components, execution surfaces, and architectural boundaries.",
+  "priority": 8,
+  "domains": ["runtime", "architecture", "knowledge"],
+  "commands": ["planning", "kb"],
+  "interpreters": [],
+  "tags": ["runtime", "architecture", "components"],
+  "query_terms": ["runtime", "architecture", "component", "command", "interpreter", "structure", "boundary"]
+}
+@aspect_runtime_structure:definition text
+This aspect positions KUs by the runtime entities, subsystems, and execution surfaces they define.
+@aspect_runtime_structure:inclusion text
+Include KUs that define commands, interpreters, state stores, routing surfaces, or architectural boundaries.
+@aspect_runtime_structure:exclusion text
+Exclude KUs that only mention a component name incidentally without defining its role or contract.
+@aspect_runtime_structure:protocol text
+Prefer KUs whose title, summary, or body explicitly defines a runtime component or boundary that the current request depends on.
+@aspect_runtime_structure:role_vocabulary json
+["primary definition", "supporting boundary note", "component overview"]
+@aspect_runtime_structure:query_terms json
+["runtime", "architecture", "component", "command", "interpreter", "boundary"]

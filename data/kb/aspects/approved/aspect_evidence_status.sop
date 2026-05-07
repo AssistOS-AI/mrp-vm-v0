@@ -1,0 +1,28 @@
+@aspect_evidence_status text
+Use this aspect when the task needs evidence, assumptions, uncertainty markers, or methodological caution around a claim.
+@aspect_evidence_status:meta json
+{
+  "rev": 1,
+  "status": "approved",
+  "aspect_type": "epistemological",
+  "title": "Evidence and assumptions",
+  "summary": "Select KUs that act as evidence, assumption notes, method notes, or uncertainty markers for the current task.",
+  "priority": 6,
+  "domains": ["runtime", "knowledge", "evaluation"],
+  "commands": ["planning", "kb", "credibility"],
+  "interpreters": ["HumanLikeReasoner", "AdvancedReasoner", "deepLLM"],
+  "tags": ["evidence", "assumption", "uncertainty"],
+  "query_terms": ["evidence", "assumption", "uncertainty", "method", "benchmark", "decision"]
+}
+@aspect_evidence_status:definition text
+This aspect positions KUs by their evidential or assumption-bearing status rather than by runtime component identity alone.
+@aspect_evidence_status:inclusion text
+Include KUs that justify a method, expose assumptions, preserve uncertainty, or provide decision rationale.
+@aspect_evidence_status:exclusion text
+Exclude KUs that only name a method or decision without explaining why it matters.
+@aspect_evidence_status:protocol text
+Prefer KUs that explicitly preserve what is known, what is assumed, and what remains uncertain for the current request.
+@aspect_evidence_status:role_vocabulary json
+["evidence note", "assumption note", "method note"]
+@aspect_evidence_status:query_terms json
+["evidence", "assumption", "uncertainty", "method", "benchmark", "decision"]
