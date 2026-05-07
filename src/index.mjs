@@ -18,3 +18,6 @@ export { FakeLlmAdapter } from './interpreters/fake-llm-adapter.mjs';
 export { ExternalInterpreterRegistry } from './interpreters/external-interpreter-registry.mjs';
 export { executeAdvancedReasoner } from './interpreters/advanced-reasoner/index.mjs';
 export { executeDocumentScalePlanner } from './interpreters/document-scale-planner/index.mjs';
+export { DiskExplainableMemorySourceStrategy } from './explainable-memory/disk-source-strategy.mjs';
+export { DiskExplainableMemoryPersistenceStrategy } from './explainable-memory/disk-persistence-strategy.mjs';
+export { ExplainableMemory } from './explainable-memory/explainable-memory.mjs';

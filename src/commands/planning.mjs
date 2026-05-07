@@ -562,7 +562,7 @@ export async function executePlanning(context) {
     throw new Error(`Unknown planning mode: ${context.mode}`);
   }
 
-  const kbResult = context.runtime.kbStore.retrieve(context.request.kbSnapshot, {
+  const kbResult = await context.runtime.retrieveKnowledge(context.request.kbSnapshot, {
     callerName: 'planning',
     retrievalMode: 'planning_bootstrap',
     desiredKuTypes: ['prompt_asset', 'content', 'policy_asset', 'caller_profile'],

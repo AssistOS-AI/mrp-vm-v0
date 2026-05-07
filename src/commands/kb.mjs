@@ -5,7 +5,7 @@ export async function executeKbCommand(context) {
     body,
   } = context;
 
-  const retrieval = runtime.kbStore.retrieve(request.kbSnapshot, {
+  const retrieval = await runtime.retrieveKnowledge(request.kbSnapshot, {
     callerName: 'kb',
     retrievalMode: 'explicit_kb_query',
     requestText: body,
@@ -21,9 +21,17 @@ export async function executeKbCommand(context) {
         kuId: entry.kuId,
         summary: entry.meta.summary,
         content: entry.content,
+        usage: entry.usage ?? null,
+        usage_reference: entry.usage_reference ?? `~${entry.kuId}`,
+        aspect_ids: entry.aspect_ids ?? [],
+        index_state: entry.index_state ?? null,
       })),
       meta: {
         origin: 'kb',
+        retrieval_mode: retrieval.mode ?? runtime.getKbRetrievalMode?.() ?? 'naive_symbolic',
+        snapshot_version: retrieval.explanation?.snapshotVersion ?? null,
+        active_aspects: retrieval.explanation?.activeAspects ?? [],
+        pruned: retrieval.pruned ?? [],
       },
     }],
     metadataUpdates: [],

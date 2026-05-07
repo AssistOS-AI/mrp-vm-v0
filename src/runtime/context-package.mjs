@@ -29,15 +29,23 @@ function renderKnowledgeUnit(entry) {
   const summary = entry.meta.summary
     ? `Selection summary: ${entry.meta.summary}`
     : 'Selection summary: [missing]';
+  const usage = entry.usage
+    ? `Usage indication: ${entry.usage}`
+    : null;
   const scopeLine = `Scope: ${entry.scope} | Type: ${entry.meta.ku_type ?? 'content'}`;
   const appliesLine = appliedTo.length > 0
     ? `Applies to: ${appliedTo.join(', ')}`
     : null;
+  const aspectLine = Array.isArray(entry.aspect_ids) && entry.aspect_ids.length > 0
+    ? `Aspect signals: ${entry.aspect_ids.join(', ')}`
+    : null;
   return [
     `## ${entry.meta.title || entry.kuId}`,
     summary,
+    usage,
     scopeLine,
     appliesLine,
+    aspectLine,
     '',
     entry.content,
   ].filter(Boolean).join('\n');
@@ -104,14 +112,18 @@ export function buildContextPackage(input) {
 
   const selectedKnowledgeUnits = kbResult.selected.map((entry) => ({
     ku_id: entry.kuId,
+    usage_reference: entry.usage_reference ?? `~${entry.kuId}`,
     scope: entry.scope,
     rev: entry.meta.rev,
     title: entry.meta.title ?? entry.kuId,
     summary: entry.meta.summary ?? '',
     ku_type: entry.meta.ku_type ?? 'content',
+    usage: entry.usage ?? null,
+    aspect_ids: entry.aspect_ids ?? [],
     commands: entry.meta.commands ?? [],
     interpreters: entry.meta.interpreters ?? [],
     tags: entry.meta.tags ?? [],
+    index_state: entry.index_state ?? null,
   }));
 
   const markdown = [
@@ -151,6 +163,11 @@ export function buildContextPackage(input) {
       direct_dependencies: directDependencies,
       resolved_family_state: resolvedFamilyState,
       knowledge_units: selectedKnowledgeUnits,
+      kb_retrieval: {
+        mode: kbResult.mode ?? 'naive_symbolic',
+        snapshot_version: kbResult.explanation?.snapshotVersion ?? null,
+        active_aspects: kbResult.explanation?.activeAspects ?? [],
+      },
       analytic_summaries: analytics.map((entry) => ({
         key: entry.key,
         value_summary: toSummaryText(entry.value),
