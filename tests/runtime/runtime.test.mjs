@@ -66,8 +66,10 @@ test('runtime persists an execution_error outcome when an interpreter throws', a
 
   assert.equal(outcome.stop_reason, 'execution_error');
   assert.equal(outcome.error.message, 'boom');
+  assert.match(String(outcome.error.stack), /boom/);
   const persisted = await runtime.inspectRequestPublic(outcome.request_id);
   assert.equal(persisted.outcome.stop_reason, 'execution_error');
+  assert.match(String(persisted.outcome.error.stack), /boom/);
 });
 
 test('runtime promotes successful LLM calls into cache and reuses them on identical requests', async () => {
@@ -169,6 +171,41 @@ test('runtime uses Explainable Memory by default for KB retrieval metadata', asy
   const chosen = result.selected.find((entry) => entry.kuId === 'ku_session_note') ?? result.selected[0];
   assert.match(chosen.usage, /Use this KU as/);
   assert.ok(chosen.usage_reference.startsWith('~'));
+});
+
+test('runtime reloads persisted Explainable Memory snapshots from disk without JSON parsing failures', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const sessionId = 'session-explainable-reload';
+  const sessionFile = path.join(rootDir, 'data', 'sessions', sessionId, 'kb', 'notes.sop');
+  await mkdir(path.dirname(sessionFile), { recursive: true });
+  await writeFile(sessionFile, [
+    '@ku_session_note text',
+    'Alpha project note with explainable retrieval guidance.',
+    '@ku_session_note:meta json',
+    '{"rev":1,"ku_type":"content","scope":"session","status":"active","title":"Alpha note","summary":"Session note","priority":1,"trust":"trusted","domains":["runtime"],"commands":["kb"],"interpreters":[],"tags":["alpha"],"input_patterns":[]}',
+  ].join('\n'));
+
+  const writer = new MRPVM(rootDir, { deterministic: {} });
+  const initialSnapshot = await writer.prepareKbSnapshot(sessionId);
+  assert.equal(initialSnapshot.retrievalMode, 'explainable_memory');
+
+  const reader = new MRPVM(rootDir, { deterministic: {} });
+  const reloadedSnapshot = await reader.prepareKbSnapshot(sessionId);
+  assert.equal(reloadedSnapshot.retrievalMode, 'explainable_memory');
+
+  const result = await reader.retrieveKnowledge(reloadedSnapshot, {
+    callerName: 'kb',
+    targetCommand: 'kb',
+    retrievalMode: 'explicit_kb_query',
+    requestText: 'Alpha retrieval guidance',
+    queryTokens: ['Alpha retrieval guidance'],
+    domainHints: ['runtime'],
+    desiredKuTypes: ['content'],
+    byteBudget: 4096,
+  });
+
+  assert.equal(result.mode, 'explainable_memory');
+  assert.ok(result.selected.some((entry) => entry.kuId === 'ku_session_note'));
 });
 
 test('runtime can switch KB retrieval back to naive symbolic mode', async () => {

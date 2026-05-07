@@ -1,7 +1,7 @@
 import vm from 'node:vm';
 import { rewriteJsReferences } from '../lang/references.mjs';
 import { createEmptyEffects } from '../runtime/effects.mjs';
-import { createFailureRecord } from '../utils/errors.mjs';
+import { createFailureRecord, normalizeFailureDetails } from '../utils/errors.mjs';
 
 function createSopRef(runtime, collector, token, tools) {
   const raw = token.slice(1);
@@ -200,6 +200,7 @@ export async function executeJsEval(context) {
         origin: 'js-eval',
         familyId: context.targetFamily,
         repairable: true,
+        details: normalizeFailureDetails(error),
       });
     }
     return effects;

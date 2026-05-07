@@ -2,6 +2,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { createRuntime, compileGraph, KbStore, MRPVM, listAchillesModels } from '../src/index.mjs';
 import { deriveFamilyExecutionStatus } from '../src/runtime/state-store.mjs';
+import { normalizeErrorLike } from '../src/utils/errors.mjs';
 import { parseUrl, json, html, text, notFound, forbidden, unauthorized, parseJsonText, readJsonBody, readRequestBody, parseMultipart, startSse, writeSseEvent } from './http-helpers.mjs';
 import { loadPublicAsset, loadTemplate } from './asset-loader.mjs';
 import { AuthStore } from './auth-store.mjs';
@@ -363,25 +364,42 @@ function isTerminalStopReason(stopReason) {
   return ['completed', 'execution_error', 'unknown_outcome', 'active_request'].includes(stopReason);
 }
 
-function firstFailureDiagnostic(diagnostics = []) {
-  const failureEvent = diagnostics[0]?.failure ?? diagnostics[0] ?? null;
-  if (!failureEvent) {
+function normalizeDiagnostic(error, options = {}) {
+  if (!error) {
     return null;
   }
+  const normalized = normalizeErrorLike(error, {
+    defaultCode: options.defaultCode ?? 'EXECUTION_ERROR',
+    defaultKind: options.defaultKind ?? 'execution_error',
+    defaultMessage: options.defaultMessage ?? 'Execution failed.',
+  });
   return {
-    kind: failureEvent.kind ?? failureEvent.failure_kind ?? 'execution_error',
-    message: failureEvent.message ?? failureEvent.error_message ?? 'Execution failed.',
-    origin: failureEvent.origin ?? failureEvent.originating_component ?? null,
+    code: normalized.code,
+    kind: normalized.kind,
+    message: normalized.message,
+    name: normalized.name,
+    origin: normalized.origin,
+    repairable: normalized.repairable,
+    retry_count: normalized.retryCount,
+    stack: normalized.stack ?? normalized.details?.stack ?? null,
+    details: normalized.details,
   };
+}
+
+function firstFailureDiagnostic(diagnostics = []) {
+  const failureEvent = diagnostics[0]?.failure ?? diagnostics[0] ?? null;
+  return normalizeDiagnostic(failureEvent);
 }
 
 function toVariableView(familyState = [], definitionMap = new Map(), nodeStatusByFamily = new Map()) {
   return familyState.map((family) => {
     const representative = chooseRepresentative(family.variants);
+    const fallbackVariant = representative ?? family.variants?.at(-1) ?? null;
     const declaration = definitionMap.get(family.familyId) ?? null;
     const nodeStatus = nodeStatusByFamily.get(family.familyId) ?? null;
     const baseStatus = deriveFamilyExecutionStatus(family);
     const timing = representative?.meta?.execution_timing
+      ?? fallbackVariant?.meta?.execution_timing
       ?? family.familyMeta?.last_execution_timing
       ?? null;
     const diagnostic = firstFailureDiagnostic(nodeStatus?.diagnostics);
@@ -413,8 +431,8 @@ function toVariableView(familyState = [], definitionMap = new Map(), nodeStatusB
           : `@${declaration.target} ${declaration.commands.join(' ')}`,
       } : null,
       family_meta: family.familyMeta ?? {},
-      current_value: representative?.value ?? representative?.rendered ?? null,
-      current_meta: representative?.meta ?? {},
+      current_value: representative?.value ?? representative?.rendered ?? fallbackVariant?.value ?? fallbackVariant?.rendered ?? null,
+      current_meta: representative?.meta ?? fallbackVariant?.meta ?? {},
       timing,
       variants: (family.variants ?? []).map((variant) => ({
         id: variant.id,
@@ -447,25 +465,31 @@ function groupEventsByDeclaration(traceEvents = []) {
 }
 
 export function buildExecutionGraph(planText, traceEvents = [], requestDetails = null) {
-  if (!planText?.trim()) {
-    return {
+  const graph = planText?.trim()
+    ? compileGraph(planText)
+    : {
       nodes: [],
       edges: [],
       strata: [],
-      summary: {
-        counts: {},
-        request_stop_reason: requestDetails?.outcome?.stop_reason ?? requestDetails?.status ?? 'unknown',
-        error: requestDetails?.outcome?.error ?? null,
-      },
     };
-  }
-  const graph = compileGraph(planText);
   const eventsByDeclaration = groupEventsByDeclaration(traceEvents);
   const requestStarted = traceEvents.find((event) => event.event === 'request_started') ?? null;
   const requestStopped = [...traceEvents].reverse().find((event) => event.event === 'request_stopped') ?? null;
+  const planningTriggeredEvents = traceEvents.filter((event) => event.event === 'planning_triggered');
+  const planningStoppedEvents = traceEvents.filter((event) => event.event === 'planning_stopped');
+  const initialPlanningTriggered = planningTriggeredEvents.find((event) => event.mode !== 'error_triggered_repair')
+    ?? planningTriggeredEvents[0]
+    ?? null;
+  const initialPlanningStopped = planningStoppedEvents.find((event) => event.mode === (initialPlanningTriggered?.mode ?? null))
+    ?? planningStoppedEvents.find((event) => event.mode !== 'error_triggered_repair')
+    ?? planningStoppedEvents[0]
+    ?? null;
   const stopReason = requestDetails?.outcome?.stop_reason ?? requestStopped?.stop_reason ?? requestDetails?.status ?? 'unknown';
-  const requestError = requestDetails?.outcome?.error
-    ?? (requestStopped?.error_message ? { code: 'EXECUTION_ERROR', message: requestStopped.error_message } : null);
+  const requestError = normalizeDiagnostic(
+    requestDetails?.outcome?.error
+      ?? requestStopped?.error
+      ?? (requestStopped?.error_message ? { code: 'EXECUTION_ERROR', message: requestStopped.error_message } : null),
+  );
   const terminalFailure = isTerminalStopReason(stopReason) && stopReason !== 'completed';
   const nodes = graph.nodes.map((node) => {
     const nodeEvents = eventsByDeclaration.get(node.id) ?? [];
@@ -499,9 +523,10 @@ export function buildExecutionGraph(planText, traceEvents = [], requestDetails =
       status_reason: failure?.message ?? null,
       dependencies: node.dependencies,
       external_dependencies: node.externalDependencies,
-      topological_level: node.topologicalLevel,
+      topological_level: node.topologicalLevel + 1,
       duration_ms: timing.duration_ms,
       epoch_ids: [...new Set(nodeEvents.map((event) => event.epoch_id).filter(Boolean))],
+      workflow_role: null,
       details: {
         declaration_definition: {
           target: node.declaration.target,
@@ -522,7 +547,7 @@ export function buildExecutionGraph(planText, traceEvents = [], requestDetails =
         diagnostics: failureEvents,
         retries: Math.max(0, invokedEvents.length - 1),
         timing,
-        execution_layer: node.topologicalLevel,
+        execution_layer: node.topologicalLevel + 1,
         invoked_as: invokedEvent?.command_id ?? invokedEvent?.interpreter_id ?? null,
         execution_environment: {
           session_id: requestDetails?.session_id ?? null,
@@ -536,6 +561,9 @@ export function buildExecutionGraph(planText, traceEvents = [], requestDetails =
         },
         failure,
         skipped_by: [],
+        synthetic_kind: null,
+        start_node: false,
+        end_node: false,
       },
     };
   });
@@ -612,24 +640,347 @@ export function buildExecutionGraph(planText, traceEvents = [], requestDetails =
     }
   }
 
-  const counts = nodes.reduce((acc, node) => {
+  const rootNodeIds = graph.strata[0]?.map((entry) => entry.id) ?? [];
+  const outgoingCounts = new Map(graph.nodes.map((node) => [node.id, 0]));
+  for (const edge of graph.edges) {
+    outgoingCounts.set(edge.from, (outgoingCounts.get(edge.from) ?? 0) + 1);
+  }
+  const sinkNodeIds = graph.nodes.filter((node) => (outgoingCounts.get(node.id) ?? 0) === 0).map((node) => node.id);
+  const startNodeId = '__synthetic_workflow_start__';
+  const finalNodeId = '__synthetic_workflow_final__';
+  const planningFailure = normalizeDiagnostic(initialPlanningStopped?.error, {
+    defaultCode: 'PLANNING_ERROR',
+    defaultKind: 'execution_error',
+    defaultMessage: 'Planning failed.',
+  });
+  const planningOutcome = initialPlanningStopped?.outcome ?? null;
+  const planningTiming = deriveTiming(
+    initialPlanningTriggered?.created_at ?? requestStarted?.created_at ?? null,
+    initialPlanningStopped?.created_at ?? requestStarted?.created_at ?? requestStopped?.created_at ?? null,
+  );
+  let startStatus = 'pending';
+  if (planningOutcome === 'accepted') {
+    startStatus = 'completed';
+  } else if (graph.nodes.length > 0 && !planningFailure) {
+    startStatus = 'completed';
+  } else if (['failed', 'rejected'].includes(planningOutcome) || planningFailure || (requestError && graph.nodes.length === 0)) {
+    startStatus = 'failed';
+  } else if (initialPlanningTriggered) {
+    startStatus = 'running';
+  }
+  const startNode = {
+    id: startNodeId,
+    label: 'Workflow start',
+    target_family: 'start',
+    declaration_kind: 'synthetic',
+    commands: ['planning'],
+    body: requestDetails?.request_text ?? requestDetails?.envelope?.user_text ?? '',
+    status: startStatus,
+    status_reason: planningFailure?.message
+      ?? (planningOutcome === 'rejected' ? 'Planning did not accept an initial graph.' : null),
+    dependencies: [],
+    external_dependencies: [],
+    topological_level: 0,
+    duration_ms: planningTiming.duration_ms,
+    epoch_ids: [],
+    workflow_role: 'start',
+    details: {
+      declaration_definition: {
+        target: 'start',
+        commands: ['planning'],
+        body: requestDetails?.request_text ?? requestDetails?.envelope?.user_text ?? '',
+        declaration_kind: 'synthetic',
+        references: [],
+      },
+      context_sections: {
+        task: {
+          target_family: 'response',
+          body: requestDetails?.request_text ?? requestDetails?.envelope?.user_text ?? '',
+        },
+        user_request: requestDetails?.request_text ?? requestDetails?.envelope?.user_text ?? '',
+        request_metadata: requestStarted?.request_metadata ?? requestDetails?.envelope ?? {},
+      },
+      resolved_dependencies: [],
+      context_package: {
+        byte_count: null,
+        selected_items: [],
+        pruned_items: [],
+        selected_knowledge_units: initialPlanningStopped?.planning_kb?.selected_knowledge_units ?? [],
+      },
+      outputs: initialPlanningStopped ? [initialPlanningStopped] : [],
+      diagnostics: planningFailure
+        ? [initialPlanningStopped ?? { event: 'planning_stopped', error: planningFailure }]
+        : [],
+      retries: Math.max(0, (initialPlanningStopped?.planning_attempt_count ?? initialPlanningStopped?.planning_attempts?.length ?? 0) - 1),
+      timing: planningTiming,
+      execution_layer: 0,
+      invoked_as: 'planning',
+      execution_environment: {
+        session_id: requestDetails?.session_id ?? null,
+        request_id: requestDetails?.request_id ?? null,
+        stop_reason: stopReason,
+        request_error: requestError,
+        budgets: requestDetails?.outcome?.remaining_budgets ?? requestStarted?.budgets ?? requestDetails?.envelope?.budgets ?? null,
+        file_count: requestStarted?.request_metadata?.file_count ?? requestDetails?.envelope?.file_descriptors?.length ?? 0,
+        trigger: requestStarted?.trigger ?? null,
+        initial_mode: initialPlanningTriggered?.mode ?? requestStarted?.initial_mode ?? null,
+      },
+      failure: planningFailure,
+      skipped_by: [],
+      synthetic_kind: 'initial_planning',
+      start_node: true,
+      end_node: false,
+      user_request: requestDetails?.request_text ?? requestDetails?.envelope?.user_text ?? '',
+      planning: {
+        mode: initialPlanningTriggered?.mode ?? initialPlanningStopped?.mode ?? null,
+        trigger_reason: initialPlanningTriggered?.trigger_reason ?? null,
+        outcome: planningOutcome,
+        accepted_actions: initialPlanningStopped?.accepted_actions ?? [],
+        rejected_actions: initialPlanningStopped?.rejected_actions ?? [],
+        required_prompt_group: initialPlanningStopped?.required_prompt_group ?? null,
+        knowledge_retrieval: initialPlanningStopped?.planning_kb ?? null,
+        graph_snapshot: initialPlanningStopped?.graph_snapshot ?? null,
+        graph_snapshot_error: initialPlanningStopped?.graph_snapshot_error ?? null,
+        attempts: initialPlanningStopped?.planning_attempts ?? [],
+        planned_declarations: initialPlanningStopped?.planned_declarations ?? planText ?? '',
+      },
+    },
+  };
+
+  const finalTiming = deriveTiming(
+    requestStarted?.created_at ?? initialPlanningTriggered?.created_at ?? null,
+    requestStopped?.created_at ?? null,
+  );
+  const finalLayer = (graph.strata?.length ?? 0) + 1;
+  const finalStatus = stopReason === 'completed'
+    ? 'completed'
+    : requestStopped
+      ? 'failed'
+      : requestStarted
+        ? 'running'
+        : 'pending';
+  const finalNode = {
+    id: finalNodeId,
+    label: 'Workflow final',
+    target_family: 'final',
+    declaration_kind: 'synthetic',
+    commands: ['result'],
+    body: requestDetails?.outcome?.response ?? '',
+    status: finalStatus,
+    status_reason: requestError?.message ?? (requestStopped && stopReason !== 'completed' ? `Request stopped with ${stopReason}.` : null),
+    dependencies: sinkNodeIds,
+    external_dependencies: [],
+    topological_level: finalLayer,
+    duration_ms: finalTiming.duration_ms,
+    epoch_ids: [],
+    workflow_role: 'final',
+    details: {
+      declaration_definition: {
+        target: 'final',
+        commands: ['result'],
+        body: requestDetails?.outcome?.response ?? '',
+        declaration_kind: 'synthetic',
+        references: [],
+      },
+      context_sections: {
+        task: {
+          target_family: 'response',
+          body: requestDetails?.outcome?.response ?? '',
+        },
+        user_request: requestDetails?.request_text ?? requestDetails?.envelope?.user_text ?? '',
+      },
+      resolved_dependencies: [],
+      context_package: {
+        byte_count: null,
+        selected_items: [],
+        pruned_items: [],
+        selected_knowledge_units: [],
+      },
+      outputs: requestDetails?.outcome ? [{
+        event: 'request_outcome',
+        outcome: requestDetails.outcome,
+      }] : [],
+      diagnostics: requestError
+        ? [requestStopped ?? { event: 'request_stopped', error: requestError }]
+        : [],
+      retries: 0,
+      timing: finalTiming,
+      execution_layer: finalLayer,
+      invoked_as: 'result',
+      execution_environment: {
+        session_id: requestDetails?.session_id ?? null,
+        request_id: requestDetails?.request_id ?? null,
+        stop_reason: stopReason,
+        request_error: requestError,
+        budgets: requestDetails?.outcome?.remaining_budgets ?? requestStarted?.budgets ?? requestDetails?.envelope?.budgets ?? null,
+        file_count: requestStarted?.request_metadata?.file_count ?? requestDetails?.envelope?.file_descriptors?.length ?? 0,
+        trigger: requestStarted?.trigger ?? null,
+      },
+      failure: requestError,
+      skipped_by: [],
+      synthetic_kind: 'request_final',
+      start_node: false,
+      end_node: true,
+      response: requestDetails?.outcome?.response ?? null,
+      outcome: requestDetails?.outcome ?? null,
+    },
+  };
+
+  const augmentedEdges = [
+    ...graph.edges,
+    ...(rootNodeIds.length > 0
+      ? rootNodeIds.map((nodeId) => ({ from: startNodeId, to: nodeId }))
+      : [{ from: startNodeId, to: finalNodeId }]),
+    ...sinkNodeIds.map((nodeId) => ({ from: nodeId, to: finalNodeId })),
+  ];
+
+  const strata = [
+    {
+      layer: 0,
+      node_ids: [startNodeId],
+    },
+    ...graph.strata.map((stratum, index) => ({
+      layer: index + 1,
+      node_ids: stratum.map((node) => node.id),
+    })),
+    {
+      layer: finalLayer,
+      node_ids: [finalNodeId],
+    },
+  ];
+  const allNodes = [startNode, ...nodes, finalNode];
+
+  const counts = allNodes.reduce((acc, node) => {
     acc[node.status] = (acc[node.status] ?? 0) + 1;
     return acc;
   }, {});
 
   return {
-    edges: graph.edges,
-    strata: graph.strata.map((stratum, index) => ({
-      layer: index,
-      node_ids: stratum.map((node) => node.id),
-    })),
-    nodes,
+    edges: augmentedEdges,
+    strata,
+    nodes: allNodes,
     summary: {
       counts,
       request_stop_reason: stopReason,
       error: requestError,
     },
   };
+}
+
+function collectTraceErrors(traceEvents = [], requestDetails = null) {
+  const errors = [];
+  const pushError = (entry) => {
+    if (!entry?.message) {
+      return;
+    }
+    errors.push(entry);
+  };
+
+  for (const event of traceEvents) {
+    if (event.event === 'failure_recorded' && event.failure) {
+      const diagnostic = normalizeDiagnostic(event.failure);
+      pushError({
+        id: `event:${event.event_id}`,
+        created_at: event.created_at ?? null,
+        source_event: event.event,
+        stage: 'execution',
+        phase: event.originating_component ?? diagnostic?.origin ?? 'execution',
+        message: diagnostic?.message ?? 'Execution failed.',
+        code: diagnostic?.code ?? 'EXECUTION_ERROR',
+        kind: diagnostic?.kind ?? 'execution_error',
+        origin: diagnostic?.origin ?? null,
+        repairable: diagnostic?.repairable ?? null,
+        retry_count: diagnostic?.retry_count ?? 0,
+        stack: diagnostic?.stack ?? null,
+        details: diagnostic?.details ?? null,
+        request_id: event.request_id ?? null,
+        declaration_id: event.declaration_id ?? null,
+        target_family: event.target_family ?? event.affected_scope ?? null,
+        execution_timing: event.execution_timing ?? null,
+      });
+    }
+
+    if (event.event === 'planning_stopped' && event.error) {
+      const diagnostic = normalizeDiagnostic(event.error, {
+        defaultCode: 'PLANNING_ERROR',
+        defaultKind: 'execution_error',
+        defaultMessage: 'Planning failed.',
+      });
+      pushError({
+        id: `event:${event.event_id}`,
+        created_at: event.created_at ?? null,
+        source_event: event.event,
+        stage: 'planning',
+        phase: event.mode ?? 'planning',
+        message: diagnostic?.message ?? 'Planning failed.',
+        code: diagnostic?.code ?? 'PLANNING_ERROR',
+        kind: diagnostic?.kind ?? 'execution_error',
+        origin: diagnostic?.origin ?? 'planning',
+        repairable: diagnostic?.repairable ?? null,
+        retry_count: diagnostic?.retry_count ?? 0,
+        stack: diagnostic?.stack ?? null,
+        details: {
+          ...(diagnostic?.details ?? {}),
+          planning_attempts: event.planning_attempts ?? [],
+          required_prompt_group: event.required_prompt_group ?? null,
+        },
+        request_id: event.request_id ?? null,
+        declaration_id: null,
+        target_family: 'start',
+        execution_timing: null,
+      });
+    }
+
+    if (event.event === 'request_stopped' && (event.error || event.error_message)) {
+      const diagnostic = normalizeDiagnostic(
+        event.error ?? { code: 'EXECUTION_ERROR', message: event.error_message },
+      );
+      pushError({
+        id: `event:${event.event_id}`,
+        created_at: event.created_at ?? null,
+        source_event: event.event,
+        stage: 'request',
+        phase: event.stop_reason ?? 'request_stop',
+        message: diagnostic?.message ?? 'Request failed.',
+        code: diagnostic?.code ?? 'EXECUTION_ERROR',
+        kind: diagnostic?.kind ?? 'execution_error',
+        origin: diagnostic?.origin ?? null,
+        repairable: diagnostic?.repairable ?? null,
+        retry_count: diagnostic?.retry_count ?? 0,
+        stack: diagnostic?.stack ?? null,
+        details: diagnostic?.details ?? null,
+        request_id: event.request_id ?? null,
+        declaration_id: null,
+        target_family: 'final',
+        execution_timing: null,
+      });
+    }
+  }
+
+  if (requestDetails?.outcome?.error && !errors.some((entry) => entry.source_event === 'request_stopped')) {
+    const diagnostic = normalizeDiagnostic(requestDetails.outcome.error);
+    pushError({
+      id: `outcome:${requestDetails.request_id ?? 'request'}`,
+      created_at: requestDetails?.outcome?.created_at ?? requestDetails?.envelope?.created_at ?? null,
+      source_event: 'persisted_outcome',
+      stage: 'request',
+      phase: requestDetails?.outcome?.stop_reason ?? requestDetails?.status ?? 'unknown',
+      message: diagnostic?.message ?? 'Request failed.',
+      code: diagnostic?.code ?? 'EXECUTION_ERROR',
+      kind: diagnostic?.kind ?? 'execution_error',
+      origin: diagnostic?.origin ?? null,
+      repairable: diagnostic?.repairable ?? null,
+      retry_count: diagnostic?.retry_count ?? 0,
+      stack: diagnostic?.stack ?? null,
+      details: diagnostic?.details ?? null,
+      request_id: requestDetails?.request_id ?? null,
+      declaration_id: null,
+      target_family: 'final',
+      execution_timing: null,
+    });
+  }
+
+  return errors;
 }
 
 async function loadKbCatalog(kbStore, sessionId = null) {
@@ -1084,6 +1435,7 @@ async function buildTraceabilityPayload(runtime, session, requestId) {
   }]));
   const requestStarted = traceEvents.find((event) => event.event === 'request_started') ?? null;
   const variables = toVariableView(requestDetails?.family_state ?? [], definitionMap, nodeStatusByFamily);
+  const errors = collectTraceErrors(traceEvents, requestDetails);
   return {
     session_id: session.session_id,
     request_id: requestId,
@@ -1112,6 +1464,7 @@ async function buildTraceabilityPayload(runtime, session, requestId) {
     sop_lang: requestDetails?.plan_snapshot ?? '',
     variables,
     execution_graph: executionGraph,
+    errors,
     trace_events: traceEvents,
   };
 }

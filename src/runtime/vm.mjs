@@ -3,7 +3,7 @@ import { compileGraph } from './graph.mjs';
 import { buildContextPackage } from './context-package.mjs';
 import { createEmptyEffects, hasStructuralEffects } from './effects.mjs';
 import { createDeterministicTools, createLiveTools } from '../utils/deterministic.mjs';
-import { createFailureRecord, isUsableVariant } from '../utils/errors.mjs';
+import { createFailureRecord, isUsableVariant, normalizeErrorLike, normalizeFailureDetails } from '../utils/errors.mjs';
 import { StateStore } from './state-store.mjs';
 import { SessionManager } from '../session/session-manager.mjs';
 import { RequestManager } from '../session/request-manager.mjs';
@@ -56,9 +56,18 @@ function deriveUnknownOutcomeError(traceEvents = [], budgets = {}) {
   const firstFailure = traceEvents.find((event) => event.event === 'failure_recorded');
   const failure = firstFailure?.failure ?? firstFailure ?? null;
   if (failure?.message || failure?.error_message) {
+    const normalized = normalizeErrorLike(failure, {
+      defaultCode: 'UNKNOWN_OUTCOME',
+      defaultKind: 'unknown_outcome',
+      defaultMessage: 'Execution stopped without producing a terminal response.',
+    });
     return {
-      code: String(failure.kind ?? failure.failure_kind ?? 'UNKNOWN_OUTCOME').toUpperCase(),
-      message: failure.message ?? failure.error_message,
+      code: normalized.code,
+      kind: normalized.kind,
+      message: normalized.message,
+      origin: normalized.origin,
+      stack: normalized.stack ?? normalized.details?.stack ?? null,
+      details: normalized.details,
     };
   }
   if (Number(budgets.steps_remaining ?? 1) <= 0) {
@@ -100,6 +109,69 @@ function summarizeRequestLlmCacheSnapshot(snapshot) {
     promoted_entry_count: Array.isArray(snapshot?.promotion?.entry_ids) ? snapshot.promotion.entry_ids.length : 0,
     promoted_at: snapshot?.promotion?.promoted_at ?? null,
     stop_reason: snapshot?.stop_reason ?? null,
+  };
+}
+
+function toOutcomeError(error, options = {}) {
+  const normalized = normalizeErrorLike(error, options);
+  return {
+    code: normalized.code,
+    kind: normalized.kind,
+    message: normalized.message,
+    name: normalized.name,
+    origin: normalized.origin,
+    repairable: normalized.repairable,
+    retry_count: normalized.retryCount,
+    stack: normalized.stack ?? normalized.details?.stack ?? null,
+    details: normalized.details,
+  };
+}
+
+function createExecutionFailureFromThrownError(error, context = {}) {
+  const normalized = normalizeErrorLike(error, {
+    defaultCode: 'EXECUTION_ERROR',
+    defaultKind: 'execution_error',
+    defaultMessage: 'Execution failed.',
+  });
+  return createFailureRecord({
+    kind: normalized.kind,
+    message: normalized.message,
+    origin: context.origin ?? normalized.origin ?? 'runtime',
+    familyId: context.familyId ?? null,
+    repairable: context.repairable ?? true,
+    details: normalizeFailureDetails(error, {
+      execution_stage: context.executionStage ?? null,
+      route: context.route ?? null,
+      target_family: context.familyId ?? null,
+    }),
+  });
+}
+
+function createThrownFailureError(failure) {
+  const normalized = normalizeErrorLike(failure, {
+    defaultCode: 'PLANNING_ERROR',
+    defaultKind: 'execution_error',
+    defaultMessage: 'Execution failed.',
+  });
+  const error = new Error(normalized.message);
+  error.code = normalized.code;
+  error.kind = normalized.kind;
+  error.origin = normalized.origin;
+  error.repairable = normalized.repairable;
+  error.details = normalized.details;
+  return error;
+}
+
+function planningTracePayload(planningEffects = null, planText = '') {
+  const trace = planningEffects?.planningTrace ?? null;
+  return {
+    planned_declarations: trace?.accepted_plan_text ?? planText ?? '',
+    planning_attempt_count: Array.isArray(trace?.attempts) ? trace.attempts.length : 0,
+    planning_attempts: trace?.attempts ?? [],
+    required_prompt_group: trace?.required_prompt_group ?? null,
+    planning_kb: trace?.kb_summary ?? null,
+    graph_snapshot: trace?.graph_snapshot ?? null,
+    graph_snapshot_error: trace?.graph_snapshot_error ?? null,
   };
 }
 
@@ -830,49 +902,66 @@ export class MRPVM {
       ],
     });
 
-    if (this.commandRegistry.has(name)) {
-      if (!this.commandRegistry.isEnabled(name)) {
-        return {
-          emittedVariants: [],
-          metadataUpdates: [],
-          withdrawals: [],
-          declarationInsertions: [],
-          failure: createFailureRecord({
-            kind: 'blocked_state',
-            message: `Command ${name} is disabled.`,
-            origin: name,
-            familyId: context.targetFamily,
-            repairable: true,
-          }),
-        };
+    try {
+      if (this.commandRegistry.has(name)) {
+        if (!this.commandRegistry.isEnabled(name)) {
+          return {
+            emittedVariants: [],
+            metadataUpdates: [],
+            withdrawals: [],
+            declarationInsertions: [],
+            failure: createFailureRecord({
+              kind: 'blocked_state',
+              message: `Command ${name} is disabled.`,
+              origin: name,
+              familyId: context.targetFamily,
+              repairable: true,
+            }),
+          };
+        }
+        return await this.commandRegistry.get(name)(context);
       }
-      return this.commandRegistry.get(name)(context);
-    }
 
-    if (this.externalInterpreters.has(name)) {
-      return this.externalInterpreters.invoke(name, {
-        ...context,
-        body: context.body,
-        targetFamily: context.targetFamily,
-        contextPackage: context.contextPackage,
-        promptAssets: context.kbResult.selected.filter((entry) => entry.meta.ku_type === 'prompt_asset'),
-        modelClass: context.kbResult.callerProfile?.meta.model_classes?.[0] ?? 'medium',
-      });
-    }
+      if (this.externalInterpreters.has(name)) {
+        return await this.externalInterpreters.invoke(name, {
+          ...context,
+          body: context.body,
+          targetFamily: context.targetFamily,
+          contextPackage: context.contextPackage,
+          promptAssets: context.kbResult.selected.filter((entry) => entry.meta.ku_type === 'prompt_asset'),
+          modelClass: context.kbResult.callerProfile?.meta.model_classes?.[0] ?? 'medium',
+        });
+      }
 
-    return {
-      emittedVariants: [],
-      metadataUpdates: [],
-      withdrawals: [],
-      declarationInsertions: [],
-      failure: createFailureRecord({
-        kind: 'resolution_error',
-        message: `Unknown command or interpreter: ${name}`,
-        origin: name,
-        familyId: context.targetFamily,
-        repairable: false,
-      }),
-    };
+      return {
+        emittedVariants: [],
+        metadataUpdates: [],
+        withdrawals: [],
+        declarationInsertions: [],
+        failure: createFailureRecord({
+          kind: 'resolution_error',
+          message: `Unknown command or interpreter: ${name}`,
+          origin: name,
+          familyId: context.targetFamily,
+          repairable: false,
+        }),
+      };
+    } catch (error) {
+      return {
+        emittedVariants: [],
+        metadataUpdates: [],
+        withdrawals: [],
+        declarationInsertions: [],
+        failure: createExecutionFailureFromThrownError(error, {
+          executionStage: this.commandRegistry.has(name) ? 'command' : 'interpreter',
+          route: name,
+          familyId: context.targetFamily,
+          origin: name,
+          repairable: true,
+        }),
+        unhandledError: error,
+      };
+    }
   }
 
   async openEpoch(sessionId, requestId, request, epochNumber) {
@@ -926,6 +1015,7 @@ export class MRPVM {
       return false;
     }
 
+    const mode = 'error_triggered_repair';
     request.budgets.planning_remaining -= 1;
     const planningNode = {
       id: 'repair-planning',
@@ -936,14 +1026,75 @@ export class MRPVM {
       },
       dependencies: [],
     };
+    await this.emitTrace(sessionId, 'planning_triggered', {
+      session_id: sessionId,
+      request_id: requestId,
+      mode,
+      trigger_reason: mode,
+      blocked_region_summary: [],
+    });
     const planningContext = await this.buildInvocationContext(planningNode, request, sessionId, requestId, this.currentEpoch, request.requestText);
-    planningContext.mode = 'error_triggered_repair';
-    const effects = await executePlanning(planningContext);
+    planningContext.mode = mode;
+    let effects = null;
+    try {
+      effects = await executePlanning(planningContext);
+    } catch (error) {
+      await this.emitTrace(sessionId, 'planning_stopped', {
+        session_id: sessionId,
+        request_id: requestId,
+        mode,
+        outcome: 'failed',
+        accepted_actions: [],
+        rejected_actions: ['repair_plan'],
+        error: toOutcomeError(error, {
+          defaultCode: 'PLANNING_ERROR',
+          defaultKind: 'execution_error',
+          defaultMessage: 'Repair planning failed.',
+        }),
+        ...planningTracePayload(null),
+      });
+      throw error;
+    }
+    if (effects.failure) {
+      await this.emitTrace(sessionId, 'planning_stopped', {
+        session_id: sessionId,
+        request_id: requestId,
+        mode,
+        outcome: 'failed',
+        accepted_actions: [],
+        rejected_actions: ['repair_plan'],
+        error: toOutcomeError(effects.failure, {
+          defaultCode: 'PLANNING_ERROR',
+          defaultKind: effects.failure.kind ?? 'execution_error',
+          defaultMessage: 'Repair planning failed.',
+        }),
+        ...planningTracePayload(effects),
+      });
+      return false;
+    }
     if (effects.declarationInsertions.length === 0) {
+      await this.emitTrace(sessionId, 'planning_stopped', {
+        session_id: sessionId,
+        request_id: requestId,
+        mode,
+        outcome: 'rejected',
+        accepted_actions: [],
+        rejected_actions: ['repair_plan'],
+        ...planningTracePayload(effects),
+      });
       return false;
     }
     request.planText = `${request.planText.trim()}\n\n${effects.declarationInsertions.map((entry) => entry.text.trim()).join('\n\n')}\n`;
     request.planningNotes.push('Repair planning inserted new declarations.');
+    await this.emitTrace(sessionId, 'planning_stopped', {
+      session_id: sessionId,
+      request_id: requestId,
+      mode,
+      outcome: 'accepted',
+      accepted_actions: ['repair_plan'],
+      rejected_actions: [],
+      ...planningTracePayload(effects, request.planText),
+    });
     return true;
   }
 
@@ -1015,11 +1166,12 @@ export class MRPVM {
         auth_key_id: this.authKeyId,
       });
 
+      const initialPlanningMode = existingSession ? 'continuing_session_request' : 'new_session_request';
       await this.emitTrace(sessionId, 'planning_triggered', {
         session_id: sessionId,
         request_id: requestId,
-        mode: existingSession ? 'continuing_session_request' : 'new_session_request',
-        trigger_reason: existingSession ? 'continuing_session_request' : 'new_session_request',
+        mode: initialPlanningMode,
+        trigger_reason: initialPlanningMode,
         blocked_region_summary: [],
       });
       await this.emitTrace(sessionId, 'request_started', {
@@ -1034,9 +1186,9 @@ export class MRPVM {
           owner_identity: this.ownerIdentity,
           auth_key_id: this.authKeyId,
         },
-        trigger: existingSession ? 'continuing_session_request' : 'new_session_request',
+        trigger: initialPlanningMode,
         budgets: request.budgets,
-        initial_mode: existingSession ? 'continuing_session_request' : 'new_session_request',
+        initial_mode: initialPlanningMode,
       });
 
       request.budgets.planning_remaining -= 1;
@@ -1050,22 +1202,59 @@ export class MRPVM {
         dependencies: [],
       };
       const planningContext = await this.buildInvocationContext(planningNode, request, sessionId, requestId, 0, request.requestText);
-      planningContext.mode = existingSession ? 'continuing_session_request' : 'new_session_request';
-      const planningEffects = await executePlanning(planningContext);
+      planningContext.mode = initialPlanningMode;
+      let planningEffects = null;
+      try {
+        planningEffects = await executePlanning(planningContext);
+      } catch (error) {
+        await this.emitTrace(sessionId, 'planning_stopped', {
+          session_id: sessionId,
+          request_id: requestId,
+          mode: initialPlanningMode,
+          outcome: 'failed',
+          accepted_actions: [],
+          rejected_actions: ['initial_plan'],
+          error: toOutcomeError(error, {
+            defaultCode: 'PLANNING_ERROR',
+            defaultKind: 'execution_error',
+            defaultMessage: 'Initial planning failed.',
+          }),
+          ...planningTracePayload(null),
+        });
+        throw error;
+      }
       if (planningEffects.failure) {
-        throw new Error(planningEffects.failure.message);
+        await this.emitTrace(sessionId, 'planning_stopped', {
+          session_id: sessionId,
+          request_id: requestId,
+          mode: initialPlanningMode,
+          outcome: 'failed',
+          accepted_actions: [],
+          rejected_actions: ['initial_plan'],
+          error: toOutcomeError(planningEffects.failure, {
+            defaultCode: 'PLANNING_ERROR',
+            defaultKind: planningEffects.failure.kind ?? 'execution_error',
+            defaultMessage: 'Initial planning failed.',
+          }),
+          ...planningTracePayload(planningEffects),
+        });
+        throw createThrownFailureError(planningEffects.failure);
       }
       request.planText = planningEffects.declarationInsertions.map((entry) => entry.text).join('\n\n');
+      const acceptedActions = ['initial_plan'];
       if (!request.planText.includes('@response')) {
         request.planText = `@response writerLLM\n${request.requestText}\n`;
+        acceptedActions.push('response_fallback');
       }
       this.requestRecords.get(requestId).plan_snapshot = request.planText;
       await this.emitTrace(sessionId, 'planning_stopped', {
         session_id: sessionId,
         request_id: requestId,
+        mode: initialPlanningMode,
         outcome: 'accepted',
-        accepted_actions: ['initial_plan'],
+        accepted_actions: acceptedActions,
         rejected_actions: [],
+        ...planningTracePayload(planningEffects, request.planText),
       });
 
       while (request.budgets.steps_remaining > 0 && request.budgets.structural_changes_remaining > 0) {
@@ -1196,6 +1385,10 @@ export class MRPVM {
             });
           }
 
+          if (effects.unhandledError) {
+            throw effects.unhandledError;
+          }
+
           structuralChange = structuralChange || hasStructuralEffects(effects);
         }
 
@@ -1263,6 +1456,7 @@ export class MRPVM {
         stop_reason: outcome.stop_reason,
         remaining_blocked_regions: [],
         error_message: outcome.error?.message ?? null,
+        error: outcome.error,
       });
       this.requestRecords.set(requestId, {
         ...this.requestRecords.get(requestId),
@@ -1284,6 +1478,11 @@ export class MRPVM {
         ownerIdentity: input.ownerIdentity ?? this.ownerIdentity,
         authKeyId: input.authKeyId ?? this.authKeyId,
       });
+      const normalizedCatchError = toOutcomeError(error, {
+        defaultCode: error?.code === 'ACTIVE_REQUEST' ? 'ACTIVE_REQUEST' : 'EXECUTION_ERROR',
+        defaultKind: error?.code === 'ACTIVE_REQUEST' ? 'execution_error' : 'execution_error',
+        defaultMessage: 'Execution failed.',
+      });
       const outcome = {
         session_id: sessionId,
         request_id: requestId,
@@ -1291,20 +1490,17 @@ export class MRPVM {
         response_variant_id: null,
         stop_reason: error.code === 'ACTIVE_REQUEST' ? 'active_request' : 'execution_error',
         remaining_budgets: request?.budgets ?? cloneBudgets(input.budgets),
-        error: {
-          code: error.code ?? 'EXECUTION_ERROR',
-          message: error.message,
-        },
+        error: normalizedCatchError,
       };
       const llmCacheSnapshot = await this.persistRequestLlmCacheSnapshot(sessionId, requestId, outcome.stop_reason);
       await this.sessionManager.persistOutcome(sessionId, requestId, outcome);
       await this.sessionManager.appendRequestSummary(sessionId, {
         request_id: requestId,
         created_at: this.tools.now(),
-        response: error.message,
+        response: normalizedCatchError.message,
         stop_reason: outcome.stop_reason,
         request_text: input.requestText,
-        error_message: error.message,
+        error_message: normalizedCatchError.message,
       });
       await this.emitTrace(sessionId, 'request_stopped', {
         session_id: sessionId,
@@ -1312,7 +1508,7 @@ export class MRPVM {
         final_outcome: outcome.stop_reason,
         stop_reason: outcome.stop_reason,
         remaining_blocked_regions: [],
-        error_message: error.message,
+        error_message: normalizedCatchError.message,
         error: outcome.error,
       });
       const existingRecord = this.requestRecords.get(requestId) ?? {
@@ -1328,7 +1524,7 @@ export class MRPVM {
         family_state: this.stateStore.listFamilies(),
         plan_snapshot: request?.planText ?? existingRecord.plan_snapshot ?? '',
         completed_at: this.tools.now(),
-        error_message: error.message,
+        error_message: normalizedCatchError.message,
         llm_cache: summarizeRequestLlmCacheSnapshot(llmCacheSnapshot),
       });
       return outcome;

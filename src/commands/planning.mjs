@@ -1,6 +1,7 @@
 import { parsePlan } from '../lang/parser.mjs';
 import { compileGraph } from '../runtime/graph.mjs';
 import { createEmptyEffects } from '../runtime/effects.mjs';
+import { createFailureRecord, normalizeErrorLike } from '../utils/errors.mjs';
 
 const REQUIRED_GROUPS = {
   new_session_request: 'planning_init_core',
@@ -557,10 +558,23 @@ function extractPlannerProposalText(adapterEffects) {
 
 export async function executePlanning(context) {
   const effects = createEmptyEffects();
+  const planningTrace = {
+    mode: context.mode,
+    request_text: context.request.requestText,
+    required_prompt_group: null,
+    kb_summary: null,
+    graph_snapshot: null,
+    graph_snapshot_error: null,
+    attempts: [],
+    accepted_attempt: null,
+    accepted_plan_text: null,
+  };
+  effects.planningTrace = planningTrace;
   const requiredGroup = REQUIRED_GROUPS[context.mode];
   if (!requiredGroup) {
     throw new Error(`Unknown planning mode: ${context.mode}`);
   }
+  planningTrace.required_prompt_group = requiredGroup;
 
   const kbResult = await context.runtime.retrieveKnowledge(context.request.kbSnapshot, {
     callerName: 'planning',
@@ -571,14 +585,32 @@ export async function executePlanning(context) {
     domainHints: context.request.domainHints ?? [],
     byteBudget: 12_288,
   });
+  planningTrace.kb_summary = {
+    mode: kbResult.mode,
+    selected_count: kbResult.selected.length,
+    pruned_count: kbResult.pruned.length,
+    selected_knowledge_units: kbResult.selected.map((entry) => ({
+      ku_id: entry.kuId,
+      title: entry.meta.title ?? entry.kuId,
+      ku_type: entry.meta.ku_type ?? 'content',
+      mandatory_group: entry.meta.mandatory_group ?? null,
+      scope: entry.scope,
+      usage_reference: entry.usage_reference ?? null,
+      aspect_ids: entry.aspect_ids ?? [],
+    })),
+  };
 
   if (!kbResult.selected.some((entry) => entry.meta.mandatory_group === requiredGroup)) {
-    effects.failure = {
+    effects.failure = createFailureRecord({
       kind: 'resolution_error',
       message: `Missing required planning prompt group: ${requiredGroup}`,
       origin: 'planning',
       repairable: false,
-    };
+      details: {
+        required_prompt_group: requiredGroup,
+        kb_summary: planningTrace.kb_summary,
+      },
+    });
     return effects;
   }
 
@@ -614,6 +646,8 @@ export async function executePlanning(context) {
       graphSnapshotError = error instanceof Error ? error.message : String(error);
     }
   }
+  planningTrace.graph_snapshot = graphSnapshot;
+  planningTrace.graph_snapshot_error = graphSnapshotError;
   const attemptHistory = [];
 
   for (let attempt = 1; attempt <= MAX_PLANNING_ATTEMPTS; attempt += 1) {
@@ -678,11 +712,33 @@ export async function executePlanning(context) {
     });
 
     if (adapterEffects.failure) {
+      const normalizedFailure = normalizeErrorLike(adapterEffects.failure, {
+        defaultCode: 'PLANNING_ERROR',
+        defaultKind: 'execution_error',
+        defaultMessage: 'Planner invocation failed.',
+      });
+      planningTrace.attempts.push({
+        attempt,
+        adapter_failure: normalizedFailure,
+        proposed_plan_text: '',
+        normalized_plan_text: '',
+        valid: false,
+        diagnostics: normalizedFailure.message ? [normalizedFailure.message] : [],
+      });
+      adapterEffects.planningTrace = planningTrace;
       return adapterEffects;
     }
 
     const proposedPlanText = extractPlannerProposalText(adapterEffects);
     const validation = validatePlannedProgram(proposedPlanText, nativeCommands, enabledInterpreters, context.request.requestText);
+    const attemptRecord = {
+      attempt,
+      proposed_plan_text: proposedPlanText,
+      normalized_plan_text: validation.text,
+      valid: validation.valid,
+      diagnostics: validation.diagnostics,
+    };
+    planningTrace.attempts.push(attemptRecord);
     if (validation.valid) {
       effects.declarationInsertions.push({
         text: validation.text,
@@ -690,6 +746,8 @@ export async function executePlanning(context) {
           source_interpreter: 'plannerLLM',
         },
       });
+      planningTrace.accepted_attempt = attempt;
+      planningTrace.accepted_plan_text = validation.text;
       return effects;
     }
 
@@ -700,11 +758,16 @@ export async function executePlanning(context) {
   }
 
   const lastAttempt = attemptHistory.at(-1);
-  effects.failure = {
+  effects.failure = createFailureRecord({
     kind: 'resolution_error',
     message: `Planner failed to produce a connected SOP graph after ${MAX_PLANNING_ATTEMPTS} attempts. ${summarizeDiagnostics(lastAttempt?.diagnostics ?? [])}`,
     origin: 'planning',
     repairable: true,
-  };
+    details: {
+      attempts: planningTrace.attempts,
+      graph_snapshot: graphSnapshot,
+      graph_snapshot_error: graphSnapshotError,
+    },
+  });
   return effects;
 }

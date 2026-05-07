@@ -40,10 +40,12 @@ export class RequestManager {
           break;
         }
         const meta = await readJson(path.join(familyDir, `${versionName}.meta.json`), {});
+        const rendered = value.trimEnd();
         variants.push({
           id: `${familyId}:v${version}`,
           version,
-          rendered: value.trimEnd(),
+          value: rendered,
+          rendered,
           meta,
         });
         version += 1;

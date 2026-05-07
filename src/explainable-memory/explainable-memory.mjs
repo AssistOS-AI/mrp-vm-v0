@@ -298,9 +298,11 @@ export class ExplainableMemory {
     if (this.searchCache.has(snapshot.version)) {
       return this.searchCache.get(snapshot.version);
     }
-    const index = snapshot.lexicalIndexJson
+    const index = typeof snapshot.lexicalIndexJson === 'string'
       ? MiniSearch.loadJSON(snapshot.lexicalIndexJson, SEARCH_OPTIONS)
-      : this.createSearchIndex(snapshot.lexicalDocuments ?? []);
+      : snapshot.lexicalIndexJson && typeof snapshot.lexicalIndexJson === 'object'
+        ? MiniSearch.loadJS(snapshot.lexicalIndexJson, SEARCH_OPTIONS)
+        : this.createSearchIndex(snapshot.lexicalDocuments ?? []);
     this.searchCache.set(snapshot.version, index);
     return index;
   }

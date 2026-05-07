@@ -50,6 +50,70 @@ export function createFailureRecord(input) {
   };
 }
 
+function safeCloneDetails(details) {
+  if (details == null) {
+    return null;
+  }
+  if (Array.isArray(details)) {
+    return details.map((item) => safeCloneDetails(item));
+  }
+  if (typeof details === 'object') {
+    return Object.fromEntries(Object.entries(details).map(([key, value]) => [key, safeCloneDetails(value)]));
+  }
+  return details;
+}
+
+function normalizeMessage(error, defaultMessage) {
+  if (typeof error === 'string' && error.trim()) {
+    return error;
+  }
+  if (typeof error?.message === 'string' && error.message.trim()) {
+    return error.message;
+  }
+  return defaultMessage;
+}
+
+export function normalizeErrorLike(error, options = {}) {
+  const {
+    defaultCode = 'EXECUTION_ERROR',
+    defaultKind = 'execution_error',
+    defaultMessage = 'Execution failed.',
+  } = options;
+
+  const kind = error?.kind ?? error?.failure_kind ?? defaultKind;
+  const code = error?.code ?? String(kind || defaultCode).toUpperCase();
+  const message = normalizeMessage(error, defaultMessage);
+  const details = safeCloneDetails(error?.details ?? error?.failure?.details ?? null);
+  return {
+    code,
+    kind,
+    message,
+    name: error?.name ?? null,
+    origin: error?.origin ?? error?.originating_component ?? null,
+    repairable: error?.repairable ?? null,
+    retryCount: Number(error?.retryCount ?? error?.retry_count ?? 0) || 0,
+    stack: typeof error?.stack === 'string' && error.stack.trim() ? error.stack : null,
+    details,
+  };
+}
+
+export function normalizeFailureDetails(error, extra = {}) {
+  const normalized = normalizeErrorLike(error);
+  const baseDetails = normalized.details && typeof normalized.details === 'object'
+    ? normalized.details
+    : normalized.details == null
+      ? {}
+      : { value: normalized.details };
+
+  return {
+    ...baseDetails,
+    ...extra,
+    error_code: normalized.code,
+    error_name: normalized.name,
+    stack: extra.stack ?? normalized.stack ?? baseDetails.stack ?? null,
+  };
+}
+
 export function createFailureVariantMeta(input) {
   const {
     kind,

@@ -792,6 +792,7 @@ h4 { font-size: 0.85rem; }
 
 #sop-tab.active,
 #variables-tab.active,
+#errors-tab.active,
 #graph-tab.active {
   display: flex;
   flex-direction: column;
@@ -2233,6 +2234,29 @@ body {
   border: none;
   background: #fef2f2;
   color: #991b1b;
+}
+
+.trace-error-card {
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: rgba(254, 242, 242, 0.7);
+  border: 1px solid rgba(153, 27, 27, 0.14);
+}
+
+.trace-error-card-message {
+  font-weight: 600;
+  color: #7f1d1d;
+}
+
+.trace-error-details {
+  border-top: 1px solid rgba(153, 27, 27, 0.1);
+  padding-top: 0.35rem;
+}
+
+.trace-error-details summary {
+  cursor: pointer;
+  color: var(--muted-strong);
+  font-size: 0.84rem;
 }
 
 .graph-overview--wrap {

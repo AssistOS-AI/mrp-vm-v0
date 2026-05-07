@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createServer } from '../../server/index.mjs';
+import { ExternalInterpreterRegistry } from '../../src/index.mjs';
 import { createTempRuntimeRoot } from '../fixtures/runtime-root.mjs';
 
 async function createSession(baseUrl, isAdmin = false) {
@@ -193,6 +194,75 @@ test('server exposes native session and request APIs plus /chat', async () => {
     assert.match(settingsPage, /Scan logs/);
     const kbPage = await fetch(`${baseUrl}/kb-browser`).then((response) => response.text());
     assert.match(kbPage, /Aspect state/);
+  } finally {
+    server.close();
+    await once(server, 'close');
+  }
+});
+
+test('server traceability payload exposes error stacks and workflow boundary nodes for failed requests', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const externalInterpreters = new ExternalInterpreterRegistry();
+  for (const profile of ['plannerLLM', 'writerLLM']) {
+    externalInterpreters.register({
+      name: profile,
+      purpose: profile,
+      input_contract: ['instruction'],
+      output_shapes: profile === 'plannerLLM' ? ['sop_proposal'] : ['plain_value'],
+      cost_class: 'normal',
+      can_insert_declarations: profile === 'plannerLLM',
+      can_refuse: true,
+      uses_llm_adapter: false,
+      capability_profile: 'default',
+      trace_requirements: ['interpreter_invoked'],
+    }, async () => {
+      throw new Error('boom');
+    });
+  }
+
+  const server = createServer({
+    rootDir,
+    allowFakeLlm: true,
+    runtimeOptions: {
+      deterministic: {},
+      externalInterpreters,
+    },
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+
+  try {
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const session = await createSession(baseUrl);
+
+    const requestResponse = await fetch(`${baseUrl}/api/sessions/${session.session_id}/requests`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': session.session_id,
+      },
+      body: JSON.stringify({
+        request: 'trigger failure',
+      }),
+    });
+    assert.equal(requestResponse.status, 202);
+    const started = await requestResponse.json();
+
+    const request = await waitForOutcome(baseUrl, session.session_id, started.request_id);
+    assert.equal(request.outcome.stop_reason, 'execution_error');
+    assert.match(String(request.outcome.error.stack), /boom/);
+
+    const traceability = await fetch(`${baseUrl}/api/sessions/${session.session_id}/requests/${started.request_id}/traceability`, {
+      headers: { 'x-session-id': session.session_id },
+    }).then((response) => response.json());
+
+    assert.ok(traceability.errors.some((entry) => /boom/.test(String(entry.message))));
+    assert.ok(traceability.errors.some((entry) => /boom/.test(String(entry.stack || ''))));
+    assert.ok(traceability.execution_graph.nodes.some((node) => node.workflow_role === 'start'));
+    assert.ok(traceability.execution_graph.nodes.some((node) => node.workflow_role === 'final'));
+    const startNode = traceability.execution_graph.nodes.find((node) => node.workflow_role === 'start');
+    assert.equal(startNode.details.planning.outcome, 'failed');
   } finally {
     server.close();
     await once(server, 'close');

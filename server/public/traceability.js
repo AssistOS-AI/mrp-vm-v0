@@ -259,6 +259,52 @@ function renderVariables() {
   `;
 }
 
+function renderErrors() {
+  const panel = el('errors-tab');
+  const errors = state.payload?.errors ?? [];
+  if (errors.length === 0) {
+    panel.innerHTML = '<div class="inset-card muted small">No execution or planning errors were captured for this request.</div>';
+    return;
+  }
+
+  panel.innerHTML = `
+    <div class="stack">
+      ${errors.map((entry, index) => `
+        <article class="trace-error-card stack compact">
+          <div class="between">
+            <div class="row wrap">
+              <span class="badge ${statusClass(entry.kind || 'execution_error')}">${escapeHtml(humanizeStatus(entry.kind || 'execution_error'))}</span>
+              <span class="badge">${escapeHtml(entry.stage || 'request')}</span>
+              ${entry.phase ? `<span class="badge">${escapeHtml(entry.phase)}</span>` : ''}
+              ${entry.origin ? `<span class="badge">${escapeHtml(entry.origin)}</span>` : ''}
+            </div>
+            <span class="muted small">${escapeHtml(formatDate(entry.created_at))}</span>
+          </div>
+          <div class="trace-error-card-message">${escapeHtml(entry.message || `Error ${index + 1}`)}</div>
+          <div class="row wrap">
+            ${entry.target_family ? `<span class="badge">target ${escapeHtml(entry.target_family)}</span>` : ''}
+            ${entry.declaration_id ? `<span class="badge">${escapeHtml(entry.declaration_id)}</span>` : ''}
+            ${entry.code ? `<span class="badge">${escapeHtml(entry.code)}</span>` : ''}
+            ${entry.execution_timing?.duration_ms == null ? '' : `<span class="badge">${escapeHtml(formatDuration(entry.execution_timing.duration_ms))}</span>`}
+          </div>
+          ${entry.stack ? `
+            <details class="trace-error-details">
+              <summary>Stack</summary>
+              <pre>${escapeHtml(entry.stack)}</pre>
+            </details>
+          ` : ''}
+          ${entry.details ? `
+            <details class="trace-error-details">
+              <summary>Details</summary>
+              <pre>${escapeHtml(stringify(entry.details))}</pre>
+            </details>
+          ` : ''}
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
 function truncateNodeLabel(value, length = 22) {
   const text = String(value || '');
   return text.length > length ? `${text.slice(0, length - 3)}...` : text;
@@ -513,6 +559,42 @@ function renderNodePanel(node, tab) {
   const details = node.details || {};
   const contextSections = details.context_sections || {};
   if (tab === 'declaration') {
+    if (details.synthetic_kind === 'initial_planning') {
+      return `
+        <div class="stack">
+          <div class="inset-card stack compact">
+            <h4>Workflow role</h4>
+            <pre>${escapeHtml(JSON.stringify({
+              role: node.workflow_role,
+              status: node.status,
+              layer: node.topological_level,
+            }, null, 2))}</pre>
+          </div>
+          <div class="inset-card stack compact">
+            <h4>Accepted plan</h4>
+            <pre>${escapeHtml(details.planning?.planned_declarations || '; Planning did not accept a graph.')}</pre>
+          </div>
+        </div>
+      `;
+    }
+    if (details.synthetic_kind === 'request_final') {
+      return `
+        <div class="stack">
+          <div class="inset-card stack compact">
+            <h4>Workflow role</h4>
+            <pre>${escapeHtml(JSON.stringify({
+              role: node.workflow_role,
+              status: node.status,
+              layer: node.topological_level,
+            }, null, 2))}</pre>
+          </div>
+          <div class="inset-card stack compact">
+            <h4>Final response</h4>
+            <pre>${escapeHtml(stringify(details.response))}</pre>
+          </div>
+        </div>
+      `;
+    }
     return `
       <div class="stack">
         <div class="inset-card stack compact">
@@ -550,6 +632,27 @@ function renderNodePanel(node, tab) {
     `;
   }
   if (tab === 'context') {
+    if (details.synthetic_kind === 'initial_planning') {
+      return `
+        <div class="stack">
+          <div class="inset-card stack compact">
+            <h4>Request metadata</h4>
+            <pre>${escapeHtml(JSON.stringify(contextSections.request_metadata || {}, null, 2))}</pre>
+          </div>
+          <div class="inset-card stack compact">
+            <h4>Planning retrieval</h4>
+            <pre>${escapeHtml(JSON.stringify(details.planning?.knowledge_retrieval || {}, null, 2))}</pre>
+          </div>
+          <div class="inset-card stack compact">
+            <h4>Graph snapshot</h4>
+            <pre>${escapeHtml(JSON.stringify({
+              graph_snapshot: details.planning?.graph_snapshot || null,
+              graph_snapshot_error: details.planning?.graph_snapshot_error || null,
+            }, null, 2))}</pre>
+          </div>
+        </div>
+      `;
+    }
     return `
       <div class="stack">
         <div class="inset-card stack compact">
@@ -568,6 +671,43 @@ function renderNodePanel(node, tab) {
     `;
   }
   if (tab === 'output') {
+    if (details.synthetic_kind === 'initial_planning') {
+      return `
+        <div class="stack">
+          <div class="inset-card stack compact">
+            <h4>Planning outcome</h4>
+            <pre>${escapeHtml(JSON.stringify({
+              outcome: details.planning?.outcome ?? null,
+              accepted_actions: details.planning?.accepted_actions ?? [],
+              rejected_actions: details.planning?.rejected_actions ?? [],
+              required_prompt_group: details.planning?.required_prompt_group ?? null,
+            }, null, 2))}</pre>
+          </div>
+          <div class="inset-card stack compact">
+            <h4>Attempts</h4>
+            <pre>${escapeHtml(JSON.stringify(details.planning?.attempts ?? [], null, 2))}</pre>
+          </div>
+          <div class="inset-card stack compact">
+            <h4>Raw planning events</h4>
+            <pre>${escapeHtml(JSON.stringify(details.outputs || [], null, 2))}</pre>
+          </div>
+        </div>
+      `;
+    }
+    if (details.synthetic_kind === 'request_final') {
+      return `
+        <div class="stack">
+          <div class="inset-card stack compact">
+            <h4>Final outcome</h4>
+            <pre>${escapeHtml(JSON.stringify(details.outcome || {}, null, 2))}</pre>
+          </div>
+          <div class="inset-card stack compact">
+            <h4>Raw final events</h4>
+            <pre>${escapeHtml(JSON.stringify(details.outputs || [], null, 2))}</pre>
+          </div>
+        </div>
+      `;
+    }
     return `
       <div class="stack">
         <div class="inset-card stack compact">
@@ -622,11 +762,17 @@ function renderNodeModal() {
   if (!node) {
     return;
   }
+  const headingMain = node.workflow_role === 'start'
+    ? 'Workflow start'
+    : node.workflow_role === 'final'
+      ? 'Workflow final'
+      : `@${node.target_family}`;
   el('node-modal-heading').innerHTML = `
-    <span class="node-modal-heading-main">@${escapeHtml(node.target_family)}</span>
+    <span class="node-modal-heading-main">${escapeHtml(headingMain)}</span>
     <span class="node-modal-heading-command">${escapeHtml((node.commands || []).join(', ') || 'No command')}</span>
     <span class="badge ${statusClass(node.status)}">${escapeHtml(humanizeStatus(node.status))}</span>
-    <span class="badge">layer ${escapeHtml(String((node.topological_level ?? 0) + 1))}</span>
+    <span class="badge">layer ${escapeHtml(String(node.topological_level ?? 0))}</span>
+    ${node.workflow_role ? `<span class="badge">${escapeHtml(`workflow ${node.workflow_role}`)}</span>` : ''}
     ${node.duration_ms == null ? '' : `<span class="badge">${escapeHtml(formatDuration(node.duration_ms))}</span>`}
   `;
   el('node-modal-tabs').innerHTML = nodeModalTabs().map(([id, label]) => `
@@ -675,7 +821,7 @@ function renderGraph() {
           <div class="execution-graph-layers">
             ${graph.strata.map((layer) => `
               <div class="execution-graph-layer" data-layer-index="${escapeHtml(String(layer.layer))}">
-                <div class="execution-graph-layer-label" data-layer-drag-index="${escapeHtml(String(layer.layer))}" title="Drag to resize this layer column">Layer ${layer.layer + 1}</div>
+                <div class="execution-graph-layer-label" data-layer-drag-index="${escapeHtml(String(layer.layer))}" title="Drag to resize this layer column">Layer ${layer.layer}</div>
                 <div class="execution-graph-column">
                   ${layer.node_ids.map((nodeId) => {
                     const node = nodesById.get(nodeId);
@@ -689,6 +835,7 @@ function renderGraph() {
                         </span>
                         <span class="execution-graph-node-family">${escapeHtml(truncateNodeLabel(node.target_family, 20))}</span>
                         <span class="execution-graph-node-command">${escapeHtml(truncateNodeLabel((node.commands || []).join(', '), 24))}</span>
+                        ${node.workflow_role ? `<span class="execution-graph-node-note">${escapeHtml(`workflow ${node.workflow_role}`)}</span>` : ''}
                         ${node.status_reason ? `<span class="execution-graph-node-note">${escapeHtml(truncateNodeLabel(node.status_reason, 42))}</span>` : ''}
                         ${node.duration_ms == null ? '' : `<span class="execution-graph-node-duration">${escapeHtml(formatDuration(node.duration_ms))}</span>`}
                       </button>
@@ -733,6 +880,7 @@ async function loadTraceability(requestId = state.requestId) {
   renderTimeline();
   renderSop();
   renderVariables();
+  renderErrors();
   renderGraph();
 }
 
