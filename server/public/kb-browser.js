@@ -15,6 +15,7 @@ const TYPE_ORDER = ['caller_profile', 'prompt_asset', 'template_asset', 'policy_
 const state = {
   items: [],
   summary: null,
+  explainableMemory: null,
   selected: null,
   auth: null,
   sessionId: queryParam('session_id') || localStorage.getItem('mrpvm.activeSessionId'),
@@ -48,6 +49,7 @@ function summaryTile(label, value) {
 
 function summarizeItems() {
   const s = state.summary || {};
+  const explainable = state.explainableMemory || {};
   el('kb-summary').innerHTML = [
     summaryTile('Total', s.total_ku_count || 0),
     summaryTile('Default', s.default_ku_count || 0),
@@ -55,6 +57,9 @@ function summarizeItems() {
     summaryTile('Session', s.session_ku_count || 0),
     summaryTile('Prompt assets', s.prompt_asset_count || 0),
     summaryTile('Overrides', s.overridden_item_count || 0),
+    summaryTile('Indexed', s.indexed_ku_count || 0),
+    summaryTile('Unindexed', s.unindexed_ku_count || 0),
+    summaryTile('KB mode', explainable.mode || 'unknown'),
   ].join('');
 }
 
@@ -135,6 +140,7 @@ function buildTreeMarkup() {
             ${items.map((item) => {
               const isActive = state.selected?.ku_id === item.ku_id && state.selected?.scope === item.scope;
               const badges = [
+                item.index_state?.indexed ? '<span class="badge status-active">indexed</span>' : '<span class="badge">pending index</span>',
                 item.flags?.active ? '<span class="badge status-active">active</span>' : '',
                 item.flags?.shadowed ? '<span class="badge status-error">shadowed</span>' : '',
                 item.flags?.superseded ? '<span class="badge status-partially_failed">superseded</span>' : '',
@@ -208,19 +214,33 @@ function renderInspector() {
     el('kb-details-body').innerHTML = '<div class="muted small">Select a KU from the tree to inspect or edit it.</div>';
     return;
   }
+  const indexState = item.index_state || {};
   const badges = [
     `<span class="badge">${escapeHtml(item.scope)}</span>`,
     `<span class="badge">${escapeHtml(item.meta?.ku_type || 'content')}</span>`,
+    `<span class="badge ${indexState.indexed ? 'status-active' : ''}">${escapeHtml(indexState.indexed ? 'indexed' : 'not indexed')}</span>`,
     ...(item.meta?.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`),
     ...(item.meta?.commands || []).map((tag) => `<span class="badge dependency-pill">${escapeHtml(tag)}</span>`),
     ...(item.meta?.interpreters || []).map((tag) => `<span class="badge dependency-pill">${escapeHtml(tag)}</span>`),
   ];
+  const matchedAspects = (indexState.matched_aspects || []).length
+    ? (indexState.matched_aspects || []).map((aspectId) => `<span class="badge dependency-pill">${escapeHtml(aspectId)}</span>`).join('')
+    : '<span class="muted small">No matched aspects recorded.</span>';
   el('kb-details-body').innerHTML = `
     <div class="stack compact">
       <strong>${escapeHtml(item.ku_id)}</strong>
       <div class="muted small">${escapeHtml(item.meta?.title || '')}</div>
       <div class="muted small">${escapeHtml(item.meta?.summary || '')}</div>
       <div class="row wrap">${badges.join('')}</div>
+      <div class="stack compact">
+        <div class="muted small">Snapshot version: ${escapeHtml(indexState.snapshot_version || 'unavailable')}</div>
+        <div class="muted small">Indexed at: ${escapeHtml(indexState.indexed_at ? new Date(indexState.indexed_at).toLocaleString() : 'not indexed')}</div>
+        <div class="muted small">Lexical document id: ${escapeHtml(indexState.lexical_document_id || 'unavailable')}</div>
+      </div>
+      <div class="stack compact">
+        <div class="small muted">Matched aspects</div>
+        <div class="row wrap">${matchedAspects}</div>
+      </div>
     </div>
   `;
 }
@@ -262,6 +282,10 @@ async function loadKb() {
   const data = await fetchJson(`/api/kb/catalog?${params.toString()}`);
   state.items = data.items || [];
   state.summary = data.summary || {};
+  state.explainableMemory = data.explainable_memory || null;
+  if (state.selected) {
+    state.selected = state.items.find((item) => item.ku_id === state.selected.ku_id && item.scope === state.selected.scope) || null;
+  }
 }
 
 async function loadAuth() {

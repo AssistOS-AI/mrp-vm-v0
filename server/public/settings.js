@@ -707,6 +707,8 @@ async function reindexMemory() {
   try {
     await fetchJson('/api/kb/explainable-memory/reindex', {
       method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
     });
     notify('Explainable Memory reindexed.');
     await refresh();
