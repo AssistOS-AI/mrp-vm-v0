@@ -1,0 +1,2968 @@
+{
+  "version": "5d6807e5f47fefd122eea05639b5c87e1dc7dbfd",
+  "sessionId": null,
+  "startedAt": "2026-05-07T11:53:17.843Z",
+  "builtAt": "2026-05-07T11:53:17.872Z",
+  "counts": {
+    "indexed_ku_count": 36,
+    "approved_aspect_count": 5,
+    "candidate_aspect_count": 0
+  },
+  "approvedAspects": [
+    {
+      "aspectId": "aspect_bias_risk",
+      "meta": {
+        "rev": 1,
+        "status": "approved",
+        "aspect_type": "bias_oriented",
+        "title": "Bias and selection risk",
+        "summary": "Select KUs that warn about interpretive bias, selection bias, or omission risk for the current task.",
+        "priority": 5,
+        "domains": [
+          "runtime",
+          "policy",
+          "knowledge"
+        ],
+        "commands": [
+          "planning",
+          "kb",
+          "credibility"
+        ],
+        "interpreters": [
+          "AdvancedReasoner",
+          "deepLLM"
+        ],
+        "tags": [
+          "bias",
+          "risk",
+          "omission"
+        ],
+        "query_terms": [
+          "bias",
+          "selection",
+          "omission",
+          "caution",
+          "risk"
+        ]
+      },
+      "definition": "This aspect positions KUs by the interpretive or selection risks they help surface.",
+      "inclusionCriteria": "Include KUs that warn about omitted context, selection bias, automation bias, or institutional bias.",
+      "exclusionCriteria": "Exclude KUs that merely use the word bias without explaining a concrete interpretive risk.",
+      "protocol": "Prefer KUs that should cause the runtime or operator to treat other evidence cautiously rather than taking it at face value.",
+      "roleVocabulary": [
+        "bias warning",
+        "selection-risk note",
+        "cautionary context"
+      ],
+      "queryTerms": [
+        "bias",
+        "selection",
+        "omission",
+        "caution",
+        "risk"
+      ],
+      "fileName": "aspect_bias_risk.sop",
+      "filePath": "/home/salboaie/work/mrp-vm-v0/data/kb/aspects/approved/aspect_bias_risk.sop",
+      "sourceText": "@aspect_bias_risk text\nUse this aspect when the task should surface bias-sensitive or selection-risk context that a narrow technical retrieval might miss.\n@aspect_bias_risk:meta json\n{\n  \"rev\": 1,\n  \"status\": \"approved\",\n  \"aspect_type\": \"bias_oriented\",\n  \"title\": \"Bias and selection risk\",\n  \"summary\": \"Select KUs that warn about interpretive bias, selection bias, or omission risk for the current task.\",\n  \"priority\": 5,\n  \"domains\": [\"runtime\", \"policy\", \"knowledge\"],\n  \"commands\": [\"planning\", \"kb\", \"credibility\"],\n  \"interpreters\": [\"AdvancedReasoner\", \"deepLLM\"],\n  \"tags\": [\"bias\", \"risk\", \"omission\"],\n  \"query_terms\": [\"bias\", \"selection\", \"omission\", \"caution\", \"risk\"]\n}\n@aspect_bias_risk:definition text\nThis aspect positions KUs by the interpretive or selection risks they help surface.\n@aspect_bias_risk:inclusion text\nInclude KUs that warn about omitted context, selection bias, automation bias, or institutional bias.\n@aspect_bias_risk:exclusion text\nExclude KUs that merely use the word bias without explaining a concrete interpretive risk.\n@aspect_bias_risk:protocol text\nPrefer KUs that should cause the runtime or operator to treat other evidence cautiously rather than taking it at face value.\n@aspect_bias_risk:role_vocabulary json\n[\"bias warning\", \"selection-risk note\", \"cautionary context\"]\n@aspect_bias_risk:query_terms json\n[\"bias\", \"selection\", \"omission\", \"caution\", \"risk\"]\n"
+    },
+    {
+      "aspectId": "aspect_evidence_status",
+      "meta": {
+        "rev": 1,
+        "status": "approved",
+        "aspect_type": "epistemological",
+        "title": "Evidence and assumptions",
+        "summary": "Select KUs that act as evidence, assumption notes, method notes, or uncertainty markers for the current task.",
+        "priority": 6,
+        "domains": [
+          "runtime",
+          "knowledge",
+          "evaluation"
+        ],
+        "commands": [
+          "planning",
+          "kb",
+          "credibility"
+        ],
+        "interpreters": [
+          "HumanLikeReasoner",
+          "AdvancedReasoner",
+          "deepLLM"
+        ],
+        "tags": [
+          "evidence",
+          "assumption",
+          "uncertainty"
+        ],
+        "query_terms": [
+          "evidence",
+          "assumption",
+          "uncertainty",
+          "method",
+          "benchmark",
+          "decision"
+        ]
+      },
+      "definition": "This aspect positions KUs by their evidential or assumption-bearing status rather than by runtime component identity alone.",
+      "inclusionCriteria": "Include KUs that justify a method, expose assumptions, preserve uncertainty, or provide decision rationale.",
+      "exclusionCriteria": "Exclude KUs that only name a method or decision without explaining why it matters.",
+      "protocol": "Prefer KUs that explicitly preserve what is known, what is assumed, and what remains uncertain for the current request.",
+      "roleVocabulary": [
+        "evidence note",
+        "assumption note",
+        "method note"
+      ],
+      "queryTerms": [
+        "evidence",
+        "assumption",
+        "uncertainty",
+        "method",
+        "benchmark",
+        "decision"
+      ],
+      "fileName": "aspect_evidence_status.sop",
+      "filePath": "/home/salboaie/work/mrp-vm-v0/data/kb/aspects/approved/aspect_evidence_status.sop",
+      "sourceText": "@aspect_evidence_status text\nUse this aspect when the task needs evidence, assumptions, uncertainty markers, or methodological caution around a claim.\n@aspect_evidence_status:meta json\n{\n  \"rev\": 1,\n  \"status\": \"approved\",\n  \"aspect_type\": \"epistemological\",\n  \"title\": \"Evidence and assumptions\",\n  \"summary\": \"Select KUs that act as evidence, assumption notes, method notes, or uncertainty markers for the current task.\",\n  \"priority\": 6,\n  \"domains\": [\"runtime\", \"knowledge\", \"evaluation\"],\n  \"commands\": [\"planning\", \"kb\", \"credibility\"],\n  \"interpreters\": [\"HumanLikeReasoner\", \"AdvancedReasoner\", \"deepLLM\"],\n  \"tags\": [\"evidence\", \"assumption\", \"uncertainty\"],\n  \"query_terms\": [\"evidence\", \"assumption\", \"uncertainty\", \"method\", \"benchmark\", \"decision\"]\n}\n@aspect_evidence_status:definition text\nThis aspect positions KUs by their evidential or assumption-bearing status rather than by runtime component identity alone.\n@aspect_evidence_status:inclusion text\nInclude KUs that justify a method, expose assumptions, preserve uncertainty, or provide decision rationale.\n@aspect_evidence_status:exclusion text\nExclude KUs that only name a method or decision without explaining why it matters.\n@aspect_evidence_status:protocol text\nPrefer KUs that explicitly preserve what is known, what is assumed, and what remains uncertain for the current request.\n@aspect_evidence_status:role_vocabulary json\n[\"evidence note\", \"assumption note\", \"method note\"]\n@aspect_evidence_status:query_terms json\n[\"evidence\", \"assumption\", \"uncertainty\", \"method\", \"benchmark\", \"decision\"]\n"
+    },
+    {
+      "aspectId": "aspect_execution_guidance",
+      "meta": {
+        "rev": 1,
+        "status": "approved",
+        "aspect_type": "operational",
+        "title": "Execution guidance",
+        "summary": "Select KUs that prescribe how to use commands, interpreters, caller profiles, or prompt assets during execution.",
+        "priority": 10,
+        "domains": [
+          "runtime",
+          "planning",
+          "knowledge"
+        ],
+        "commands": [
+          "planning",
+          "kb",
+          "analytic-memory",
+          "logic-eval",
+          "js-eval",
+          "template-eval",
+          "credibility"
+        ],
+        "interpreters": [
+          "HumanLikeReasoner",
+          "AdvancedReasoner",
+          "DocumentScalePlanner",
+          "fastLLM",
+          "deepLLM",
+          "writerLLM",
+          "plannerLLM",
+          "codeGeneratorLLM"
+        ],
+        "tags": [
+          "guidance",
+          "execution",
+          "routing"
+        ],
+        "query_terms": [
+          "guidance",
+          "execution",
+          "use",
+          "routing",
+          "prompt",
+          "input",
+          "output"
+        ]
+      },
+      "definition": "This aspect positions KUs by their direct usefulness as execution-time guidance.",
+      "inclusionCriteria": "Include KUs that tell the runtime when a component should be selected, what input shape it expects, or what output discipline it requires.",
+      "exclusionCriteria": "Exclude KUs that provide only abstract background without actionable execution guidance.",
+      "protocol": "Prefer caller profiles, prompt assets, and command/interpreter guidance KUs whose metadata or body directly constrains the next execution step.",
+      "roleVocabulary": [
+        "primary guidance",
+        "prompt asset",
+        "routing cue"
+      ],
+      "queryTerms": [
+        "guidance",
+        "execution",
+        "use",
+        "routing",
+        "prompt",
+        "input",
+        "output"
+      ],
+      "fileName": "aspect_execution_guidance.sop",
+      "filePath": "/home/salboaie/work/mrp-vm-v0/data/kb/aspects/approved/aspect_execution_guidance.sop",
+      "sourceText": "@aspect_execution_guidance text\nUse this aspect when the task needs operational guidance about how a command, interpreter, or prompt asset should be used in execution.\n@aspect_execution_guidance:meta json\n{\n  \"rev\": 1,\n  \"status\": \"approved\",\n  \"aspect_type\": \"operational\",\n  \"title\": \"Execution guidance\",\n  \"summary\": \"Select KUs that prescribe how to use commands, interpreters, caller profiles, or prompt assets during execution.\",\n  \"priority\": 10,\n  \"domains\": [\"runtime\", \"planning\", \"knowledge\"],\n  \"commands\": [\"planning\", \"kb\", \"analytic-memory\", \"logic-eval\", \"js-eval\", \"template-eval\", \"credibility\"],\n  \"interpreters\": [\"HumanLikeReasoner\", \"AdvancedReasoner\", \"DocumentScalePlanner\", \"fastLLM\", \"deepLLM\", \"writerLLM\", \"plannerLLM\", \"codeGeneratorLLM\"],\n  \"tags\": [\"guidance\", \"execution\", \"routing\"],\n  \"query_terms\": [\"how\", \"use\", \"guidance\", \"execute\", \"planning\", \"routing\", \"prompt\"]\n}\n@aspect_execution_guidance:definition text\nThis aspect positions KUs by their direct usefulness as execution-time guidance.\n@aspect_execution_guidance:inclusion text\nInclude KUs that tell the runtime when a component should be selected, what input shape it expects, or what output discipline it requires.\n@aspect_execution_guidance:exclusion text\nExclude KUs that provide only abstract background without actionable execution guidance.\n@aspect_execution_guidance:protocol text\nPrefer caller profiles, prompt assets, and command/interpreter guidance KUs whose metadata or body directly constrains the next execution step.\n@aspect_execution_guidance:role_vocabulary json\n[\"primary guidance\", \"prompt asset\", \"routing cue\"]\n@aspect_execution_guidance:query_terms json\n[\"guidance\", \"execution\", \"use\", \"routing\", \"prompt\", \"input\", \"output\"]\n"
+    },
+    {
+      "aspectId": "aspect_governance_constraints",
+      "meta": {
+        "rev": 1,
+        "status": "approved",
+        "aspect_type": "axiological",
+        "title": "Governance constraints",
+        "summary": "Select KUs that define policy, safety, trust, or value-oriented constraints relevant to the request.",
+        "priority": 7,
+        "domains": [
+          "runtime",
+          "policy",
+          "knowledge"
+        ],
+        "commands": [
+          "planning",
+          "kb",
+          "credibility"
+        ],
+        "interpreters": [
+          "AdvancedReasoner",
+          "deepLLM"
+        ],
+        "tags": [
+          "policy",
+          "safety",
+          "trust"
+        ],
+        "query_terms": [
+          "policy",
+          "safety",
+          "trust",
+          "constraint",
+          "risk",
+          "governance"
+        ]
+      },
+      "definition": "This aspect positions KUs by the values, policies, and governance constraints they express.",
+      "inclusionCriteria": "Include KUs that constrain what the runtime should do because of policy, safety, or trust requirements.",
+      "exclusionCriteria": "Exclude neutral descriptive KUs that do not change the acceptable action boundary.",
+      "protocol": "Prefer policy assets and other KUs whose guidance should remain visible whenever the request has safety, trust, or governance implications.",
+      "roleVocabulary": [
+        "policy constraint",
+        "safety note",
+        "governance warning"
+      ],
+      "queryTerms": [
+        "policy",
+        "safety",
+        "trust",
+        "constraint",
+        "risk",
+        "governance"
+      ],
+      "fileName": "aspect_governance_constraints.sop",
+      "filePath": "/home/salboaie/work/mrp-vm-v0/data/kb/aspects/approved/aspect_governance_constraints.sop",
+      "sourceText": "@aspect_governance_constraints text\nUse this aspect when the task has policy, safety, trust, or governance implications that should constrain context selection.\n@aspect_governance_constraints:meta json\n{\n  \"rev\": 1,\n  \"status\": \"approved\",\n  \"aspect_type\": \"axiological\",\n  \"title\": \"Governance constraints\",\n  \"summary\": \"Select KUs that define policy, safety, trust, or value-oriented constraints relevant to the request.\",\n  \"priority\": 7,\n  \"domains\": [\"runtime\", \"policy\", \"knowledge\"],\n  \"commands\": [\"planning\", \"kb\", \"credibility\"],\n  \"interpreters\": [\"AdvancedReasoner\", \"deepLLM\"],\n  \"tags\": [\"policy\", \"safety\", \"trust\"],\n  \"query_terms\": [\"policy\", \"safety\", \"trust\", \"constraint\", \"risk\", \"governance\"]\n}\n@aspect_governance_constraints:definition text\nThis aspect positions KUs by the values, policies, and governance constraints they express.\n@aspect_governance_constraints:inclusion text\nInclude KUs that constrain what the runtime should do because of policy, safety, or trust requirements.\n@aspect_governance_constraints:exclusion text\nExclude neutral descriptive KUs that do not change the acceptable action boundary.\n@aspect_governance_constraints:protocol text\nPrefer policy assets and other KUs whose guidance should remain visible whenever the request has safety, trust, or governance implications.\n@aspect_governance_constraints:role_vocabulary json\n[\"policy constraint\", \"safety note\", \"governance warning\"]\n@aspect_governance_constraints:query_terms json\n[\"policy\", \"safety\", \"trust\", \"constraint\", \"risk\", \"governance\"]\n"
+    },
+    {
+      "aspectId": "aspect_runtime_structure",
+      "meta": {
+        "rev": 1,
+        "status": "approved",
+        "aspect_type": "ontological",
+        "title": "Runtime structure",
+        "summary": "Select KUs that define runtime entities, components, execution surfaces, and architectural boundaries.",
+        "priority": 8,
+        "domains": [
+          "runtime",
+          "architecture",
+          "knowledge"
+        ],
+        "commands": [
+          "planning",
+          "kb"
+        ],
+        "interpreters": [],
+        "tags": [
+          "runtime",
+          "architecture",
+          "components"
+        ],
+        "query_terms": [
+          "runtime",
+          "architecture",
+          "component",
+          "command",
+          "interpreter",
+          "boundary"
+        ]
+      },
+      "definition": "This aspect positions KUs by the runtime entities, subsystems, and execution surfaces they define.",
+      "inclusionCriteria": "Include KUs that define commands, interpreters, state stores, routing surfaces, or architectural boundaries.",
+      "exclusionCriteria": "Exclude KUs that only mention a component name incidentally without defining its role or contract.",
+      "protocol": "Prefer KUs whose title, summary, or body explicitly defines a runtime component or boundary that the current request depends on.",
+      "roleVocabulary": [
+        "primary definition",
+        "supporting boundary note",
+        "component overview"
+      ],
+      "queryTerms": [
+        "runtime",
+        "architecture",
+        "component",
+        "command",
+        "interpreter",
+        "boundary"
+      ],
+      "fileName": "aspect_runtime_structure.sop",
+      "filePath": "/home/salboaie/work/mrp-vm-v0/data/kb/aspects/approved/aspect_runtime_structure.sop",
+      "sourceText": "@aspect_runtime_structure text\nUse this aspect when the task is primarily about runtime components, architectural entities, execution surfaces, or subsystem boundaries.\n@aspect_runtime_structure:meta json\n{\n  \"rev\": 1,\n  \"status\": \"approved\",\n  \"aspect_type\": \"ontological\",\n  \"title\": \"Runtime structure\",\n  \"summary\": \"Select KUs that define runtime entities, components, execution surfaces, and architectural boundaries.\",\n  \"priority\": 8,\n  \"domains\": [\"runtime\", \"architecture\", \"knowledge\"],\n  \"commands\": [\"planning\", \"kb\"],\n  \"interpreters\": [],\n  \"tags\": [\"runtime\", \"architecture\", \"components\"],\n  \"query_terms\": [\"runtime\", \"architecture\", \"component\", \"command\", \"interpreter\", \"structure\", \"boundary\"]\n}\n@aspect_runtime_structure:definition text\nThis aspect positions KUs by the runtime entities, subsystems, and execution surfaces they define.\n@aspect_runtime_structure:inclusion text\nInclude KUs that define commands, interpreters, state stores, routing surfaces, or architectural boundaries.\n@aspect_runtime_structure:exclusion text\nExclude KUs that only mention a component name incidentally without defining its role or contract.\n@aspect_runtime_structure:protocol text\nPrefer KUs whose title, summary, or body explicitly defines a runtime component or boundary that the current request depends on.\n@aspect_runtime_structure:role_vocabulary json\n[\"primary definition\", \"supporting boundary note\", \"component overview\"]\n@aspect_runtime_structure:query_terms json\n[\"runtime\", \"architecture\", \"component\", \"command\", \"interpreter\", \"boundary\"]\n"
+    }
+  ],
+  "candidateAspects": [],
+  "kuRecords": [
+    {
+      "kuId": "AdvancedReasoner",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:AdvancedReasoner:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 74,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 92,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 86,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "DocumentScalePlanner",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:DocumentScalePlanner:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 56,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 108,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 66,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "HumanLikeReasoner",
+      "scope": "default",
+      "rev": 2,
+      "lexicalDocumentId": "default:HumanLikeReasoner:2",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 66,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 70,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 48,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "analytic-memory",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:analytic-memory:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 56,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 56,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 44,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "codeGeneratorLLM",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:codeGeneratorLLM:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 60,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 60,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 70,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 50,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "credibility",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:credibility:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 72,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 76,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 84,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "deepLLM",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:deepLLM:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 70,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 60,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 50,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 54,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "fastLLM",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:fastLLM:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 66,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 54,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 54,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "js-eval",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:js-eval:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 48,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 50,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 54,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 48,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "kb",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:kb:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 76,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 70,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 110,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 80,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 66,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "logic-eval",
+      "scope": "default",
+      "rev": 6,
+      "lexicalDocumentId": "default:logic-eval:6",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 56,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 84,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "plannerLLM",
+      "scope": "default",
+      "rev": 3,
+      "lexicalDocumentId": "default:plannerLLM:3",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 54,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 78,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "planning",
+      "scope": "default",
+      "rev": 2,
+      "lexicalDocumentId": "default:planning:2",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 74,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 80,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 102,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 84,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 94,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "template-eval",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:template-eval:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 48,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 48,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 68,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 44,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 46,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "writerLLM",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:writerLLM:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 48,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap",
+            "caller_profile_operational_affinity"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 46,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_analytic_memory_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_analytic_memory_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 72,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 76,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 78,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 50,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_credibility_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_credibility_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 76,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 94,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 92,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 68,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_js_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_js_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 82,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 60,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 60,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_kb_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_kb_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 76,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 90,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 116,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 70,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 74,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_logic_guidance",
+      "scope": "default",
+      "rev": 6,
+      "lexicalDocumentId": "default:ku_logic_guidance:6",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 66,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 84,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 108,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 66,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 78,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_logic_patterns",
+      "scope": "default",
+      "rev": 2,
+      "lexicalDocumentId": "default:ku_logic_patterns:2",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 48,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 88,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 68,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_planning_guidance",
+      "scope": "default",
+      "rev": 6,
+      "lexicalDocumentId": "default:ku_planning_guidance:6",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 78,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 86,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 134,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 88,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 112,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_template_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_template_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 60,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 72,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 90,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_advanced_reasoner_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_advanced_reasoner_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 82,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 114,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 96,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 72,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 72,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_advanced_reasoner_program_core",
+      "scope": "default",
+      "rev": 2,
+      "lexicalDocumentId": "default:ku_advanced_reasoner_program_core:2",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 68,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 96,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 74,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_code_generator_llm_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_code_generator_llm_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 76,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 54,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_deep_llm_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_deep_llm_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 64,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 68,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 84,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 60,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 58,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_document_scale_planner_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_document_scale_planner_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 56,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 70,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 104,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 54,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_fast_llm_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_fast_llm_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 56,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 72,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 54,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_human_like_reasoner_guidance",
+      "scope": "default",
+      "rev": 3,
+      "lexicalDocumentId": "default:ku_human_like_reasoner_guidance:3",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 68,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 106,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 94,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 66,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 76,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_human_like_reasoner_program_core",
+      "scope": "default",
+      "rev": 3,
+      "lexicalDocumentId": "default:ku_human_like_reasoner_program_core:3",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 62,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 90,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 78,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 68,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 78,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_planner_llm_guidance",
+      "scope": "default",
+      "rev": 4,
+      "lexicalDocumentId": "default:ku_planner_llm_guidance:4",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 84,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 86,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 144,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 80,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 110,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_writer_llm_guidance",
+      "scope": "default",
+      "rev": 1,
+      "lexicalDocumentId": "default:ku_writer_llm_guidance:1",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 44,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 52,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 66,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 44,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 42,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_planning_continue_core",
+      "scope": "default",
+      "rev": 6,
+      "lexicalDocumentId": "default:ku_planning_continue_core:6",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 100,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 100,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 154,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 96,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 106,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_planning_init_core",
+      "scope": "default",
+      "rev": 6,
+      "lexicalDocumentId": "default:ku_planning_init_core:6",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 108,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 102,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 160,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 100,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 120,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    },
+    {
+      "kuId": "ku_planning_repair_core",
+      "scope": "default",
+      "rev": 5,
+      "lexicalDocumentId": "default:ku_planning_repair_core:5",
+      "aspectSignals": [
+        {
+          "aspectId": "aspect_bias_risk",
+          "aspectType": "bias_oriented",
+          "score": 88,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_evidence_status",
+          "aspectType": "epistemological",
+          "score": 98,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_execution_guidance",
+          "aspectType": "operational",
+          "score": 140,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap",
+            "interpreter_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_governance_constraints",
+          "aspectType": "axiological",
+          "score": 84,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        },
+        {
+          "aspectId": "aspect_runtime_structure",
+          "aspectType": "ontological",
+          "score": 110,
+          "reasons": [
+            "token_overlap",
+            "domain_overlap",
+            "command_overlap"
+          ]
+        }
+      ],
+      "indexedAt": "2026-05-07T11:53:17.843Z"
+    }
+  ],
+  "inverseAspectView": {
+    "aspect_bias_risk": [
+      "AdvancedReasoner",
+      "DocumentScalePlanner",
+      "HumanLikeReasoner",
+      "analytic-memory",
+      "codeGeneratorLLM",
+      "credibility",
+      "deepLLM",
+      "fastLLM",
+      "js-eval",
+      "kb",
+      "logic-eval",
+      "plannerLLM",
+      "planning",
+      "template-eval",
+      "writerLLM",
+      "ku_analytic_memory_guidance",
+      "ku_credibility_guidance",
+      "ku_js_guidance",
+      "ku_kb_guidance",
+      "ku_logic_guidance",
+      "ku_logic_patterns",
+      "ku_planning_guidance",
+      "ku_template_guidance",
+      "ku_advanced_reasoner_guidance",
+      "ku_advanced_reasoner_program_core",
+      "ku_code_generator_llm_guidance",
+      "ku_deep_llm_guidance",
+      "ku_document_scale_planner_guidance",
+      "ku_fast_llm_guidance",
+      "ku_human_like_reasoner_guidance",
+      "ku_human_like_reasoner_program_core",
+      "ku_planner_llm_guidance",
+      "ku_writer_llm_guidance",
+      "ku_planning_continue_core",
+      "ku_planning_init_core",
+      "ku_planning_repair_core"
+    ],
+    "aspect_evidence_status": [
+      "AdvancedReasoner",
+      "DocumentScalePlanner",
+      "HumanLikeReasoner",
+      "analytic-memory",
+      "codeGeneratorLLM",
+      "credibility",
+      "deepLLM",
+      "fastLLM",
+      "js-eval",
+      "kb",
+      "logic-eval",
+      "plannerLLM",
+      "planning",
+      "template-eval",
+      "writerLLM",
+      "ku_analytic_memory_guidance",
+      "ku_credibility_guidance",
+      "ku_js_guidance",
+      "ku_kb_guidance",
+      "ku_logic_guidance",
+      "ku_logic_patterns",
+      "ku_planning_guidance",
+      "ku_template_guidance",
+      "ku_advanced_reasoner_guidance",
+      "ku_advanced_reasoner_program_core",
+      "ku_code_generator_llm_guidance",
+      "ku_deep_llm_guidance",
+      "ku_document_scale_planner_guidance",
+      "ku_fast_llm_guidance",
+      "ku_human_like_reasoner_guidance",
+      "ku_human_like_reasoner_program_core",
+      "ku_planner_llm_guidance",
+      "ku_writer_llm_guidance",
+      "ku_planning_continue_core",
+      "ku_planning_init_core",
+      "ku_planning_repair_core"
+    ],
+    "aspect_execution_guidance": [
+      "AdvancedReasoner",
+      "DocumentScalePlanner",
+      "HumanLikeReasoner",
+      "analytic-memory",
+      "codeGeneratorLLM",
+      "credibility",
+      "deepLLM",
+      "fastLLM",
+      "js-eval",
+      "kb",
+      "logic-eval",
+      "plannerLLM",
+      "planning",
+      "template-eval",
+      "writerLLM",
+      "ku_analytic_memory_guidance",
+      "ku_credibility_guidance",
+      "ku_js_guidance",
+      "ku_kb_guidance",
+      "ku_logic_guidance",
+      "ku_logic_patterns",
+      "ku_planning_guidance",
+      "ku_template_guidance",
+      "ku_advanced_reasoner_guidance",
+      "ku_advanced_reasoner_program_core",
+      "ku_code_generator_llm_guidance",
+      "ku_deep_llm_guidance",
+      "ku_document_scale_planner_guidance",
+      "ku_fast_llm_guidance",
+      "ku_human_like_reasoner_guidance",
+      "ku_human_like_reasoner_program_core",
+      "ku_planner_llm_guidance",
+      "ku_writer_llm_guidance",
+      "ku_planning_continue_core",
+      "ku_planning_init_core",
+      "ku_planning_repair_core"
+    ],
+    "aspect_governance_constraints": [
+      "AdvancedReasoner",
+      "DocumentScalePlanner",
+      "HumanLikeReasoner",
+      "analytic-memory",
+      "codeGeneratorLLM",
+      "credibility",
+      "deepLLM",
+      "fastLLM",
+      "js-eval",
+      "kb",
+      "logic-eval",
+      "plannerLLM",
+      "planning",
+      "template-eval",
+      "writerLLM",
+      "ku_analytic_memory_guidance",
+      "ku_credibility_guidance",
+      "ku_js_guidance",
+      "ku_kb_guidance",
+      "ku_logic_guidance",
+      "ku_logic_patterns",
+      "ku_planning_guidance",
+      "ku_template_guidance",
+      "ku_advanced_reasoner_guidance",
+      "ku_advanced_reasoner_program_core",
+      "ku_code_generator_llm_guidance",
+      "ku_deep_llm_guidance",
+      "ku_document_scale_planner_guidance",
+      "ku_fast_llm_guidance",
+      "ku_human_like_reasoner_guidance",
+      "ku_human_like_reasoner_program_core",
+      "ku_planner_llm_guidance",
+      "ku_writer_llm_guidance",
+      "ku_planning_continue_core",
+      "ku_planning_init_core",
+      "ku_planning_repair_core"
+    ],
+    "aspect_runtime_structure": [
+      "AdvancedReasoner",
+      "DocumentScalePlanner",
+      "HumanLikeReasoner",
+      "analytic-memory",
+      "codeGeneratorLLM",
+      "credibility",
+      "deepLLM",
+      "fastLLM",
+      "js-eval",
+      "kb",
+      "logic-eval",
+      "plannerLLM",
+      "planning",
+      "template-eval",
+      "writerLLM",
+      "ku_analytic_memory_guidance",
+      "ku_credibility_guidance",
+      "ku_js_guidance",
+      "ku_kb_guidance",
+      "ku_logic_guidance",
+      "ku_logic_patterns",
+      "ku_planning_guidance",
+      "ku_template_guidance",
+      "ku_advanced_reasoner_guidance",
+      "ku_advanced_reasoner_program_core",
+      "ku_code_generator_llm_guidance",
+      "ku_deep_llm_guidance",
+      "ku_document_scale_planner_guidance",
+      "ku_fast_llm_guidance",
+      "ku_human_like_reasoner_guidance",
+      "ku_human_like_reasoner_program_core",
+      "ku_planner_llm_guidance",
+      "ku_writer_llm_guidance",
+      "ku_planning_continue_core",
+      "ku_planning_init_core",
+      "ku_planning_repair_core"
+    ]
+  },
+  "lexicalDocuments": [
+    {
+      "id": "default:AdvancedReasoner:1",
+      "kuId": "AdvancedReasoner",
+      "title": "AdvancedReasoner",
+      "summary": "Choose AdvancedReasoner for bounded advanced reasoning tasks that must expose evidence quality, certainty, review or engine-escalation guidance, and typed reasoning structure rather than only a finite exact solver result.",
+      "content": "Use AdvancedReasoner for bounded meta-reasoning tasks where the runtime should reason explicitly about uncertainty, evidence quality, missing structure, normative review, or engine escalation instead of pretending the task is already a finite closed-world puzzle.\nPrefer it for abductive, probabilistic, causal, argumentative, belief-revision, legal, scientific, optimization-routing, formal-proof-routing, SMT-fragment, pragmatic, analogical, ethical, and creative-evaluation tasks when a bounded local pass is still useful.\nThe body may be a direct natural-language problem, a structured rewrite brief produced by logic-eval, or a JSON envelope that pins result_mode, program, or generation settings.\nPrefer direct AdvancedReasoner routing when the task already clearly belongs to one of these advanced reasoning families. Prefer HumanLikeReasoner instead when the task is already a finite rule, constraint, graph, search, or numeric problem that should be solved exactly by local symbolic composition.\nThe expected exit surface is a structured reasoner response returned through `ctx.returnResponse(...)`, not `ctx.emit(...)`.",
+      "tags": "reasoning advanced meta",
+      "commands": "",
+      "interpreters": "AdvancedReasoner",
+      "domains": "runtime reasoning interpreters"
+    },
+    {
+      "id": "default:DocumentScalePlanner:1",
+      "kuId": "DocumentScalePlanner",
+      "title": "DocumentScalePlanner",
+      "summary": "Choose DocumentScalePlanner for bounded Markdown or JSON analysis tasks that should be executed through explicit chunking, rollups, coverage checks, and declaration insertion rather than one opaque prompt.",
+      "content": "Use DocumentScalePlanner for bounded document-scale planning tasks over explicit Markdown or JSON inputs when the runtime should build an inspectable chunked SOP workflow instead of treating the whole document as one opaque prompt.\nPrefer it for chapter-, section-, paragraph-, table-, or record-level analysis that needs repeated per-unit processing, rollups, coverage checks, or explicit selective expansion guidance.\nThe body may be a direct natural-language planning request, a mixed body that repeats an explicit `document_ref ~family` line plus a JSON envelope, or a direct inline envelope that pins document_text, document_json, operation, granularity, path, final_target, and plan limits for controlled execution.\nPrefer direct DocumentScalePlanner routing when the task already clearly targets multi-unit Markdown or JSON analysis. Prefer HumanLikeReasoner or AdvancedReasoner instead when the task is primarily a bounded reasoning problem, and prefer writerLLM or deepLLM instead when the task is just one-shot prose over a small excerpt.\nWhen planning uses DocumentScalePlanner, keep the initial graph connected by making @response depend on the declared planner family. Let the inserted declarations bridge the final semantic target back into that planner family rather than referencing an undeclared future family directly from the initial @response declaration.",
+      "tags": "document planning chunking",
+      "commands": "",
+      "interpreters": "DocumentScalePlanner",
+      "domains": "runtime planning interpreters"
+    },
+    {
+      "id": "default:HumanLikeReasoner:2",
+      "kuId": "HumanLikeReasoner",
+      "title": "HumanLikeReasoner",
+      "summary": "Choose HumanLikeReasoner for bounded human-scale reasoning and mixed finite problems that should run through an explicit generated reasoning program plus inspectable local solvers, not for open-world advanced reasoning.",
+      "content": "Use HumanLikeReasoner for bounded human-scale reasoning tasks that should be solved through an explicit generated reasoning program plus inspectable local solvers.\nPrefer it for finite assignment, graph reachability, bounded numeric reasoning, small search problems, and mixed tasks where one statement combines several of those reasoning families.\nThe body may be a direct natural-language problem, a structured rewrite brief produced by logic-eval, or a JSON envelope that pins result_mode, program, or generation settings.\nPrefer direct HumanLikeReasoner routing when the task is already clearly a bounded reasoning problem. Prefer AdvancedReasoner instead when the task becomes incomplete, probabilistic, causal, evidential, legal, scientific, normative, interpretive, or otherwise too open-world for a finite local solver profile.",
+      "tags": "reasoning bounded compositional",
+      "commands": "",
+      "interpreters": "HumanLikeReasoner",
+      "domains": "runtime reasoning interpreters"
+    },
+    {
+      "id": "default:analytic-memory:1",
+      "kuId": "analytic-memory",
+      "title": "analytic-memory",
+      "summary": "Choose analytic-memory for keyed accumulation, evidence ledgers, rollups, derived metrics, and compact exported summaries.",
+      "content": "Use analytic-memory for structured accumulation, rollups, derived metrics, and exportable summaries that span many observations.\nPrefer it when the task is about storing keyed facts, appending evidence, computing aggregates, or exporting a compact session-level summary for later steps.\nIt is best for inspectable session memory and evidence ledgers, not for one-off narrative explanations.\nDo not use it for open-ended prose generation, arbitrary scripting, or KB retrieval.\nGood bodies look like normalized operator instructions such as store, append, derive, rollup, and export.",
+      "tags": "analytics aggregation",
+      "commands": "analytic-memory",
+      "interpreters": "",
+      "domains": "runtime analytics"
+    },
+    {
+      "id": "default:codeGeneratorLLM:1",
+      "kuId": "codeGeneratorLLM",
+      "title": "codeGeneratorLLM",
+      "summary": "Choose codeGeneratorLLM for syntax-sensitive code generation, transformation, and patch-like outputs rather than generic prose.",
+      "content": "Use codeGeneratorLLM when the task requires syntax-sensitive code generation, code transformation, or structured patches that must preserve programming-language constraints.\nPrefer it over writerLLM when exact syntax matters and over js-eval when code still needs to be produced rather than executed inside the runtime.\nGood inputs state the target language, environment, preserved context, forbidden changes, desired output shape, and whether the result should be a snippet, full file, or patch-like artifact.\nAvoid using it as a general planner, a vague reasoning surface, or a generic prose model.",
+      "tags": "llm code",
+      "commands": "",
+      "interpreters": "codeGeneratorLLM",
+      "domains": "runtime wrappers"
+    },
+    {
+      "id": "default:credibility:1",
+      "kuId": "credibility",
+      "title": "credibility",
+      "summary": "Choose credibility for ranking competing family variants, emitting scores or withdrawals, and escalating when comparison evidence is insufficient.",
+      "content": "Use credibility when several candidate variants exist for the same family and the runtime needs an explicit comparison rather than an accidental latest-value choice.\nPrefer it for ranking, scoring, withdrawal decisions, or deciding whether more evidence is needed before downstream execution continues.\nIts input should summarize candidates, provenance, criteria, and any evaluation hints that matter for fair comparison, so the outcome can be explained in traceability.\nAvoid using credibility to generate brand-new answers; it is for comparing existing variants.",
+      "tags": "comparison scoring",
+      "commands": "credibility",
+      "interpreters": "deepLLM",
+      "domains": "runtime evaluation"
+    },
+    {
+      "id": "default:deepLLM:1",
+      "kuId": "deepLLM",
+      "title": "deepLLM",
+      "summary": "Choose deepLLM for harder reasoning, proof-like explanation, nuanced evaluation, and language tasks that need stronger inference.",
+      "content": "Use deepLLM for difficult reasoning, nuanced evaluation, proof-like explanation, or multi-constraint language tasks where cheap synthesis is likely to miss important structure.\nPrefer it when the task needs stronger inference, comparison, state interpretation, or generalization, but the result is still language output rather than executable code or a plan proposal.\nDeepLLM is a strong companion to deterministic steps: it can explain why a computed result is correct, justify minimality, discuss tradeoffs, or generalize a solution from exact intermediate data.\nAvoid it for trivial classification, deterministic assembly, or lightweight chat turns that fastLLM can handle more cheaply.",
+      "tags": "llm deep",
+      "commands": "",
+      "interpreters": "deepLLM",
+      "domains": "runtime wrappers"
+    },
+    {
+      "id": "default:fastLLM:1",
+      "kuId": "fastLLM",
+      "title": "fastLLM",
+      "summary": "Choose fastLLM for cheap extraction, normalization, and brief synthesis when latency matters more than deep reasoning or exactness.",
+      "content": "Use fastLLM for cheap short-form language work: extraction, normalization, lightweight synthesis, simple classification, and quick answers where latency matters.\nPrefer it when the step is language-heavy but shallow enough that exactness does not depend on deeper reasoning or deterministic computation.\nGood fits include small label extraction, concise rewrites, short summaries, and lightweight comparisons over already obvious evidence.\nAvoid fastLLM for planning, mathematical proof, search over state spaces, delicate policy evaluation, or answers that must preserve an exact requested structure from computed results.",
+      "tags": "llm fast",
+      "commands": "",
+      "interpreters": "fastLLM",
+      "domains": "runtime wrappers"
+    },
+    {
+      "id": "default:js-eval:1",
+      "kuId": "js-eval",
+      "title": "js-eval",
+      "summary": "Choose js-eval for bounded procedural logic, exact computation, state-space search, data reshaping, and explicit state updates through JavaScript.",
+      "content": "Use js-eval for bounded procedural logic, data reshaping, exact arithmetic, local search, and controlled variant updates that benefit from explicit JavaScript.\nPrefer it when the step needs loops, collections, graph traversal, shortest-path search, object manipulation, or direct state edits through ~family handles.\nIt is especially appropriate for exact algorithmic sub-problems where the runtime should expose inspectable computation instead of asking an LLM to improvise steps or numeric results.\nDo not use it for plain prose generation, free-form reasoning, or tasks that can be expressed as short when/then rules or deterministic templates.\nBodies should be real JavaScript that reads $family values and uses ~family or sop helpers for writes and structural effects.",
+      "tags": "javascript procedural",
+      "commands": "js-eval",
+      "interpreters": "",
+      "domains": "runtime procedural"
+    },
+    {
+      "id": "default:kb:1",
+      "kuId": "kb",
+      "title": "kb",
+      "summary": "Choose kb for explicit KU search and retrieval when the step is about finding reusable guidance or content rather than executing other work.",
+      "content": "Use kb for explicit knowledge retrieval against the repository-backed KU catalog when the step is primarily about finding reusable guidance or content.\nPrefer it when the runtime needs to discover which prompt asset, caller profile, policy note, or reusable content should shape the next step.\nGood kb requests describe the topic, scope, and intended downstream use so the retrieved KUs can inform planning or execution transparently.\nDo not use it as a substitute for planning or for generating new prose when the task is not actually about retrieving knowledge.",
+      "tags": "knowledge retrieval",
+      "commands": "kb",
+      "interpreters": "",
+      "domains": "runtime knowledge"
+    },
+    {
+      "id": "default:logic-eval:6",
+      "kuId": "logic-eval",
+      "title": "logic-eval",
+      "summary": "Choose logic-eval as a bounded orchestration helper that rewrites logic-heavy requests into structured briefs for external reasoning interpreters such as HumanLikeReasoner and AdvancedReasoner, not for document-plan synthesis.",
+      "content": "Use logic-eval when a plan needs a bounded reasoning-orchestration helper, not when it needs the final solved answer directly.\nlogic-eval should read a logic-heavy request, produce a structured rewrite brief, recommend one or more external reasoning interpreters, and preserve the exact entities, constraints, answer requirements, and downstream routing cues for the next step.\nPrefer direct HumanLikeReasoner routing when the planner already understands that the task is a bounded human-scale reasoning problem. Prefer direct AdvancedReasoner routing when the task is already clearly uncertain, evidential, probabilistic, causal, argumentative, legal, scientific, optimization-oriented, formal-routing, pragmatic, analogical, ethical, or creative in the bounded meta-reasoning sense. Use logic-eval when the planner needs help rewriting or decomposing the request before handing it to an external reasoning interpreter.\nDo not use logic-eval as the synthesis surface for document-scale Markdown or JSON workflows. Those belong in DocumentScalePlanner when explicit chunking and rollups are required.\nAvoid logic-eval for final prose, memo writing, arbitrary scripting, document-plan synthesis, or as a duplicate solver runtime. The output should be a machine-usable orchestration brief, not the final user-facing answer.",
+      "tags": "logic orchestration rewrite",
+      "commands": "logic-eval",
+      "interpreters": "",
+      "domains": "runtime logic planning"
+    },
+    {
+      "id": "default:plannerLLM:3",
+      "kuId": "plannerLLM",
+      "title": "plannerLLM",
+      "summary": "Choose plannerLLM for SOP Lang planning and repair proposals that create explicit intermediate families, valid dependency edges, and one convergent @response graph without depending on undeclared future families.",
+      "content": "Use plannerLLM only to propose or repair SOP Lang programs under the control of the native planning command.\nIts output should be raw SOP Lang that names concrete intermediate families, uses only available command or interpreter names, makes dependencies explicit through $family references, and converges into one final @response declaration without dead-end families.\nPrefer it when the runtime needs decomposition, rerouting, plan normalization, or repair after a failed declaration.\nIf a chosen interpreter inserts declarations later, keep the initial graph connected through already-declared families. Do not make the initial @response depend on a future family that does not yet exist in the accepted graph.\nAvoid using plannerLLM as an ordinary answer writer, a hidden reasoning sink, or a place to smuggle prose into native commands.",
+      "tags": "llm planning",
+      "commands": "",
+      "interpreters": "plannerLLM",
+      "domains": "runtime planning"
+    },
+    {
+      "id": "default:planning:2",
+      "kuId": "planning",
+      "title": "planning",
+      "summary": "Choose planning to decompose a request into an explicit SOP Lang dependency graph, select fitting commands or interpreters including the bounded reasoners and DocumentScalePlanner, and preserve one connected final @response path.",
+      "content": "Use planning to turn a natural-language request plus session state into an explicit executable SOP Lang graph.\nPlanning is responsible for deciding whether the task needs retrieval, deterministic computation, reasoning, formatting, aggregation, or comparison, then expressing each meaningful stage as its own declaration.\nGood planning creates a dependency graph that an operator can inspect: each intermediate family should represent a concrete artifact such as parsed constraints, retrieved guidance, computed result, explanation, or formatted response.\nPrefer multi-step plans for non-trivial requests, especially when the user asks for both solving and justification, exact computation plus explanation, or a final answer that must preserve a requested structure.\nPlanning should retrieve and respect detailed KUs before choosing surfaces, should keep deterministic work on native commands when possible, and must always end in a final @response declaration.\nPlanning should route directly to HumanLikeReasoner for clear finite symbolic reasoning, directly to AdvancedReasoner for bounded advanced meta-reasoning, directly to DocumentScalePlanner for bounded Markdown or JSON analysis that needs explicit chunking and rollups, and use logic-eval only when a rewrite brief is still needed before one of those downstream interpreters.\nWhen planning uses an interpreter that inserts declarations, keep the initial graph connected through already-declared families. Do not make the first @response depend on future undeclared targets.",
+      "tags": "planning bootstrap",
+      "commands": "planning",
+      "interpreters": "plannerLLM",
+      "domains": "runtime planning"
+    },
+    {
+      "id": "default:template-eval:1",
+      "kuId": "template-eval",
+      "title": "template-eval",
+      "summary": "Choose template-eval for deterministic assembly of known values into structured output with explicit placeholders and stable section layout.",
+      "content": "Use template-eval when the desired output is deterministic, sectioned, and assembled from already-known values.\nPrefer it for final response assembly, prompt assembly, and report formatting when the required sections, labels, and order are already known.\nUse $family or ${family.path} placeholders to insert values, and keep the template explicit enough that an operator can see how the final answer was assembled.\nAvoid it when the step needs open-ended prose invention or non-deterministic reasoning.",
+      "tags": "templates rendering",
+      "commands": "template-eval",
+      "interpreters": "",
+      "domains": "runtime templates"
+    },
+    {
+      "id": "default:writerLLM:1",
+      "kuId": "writerLLM",
+      "title": "writerLLM",
+      "summary": "Choose writerLLM for polished user-facing prose and final answer wording once the underlying substance and structure are known.",
+      "content": "Use writerLLM for polished user-facing prose when the substance is already known and the main need is clear, fluent wording.\nPrefer it for final explanations, summaries, and stitched answers that must read naturally while preserving the structure requested by the user.\nIt should present already computed facts faithfully, not invent missing reasoning, arithmetic, or state transitions that should have been produced upstream.\nAvoid it for planning, difficult hidden reasoning, exact deterministic formatting that template-eval can handle, or code generation.",
+      "tags": "llm writing",
+      "commands": "",
+      "interpreters": "writerLLM",
+      "domains": "runtime writing"
+    },
+    {
+      "id": "default:ku_analytic_memory_guidance:1",
+      "kuId": "ku_analytic_memory_guidance",
+      "title": "analytic-memory guidance",
+      "summary": "Use analytic-memory for transparent hierarchical accumulation, evidence ledgers, rollups, and exported summaries that later plan steps can inspect and reuse.",
+      "content": "Choose analytic-memory when a step is about accumulating, deriving, and exporting structured state across many observations or requests.\n\nThis command is best when the runtime needs durable inspectable aggregation instead of ad-hoc prose. It is especially appropriate for session summaries, evidence ledgers, counters, grouped measurements, and compact rollups that later steps will cite.\n\nUse it for:\n- storing repeated measurements under hierarchical keys,\n- appending evidence, claims, notes, or citations into collections,\n- computing rollups, totals, averages, counts, or merged summaries,\n- exporting one compact summary family for later planning or response steps,\n- keeping session memory structured enough that later repair or explanation steps can inspect it.\n\nGood bodies look like explicit analytic operators, for example:\n- store 0.72 under chapter.3.risk\n- append \"claim-a\" under chapter.3.claims\n- append {\"source\":\"paper-1\",\"verdict\":\"supports\"} under review.evidence\n- rollup chapter.3 using average(risk) and count(claims)\n- export chapter.3.summary as chapter3Summary\n\nPrefer analytic-memory over js-eval when the main goal is transparent accumulation semantics rather than arbitrary code.\nAnalytic-memory is useful when later plan steps need a compact export that can be cited by a writer, planner repair step, or trace inspector.\n\nAvoid analytic-memory when:\n- the step is ordinary KB retrieval,\n- the task is just prose writing or argumentation,\n- the work is a one-off deterministic transformation with no persistent analytic structure,\n- the body cannot be expressed as aggregation-oriented operators.",
+      "tags": "analytics aggregation guidance",
+      "commands": "analytic-memory",
+      "interpreters": "",
+      "domains": "runtime analytics"
+    },
+    {
+      "id": "default:ku_credibility_guidance:1",
+      "kuId": "ku_credibility_guidance",
+      "title": "credibility guidance",
+      "summary": "Use credibility to compare competing family variants, score and withdraw them explicitly, and choose a representative before dependent steps continue.",
+      "content": "Choose credibility when multiple variants compete for the same family and the runtime must compare them explicitly.\n\nUse it for:\n- scoring candidate variants,\n- selecting a representative fairly,\n- withdrawing weaker candidates with reasons,\n- deciding whether more evidence must be gathered before continuing.\n\nThe input should make the comparison space explicit:\n- what the candidates are,\n- where they came from,\n- what criteria matter,\n- whether a tie should trigger more evidence gathering.\n\nGood credibility tasks read like evaluation or arbitration instructions, not generation requests. The command is strongest when the step already has variants and needs an inspectable decision.\nCredibility is particularly useful after multiple interpreters or strategies have produced alternative answers and the runtime needs an explicit representative before formatting the response.\n\nTypical situations:\n- two interpreters produced different answers for the same family,\n- a family contains active and partially failed candidates that must be ranked,\n- a later step depends on choosing a single representative before continuing,\n- the runtime needs explicit withdrawal or score metadata for traceability.\n\nAvoid credibility when:\n- there is only one usable candidate,\n- the step is actually about generating a new answer rather than comparing existing ones,\n- the criteria are too vague and a deeper upstream generation step is still needed.",
+      "tags": "comparison scoring guidance",
+      "commands": "credibility",
+      "interpreters": "deepLLM",
+      "domains": "runtime evaluation"
+    },
+    {
+      "id": "default:ku_js_guidance:1",
+      "kuId": "ku_js_guidance",
+      "title": "js guidance",
+      "summary": "Use js-eval for bounded procedural computation, data reshaping, exact arithmetic, state-space search, and explicit state updates; avoid prose-only or rule-style bodies.",
+      "content": "Choose js-eval when a step needs bounded procedural work rather than prose generation.\n\nUse it for:\n- arithmetic, mapping, grouping, filtering, and object reshaping,\n- explicit reads from $family values,\n- controlled writes through ~family handles,\n- small local orchestration that still needs deterministic traceable effects,\n- bounded graph traversal, search, simulation, or exact state transition generation.\n\nPrefer bodies that are real JavaScript, make the data flow obvious, and stay narrowly focused on the declared target family.\n\nGood patterns:\n- compute a derived object from one or more $families,\n- normalize a list or record,\n- update one family through ~family.set(...) or property writes,\n- emit a small structural follow-up through sop.insertDeclarations(...) when truly necessary.\n\nChoose js-eval over template-eval when computation or branching is needed before rendering. Choose it over logic-eval when the task requires arrays, object traversal, arithmetic, or procedural shaping that rule syntax would express poorly.\n\nUseful body shapes include:\n- deriving JSON-ready output from multiple dependencies,\n- sanitizing parsed file content,\n- grouping records before a final template step,\n- computing an exact answer that should not depend on an LLM,\n- generating a minimal path or sequence of states for a puzzle, scheduling, or traversal problem.\n\nAvoid js-eval when:\n- the body is plain prose,\n- the task is only a deterministic template,\n- the step is better expressed as explicit when/then rules,\n- the task really needs an LLM to interpret language.\n\nDo not assume unrestricted filesystem, process, or network access.",
+      "tags": "javascript guidance",
+      "commands": "js-eval",
+      "interpreters": "",
+      "domains": "runtime procedural"
+    },
+    {
+      "id": "default:ku_kb_guidance:1",
+      "kuId": "ku_kb_guidance",
+      "title": "kb guidance",
+      "summary": "Use kb for explicit KU search and retrieval when the step needs stored guidance, prompt assets, or reusable planning knowledge instead of fresh computation.",
+      "content": "Choose kb when the step is explicitly about retrieving reusable knowledge units from the repository-backed catalog.\n\nUse it for:\n- searching KUs by topic or text,\n- retrieving prompt assets or guidance material,\n- returning matched knowledge as structured data for another step.\n\nGood bodies describe the knowledge need clearly:\n- what topic or term is being searched,\n- which scope matters,\n- whether the result is meant for planning, execution, or display.\n\nThe kb command is appropriate when the runtime does not yet know which reusable guidance or prompt asset it needs. It should surface inspectable knowledge, not hide a downstream decision inside prose.\nIn planning-heavy sessions, kb can be used to discover which command guidance, interpreter guidance, or prompt asset should shape later declarations.\n\nPrefer kb over an LLM step when the answer should come from stored project knowledge rather than fresh synthesis. Prefer it over analytic-memory when the task is retrieval, not accumulation.\n\nAvoid kb when:\n- the step already knows which computation should run,\n- the real task is prose generation,\n- session aggregation or procedural transformation would be clearer.",
+      "tags": "knowledge retrieval guidance",
+      "commands": "kb",
+      "interpreters": "",
+      "domains": "runtime knowledge"
+    },
+    {
+      "id": "default:ku_logic_guidance:6",
+      "kuId": "ku_logic_guidance",
+      "title": "logic guidance",
+      "summary": "Use logic-eval as a bounded rewrite-orchestration helper for logic-heavy requests that need a structured brief and explicit routing toward HumanLikeReasoner, AdvancedReasoner, or later engine escalation, not as the final solver runtime or document-plan synthesizer.",
+      "content": "Choose logic-eval when the planner needs help rewriting or decomposing a bounded reasoning request before handing it to an external reasoning interpreter.\n\nUse it for:\n- logic-heavy requests where the planner knows the task is finite but does not yet know the cleanest reasoning route,\n- mixed requests that need the entities, constraints, and exact target question rewritten into a sharper solver brief,\n- situations where the next stage should be a dedicated external reasoning interpreter rather than an overloaded planner step.\n\nAccepted body shapes:\n- a natural-language problem statement that should be rewritten into a bounded reasoning brief,\n- a JSON envelope that already contains problem, preferred_interpreters, answer_requirements, or decomposition_hints,\n- a direct reference to an earlier family whose structured value should become the next-stage reasoning brief.\n\nGood logic-eval outputs:\n- preserve the original task boundaries,\n- recommend one or more enabled external reasoning interpreters,\n- keep the rewritten problem finite and inspectable,\n- surface answer requirements that the downstream interpreter should preserve,\n- avoid pretending to solve the problem inside logic-eval itself,\n- make it obvious whether the next route should be HumanLikeReasoner, AdvancedReasoner, or a later specialized-engine escalation discovered by AdvancedReasoner.\n\nPrefer direct HumanLikeReasoner routing when the task already clearly fits a finite bounded solver shape. Prefer direct AdvancedReasoner routing when the task already clearly needs meta-reasoning over uncertainty, evidence quality, missing structure, normative review, or engine triage. Prefer direct DocumentScalePlanner routing when the task is really a bounded Markdown or JSON planning workflow rather than a reasoning-brief rewrite. Use logic-eval when the planner needs an intermediate orchestration brief so it does not have to encode all reasoning decomposition logic by itself.\n\nAvoid logic-eval when:\n- the task is already execution-ready for HumanLikeReasoner,\n- the task is really a document-scale planning request for DocumentScalePlanner,\n- the step is mainly polished prose or memo writing,\n- the task is unrestricted procedural code,\n- the request is too vague even for a bounded rewrite brief.",
+      "tags": "logic guidance orchestration",
+      "commands": "logic-eval",
+      "interpreters": "",
+      "domains": "runtime logic planning"
+    },
+    {
+      "id": "default:ku_logic_patterns:2",
+      "kuId": "ku_logic_patterns",
+      "title": "logic canonical patterns",
+      "summary": "Canonical logic-eval body patterns for legacy guards, inline graph and constraint programs, and bounded natural-language solver requests, plus clear anti-patterns.",
+      "content": "Canonical logic-eval patterns:\n\n1. Legacy guard with failure:\nwhen not exists input\nthen emit error for ~response reason \"Missing required input.\"\n\n2. Inline GraphProblem:\n{\"result_mode\":\"structured\",\"program_steps\":[{\"op\":\"createSolver\",\"varName\":\"g\",\"className\":\"GraphProblem\",\"options\":{}},{\"op\":\"solverCall\",\"varName\":\"g\",\"method\":\"node\",\"args\":[\"A\"]},{\"op\":\"solverCall\",\"varName\":\"g\",\"method\":\"node\",\"args\":[\"B\"]},{\"op\":\"solverCall\",\"varName\":\"g\",\"method\":\"edge\",\"args\":[\"A\",\"B\"]},{\"op\":\"solverCall\",\"varName\":\"g\",\"method\":\"findPath\",\"args\":[\"A\",\"B\"]},{\"op\":\"solverSolve\",\"varName\":\"g\",\"resultName\":\"path\"},{\"op\":\"setFinal\",\"value\":[\"ref\",\"results.path.solution.path\"]}]}\n\n3. Inline ConstraintProblem:\n{\"result_mode\":\"structured\",\"program_steps\":[{\"op\":\"createSolver\",\"varName\":\"assignment\",\"className\":\"ConstraintProblem\",\"options\":{\"maxSolutions\":1}},{\"op\":\"solverCall\",\"varName\":\"assignment\",\"method\":\"domain\",\"args\":[\"alice\",[\"red\",\"blue\"]]},{\"op\":\"solverCall\",\"varName\":\"assignment\",\"method\":\"domain\",\"args\":[\"bob\",[\"red\",\"blue\"]]},{\"op\":\"solverCall\",\"varName\":\"assignment\",\"method\":\"forbid\",\"args\":[\"alice\",\"blue\"]},{\"op\":\"solverCall\",\"varName\":\"assignment\",\"method\":\"implies\",\"args\":[\"alice\",\"red\",\"bob\",\"blue\"]},{\"op\":\"solverCall\",\"varName\":\"assignment\",\"method\":\"query\",\"args\":[\"assignment\"]},{\"op\":\"solverSolve\",\"varName\":\"assignment\",\"resultName\":\"owners\"},{\"op\":\"setFinal\",\"value\":[\"ref\",\"results.owners.solution\"]}]}\n\n4. Natural-language bounded solver request:\nDetermine whether the cutover dependency graph from $dependencies allows shift_full_traffic only after verify_billing_drain, and return the valid execution order as structured output.\n\nAnti-patterns:\n- prose explanations,\n- open-ended memo writing,\n- pseudo-code that invents new runtime primitives,\n- vague \"validate this in natural language\" instructions,\n- arbitrary scripts better handled by js-eval,\n- tasks with no finite entities, constraints, or target state.\n\nIf a body stops looking like a bounded symbolic problem and turns into unrestricted prose or scripting, it no longer belongs in logic-eval.",
+      "tags": "logic patterns guidance",
+      "commands": "logic-eval",
+      "interpreters": "",
+      "domains": "runtime logic"
+    },
+    {
+      "id": "default:ku_planning_guidance:6",
+      "kuId": "ku_planning_guidance",
+      "title": "planning guidance",
+      "summary": "Use planning to decompose an open request into one explicit SOP Lang workflow with meaningful intermediate families, authoritative-catalog routing across bounded reasoners, AdvancedReasoner, and DocumentScalePlanner, deterministic final assembly, and no dead-end declarations.",
+      "content": "Choose planning when the runtime must translate an open user request into an explicit executable SOP Lang workflow.\n\nPlanning is responsible for:\n- selecting commands and interpreters,\n- naming intermediate families clearly,\n- decomposing work so dependencies are explicit,\n- ensuring the graph ends in @response,\n- producing bodies that actually fit the selected execution surfaces.\n\nPlanning should read retrieved KUs in two passes:\n- summary fields are routing cues that help decide which command or interpreter fits a sub-task,\n- root-body guidance explains how to write a good declaration body for that chosen surface.\n\nGood planning output:\n- creates one declaration per meaningful intermediate result,\n- keeps deterministic work on native commands where possible,\n- uses LLM interpreters only when language understanding, reasoning, prose quality, or code synthesis is genuinely needed,\n- separates exact solving from explanation or final prose when those concerns differ,\n- creates explicit dependency edges so the execution graph reads like a real workflow rather than a flat list,\n- avoids monolithic plans when the task has separable stages,\n- ensures the final response depends on the relevant prior families.\n- cross-checks the authoritative component catalog from runtime code before choosing a route,\n- avoids template-eval unless the referenced families are already deterministic and available.\n- converges into exactly one terminal family named response,\n- avoids dead-end helper declarations that do not affect the final answer.\n\nFor algorithmic or puzzle-like requests, prefer a graph such as: rewrite-or-decompose if needed -> bounded reasoning execution -> explanation or final assembly. Avoid planning as a stand-in for execution. The output must be SOP Lang, not the final user answer.\n\nUse HumanLikeReasoner directly when the request is already clearly a bounded human-scale reasoning task with explicit finite structure. Use AdvancedReasoner directly when the request is reasoning-heavy but the structure is incomplete, uncertain, evidential, probabilistic, causal, argumentative, legal, scientific, optimization-oriented, formal-routing, pragmatic, analogical, ethical, or creative in the bounded meta-reasoning sense. Use DocumentScalePlanner directly when the task is a bounded Markdown or JSON analysis workflow that needs explicit chunking, rollups, coverage checks, or selective expansion.\n\nUse logic-eval only when the planner needs an intermediate rewrite brief that sharpens the entities, constraints, target question, and preferred reasoning route before handing the task to HumanLikeReasoner, AdvancedReasoner, or a later engine recommendation path. Do not use logic-eval as a stand-in for document-plan synthesis.\n\nDo not use logic-eval as a fake solver or as a container for vague reasoning prose. If the step truly needs unrestricted deterministic coding, use js-eval. If it needs justification, explanation, or formal reasoning in prose after an exact upstream result exists, use a suitable LLM interpreter instead of hiding that work in logic-eval. When planning uses DocumentScalePlanner or another declaration-inserting interpreter, keep the initial accepted graph connected through the declared planner family and let the inserted declarations bridge the final semantic target back into that family.",
+      "tags": "planning routing guidance",
+      "commands": "planning",
+      "interpreters": "plannerLLM",
+      "domains": "runtime planning"
+    },
+    {
+      "id": "default:ku_template_guidance:1",
+      "kuId": "ku_template_guidance",
+      "title": "template guidance",
+      "summary": "Use template-eval for deterministic assembly of known values into stable sectioned output with $placeholders; avoid using it as a hidden prose generator.",
+      "content": "Choose template-eval when the output should be deterministic, sectioned, and assembled from already-known values.\n\nUse it for:\n- final response assembly from prior families,\n- prompt assembly with stable wording,\n- reports, summaries, or lists where the structure matters more than novel prose.\n\nGood bodies:\n- use $value or ${value} for straightforward placeholders,\n- reserve {{#if}} and {{#each}} for simple structural control only when needed,\n- keep the template readable and explicit about sections.\n\nChoose template-eval over writerLLM when the response shape is already known and only composition remains. This keeps output stable, inspectable, and cheap.\n\nStrong fits include:\n- final answer wrappers around computed values,\n- markdown reports from already prepared sections,\n- prompts that should preserve exact wording except for slot filling,\n- user-facing answers where section headings, numbered steps, and exact computed states are already known and should not be reinvented.\n\nAvoid template-eval when:\n- the step requires open-ended prose invention,\n- the template body is really a request for reasoning,\n- the task needs procedural state updates instead of rendering.",
+      "tags": "template guidance",
+      "commands": "template-eval",
+      "interpreters": "",
+      "domains": "runtime templates"
+    },
+    {
+      "id": "default:ku_advanced_reasoner_guidance:1",
+      "kuId": "ku_advanced_reasoner_guidance",
+      "title": "AdvancedReasoner guidance",
+      "summary": "Use AdvancedReasoner for bounded advanced reasoning tasks that should expose evidence quality, certainty, review boundaries, or engine escalation rather than only a finite exact solver answer.",
+      "content": "Choose AdvancedReasoner when the request is still bounded and inspectable, but the reasoning step must say something explicit about uncertainty, evidence quality, open-world risk, missing inputs, review requirements, or engine escalation.\n\nUse it for:\n- abductive hypothesis ranking over explicit observations,\n- probabilistic belief updates over tiny finite models,\n- causal-effect triage that may end in a cautious local finding or an engine recommendation,\n- argumentation, belief revision, legal applicability scans, and scientific evidence synthesis,\n- bounded optimization routing, formal-proof routing, tiny SMT fragments, pragmatic ambiguity checks, analogy scoring, ethical option comparison, and bounded creative-rubric evaluation.\n\nAccepted body shapes:\n- a direct natural-language advanced reasoning task,\n- a structured rewrite brief from logic-eval,\n- a JSON envelope with fields such as problem, rewritten_problem, result_mode, program, or generator_profile.\n\nGood AdvancedReasoner inputs:\n- name the observations, hypotheses, claims, options, or constraints explicitly,\n- preserve requested output sections and downstream answer requirements,\n- keep local reasoning bounded even when the conclusion may be \"needs_engine\" or \"needs_review\",\n- distinguish local structural analysis from claims that require external datasets, proof systems, legal review, or larger optimization engines.\n\nProgram-generation guidance:\n- generated programs should create one `ExecutionContext`,\n- use the exact public method names published by the AdvancedReasoner prompt asset,\n- store useful intermediate artifacts with `ctx.storeResult(...)` or `ctx.assume(...)` when they improve traceability,\n- finish only with `ctx.returnResponse(ReasonerResponse.*(...))`,\n- prefer a conservative response status such as `partial`, `needs_clarification`, `needs_engine`, or `needs_review` when the bounded local pass cannot justify promotion safely.\n\nAvoid AdvancedReasoner when:\n- the task is already a finite rule, constraint, graph, search, or numeric problem that HumanLikeReasoner can solve directly,\n- the step is mainly polished prose or memo writing,\n- unrestricted coding is the real need,\n- the request is so vague that even a bounded advanced reasoning brief cannot be formed.",
+      "tags": "reasoning guidance advanced",
+      "commands": "",
+      "interpreters": "AdvancedReasoner",
+      "domains": "runtime reasoning interpreters"
+    },
+    {
+      "id": "default:ku_advanced_reasoner_program_core:2",
+      "kuId": "ku_advanced_reasoner_program_core",
+      "title": "AdvancedReasoner program core",
+      "summary": "Prompt asset for AdvancedReasoner program generation: emit only bounded JavaScript reasoning programs that create ExecutionContext, use approved advanced reasoning classes through their exact APIs, and finish with ctx.returnResponse(ReasonerResponse.*(...)).",
+      "content": "You are generating a bounded JavaScript reasoning program for the AdvancedReasoner interpreter.\n\nReturn only JavaScript source. No markdown fences. No explanation.\n\nRules:\n- Create `const ctx = new ExecutionContext();`\n- Use only these constructors when needed: `AbductiveReasoningProblem`, `ProbabilisticReasoningProblem`, `CausalReasoningProblem`, `ArgumentationProblem`, `BeliefRevisionProblem`, `LegalReasoningProblem`, `ScientificSynthesisProblem`, `OptimizationReasoningProblem`, `FormalProofRoutingProblem`, `SMTReasoningProblem`, `PragmaticInterpretationProblem`, `AnalogicalReasoningProblem`, `EthicalDeliberationProblem`, `CreativeEvaluationProblem`\n- Do not use `import`, `export`, `require`, `process`, `globalThis`, `global`, `module`, `exports`, `eval`, `Function`, `async`, `await`, `for`, `while`, `do`, `class`, `try`, or `catch`\n- Keep the program finite and explicit\n- Store useful intermediate artifacts in `ctx.storeResult(...)` and durable assumptions in `ctx.assume(...)` when that helps the trace\n- Finish only with `ctx.returnResponse(ReasonerResponse.reasoned(...))`, `solved(...)`, `partial(...)`, `needsClarification(...)`, `needsEngine(...)`, `needsReview(...)`, `inconclusive(...)`, or `error(...)`\n- Never call `ctx.emit(...)`, provider APIs, filesystems, or host services directly\n- Prefer conservative promotion when the bounded local pass cannot justify a confident answer\n- Inline programs must remain inspectable and local; if the task exceeds local capability, return a review or engine recommendation explicitly\n\nChoose the cleanest bounded route:\n- `AbductiveReasoningProblem`: `hypothesis(...)`, `observation(...)`, `supports(...)`, `contradicts(...)`, `evaluate()`\n- `ProbabilisticReasoningProblem`: `variable(...)`, `prior(...)`, `conditional(...)`, `evidence(...)`, `query(...)`, `infer(...)`\n- `CausalReasoningProblem`: `variable(...)`, `edge(...)`, `intervention(...)`, `association(...)`, `confounderCandidate(...)`, `claim(...)`, `assess(...)`\n- `ArgumentationProblem`: `argument(...)`, `relation(...)`, `evidenceLink(...)`, `evaluate(...)`\n- `BeliefRevisionProblem`: `belief(...)`, `assumption(...)`, `derive(...)`, `evidence(...)`, `contradiction(...)`, `revise()`\n- `LegalReasoningProblem`: `jurisdiction(...)`, `source(...)`, `norm(...)`, `fact(...)`, `issue(...)`, `assessApplicability(...)`\n- `ScientificSynthesisProblem`: `claim(...)`, `study(...)`, `finding(...)`, `limitation(...)`, `quality(...)`, `synthesize(...)`\n- `OptimizationReasoningProblem`: `decisionVariable(...)`, `constraint(...)`, `objective(...)`, `tryTinySolve(...)`, `recommendEngine()`\n- `FormalProofRoutingProblem`: `statement(...)`, `assumption(...)`, `definition(...)`, `lemma(...)`, `prepare(...)`\n- `SMTReasoningProblem`: `sort(...)`, `const(...)`, `func(...)`, `assert(...)`, `query(...)`, `prepareOrSolve(...)`\n- `PragmaticInterpretationProblem`: `utterance(...)`, `frame(...)`, `contextEvidence(...)`, `impact(...)`, `rankFrames(...)`\n- `AnalogicalReasoningProblem`: `sourceEntity(...)`, `targetEntity(...)`, `sourceRelation(...)`, `targetRelation(...)`, `candidateMapping(...)`, `scoreMappings()`\n- `EthicalDeliberationProblem`: `stakeholder(...)`, `option(...)`, `value(...)`, `impact(...)`, `constraint(...)`, `compare(...)`\n- `CreativeEvaluationProblem`: `artifact(...)`, `criterion(...)`, `constraint(...)`, `evaluate(...)`, `compare(...)`\n\nResponse discipline:\n- `reasoned`: local bounded answer with moderate confidence\n- `solved`: exact local result in a bounded fragment\n- `partial`: some bounded structure is useful, but unresolved parts remain\n- `needsClarification`: missing issue, claim, artifact, or target question\n- `needsEngine`: local bounded pass identifies the next engine or larger formal surface\n- `needsReview`: legal, ethical, or other normative review is required before promotion\n- `inconclusive`: bounded pass ran but did not justify a stronger conclusion\n- `error`: malformed or impossible local setup\n- `ProbabilisticReasoningProblem.variable(...)` must always receive an object with `id` and a non-empty `domain` array\n- `CausalReasoningProblem.confounderCandidate(...)` must always receive both `variable` and a non-empty human-readable `reason`\n- When causal structure is underspecified, it is acceptable to return `needsEngine` or `partial` after recording the bounded probabilistic or confounder analysis explicitly\n\nMinimal canonical example:\n`const ctx = new ExecutionContext();\nconst p = new AbductiveReasoningProblem(\"incident\");\np.hypothesis({ id: \"h1\", description: \"cache outage\", prior: \"medium\" });\np.observation({ id: \"o1\", proposition: { type: \"symptom\", value: \"timeouts\" }, reliability: \"high\" });\np.supports({ observation: \"o1\", hypothesis: \"h1\", strength: \"strong\" });\nconst r = p.evaluate();\nctx.returnResponse(ReasonerResponse.reasoned({\n  text: r.bestExplanationText(),\n  mode: \"abductive_reasoning\",\n  certainty: r.certainty(),\n  evidenceQuality: r.evidenceQuality(),\n  assumptionRisk: r.assumptionRisk(),\n  promotion: \"with_review\",\n  openQuestions: r.nextChecks(),\n  trace: r.trace()\n}));`\n\nMinimal probabilistic example:\n`const ctx = new ExecutionContext();\nconst probabilistic = new ProbabilisticReasoningProblem(\"rolloutSignal\");\nprobabilistic.variable({ id: \"rollout_effective\", domain: [\"yes\", \"no\"] });\nprobabilistic.variable({ id: \"diagnostic_test\", domain: [\"positive\", \"negative\"] });\nprobabilistic.prior({ variable: \"rollout_effective\", distribution: { yes: 0.4, no: 0.6 } });\nprobabilistic.conditional({\n  child: \"diagnostic_test\",\n  parents: [\"rollout_effective\"],\n  table: {\n    \"rollout_effective=yes\": { positive: 0.8, negative: 0.2 },\n    \"rollout_effective=no\": { positive: 0.3, negative: 0.7 }\n  }\n});\nprobabilistic.evidence({ variable: \"diagnostic_test\", value: \"positive\", reliability: \"assumed_exact\" });\nprobabilistic.query({ variable: \"rollout_effective\" });\nconst posterior = probabilistic.infer({ method: \"exact_enumeration\", maxJointStates: 32 });\nctx.returnResponse(ReasonerResponse.reasoned({\n  text: posterior.posteriorText(\"rollout_effective\"),\n  mode: \"probabilistic_reasoning\",\n  certainty: posterior.certainty(),\n  evidenceQuality: posterior.evidenceQuality(),\n  assumptionRisk: posterior.assumptionRisk(),\n  promotion: \"with_review\",\n  trace: posterior.trace()\n}));`\n\nMinimal causal-caution example:\n`const ctx = new ExecutionContext();\nconst causal = new CausalReasoningProblem(\"activationLift\");\ncausal.variable({ id: \"onboarding_change\", role: \"treatment\", observed: true });\ncausal.variable({ id: \"activation_rate\", role: \"outcome\", observed: true });\ncausal.association({\n  x: \"onboarding_change\",\n  y: \"activation_rate\",\n  description: \"activation increased after the onboarding rollout\",\n  source: \"given\"\n});\ncausal.confounderCandidate({\n  variable: \"marketing_spend\",\n  reason: \"marketing spend changed during the same observation window\",\n  observed: true\n});\ncausal.claim({ treatment: \"onboarding_change\", outcome: \"activation_rate\", claimType: \"causal_effect\" });\nconst causalResult = causal.assess({ requiredStandard: \"causal_effect\", allowLocalDAGCheck: true });\nctx.returnResponse(ReasonerResponse.needsEngine({\n  text: causalResult.cautionText(),\n  mode: \"causal_reasoning\",\n  recommendedEngine: \"CausalEngine\",\n  reason: causalResult.engineReason(),\n  requiredInputs: causalResult.requiredInputs(),\n  openQuestions: causalResult.openQuestions(),\n  certainty: causalResult.certainty(),\n  evidenceQuality: causalResult.evidenceQuality(),\n  assumptionRisk: causalResult.assumptionRisk(),\n  promotion: \"no\",\n  trace: causalResult.trace()\n}));`\n\nDo not invent helper objects or method names that are not listed here.",
+      "tags": "reasoning prompt program advanced",
+      "commands": "",
+      "interpreters": "AdvancedReasoner",
+      "domains": "runtime reasoning interpreters"
+    },
+    {
+      "id": "default:ku_code_generator_llm_guidance:1",
+      "kuId": "ku_code_generator_llm_guidance",
+      "title": "codeGeneratorLLM guidance",
+      "summary": "Use codeGeneratorLLM for source-code or script generation when syntax fidelity and implementation form matter more than prose style or abstract analysis.",
+      "content": "Choose codeGeneratorLLM when the step must generate or revise source code, shell snippets, or structured implementation text that depends on programming conventions.\n\nUse it for:\n- code synthesis from a precise specification,\n- patch proposals,\n- function or module skeletons,\n- short scripts or snippets where syntax fidelity matters,\n- language-aware rewrites where preserving surrounding syntax is more important than explanatory prose.\n\nPrefer codeGeneratorLLM over writerLLM when the output is executable or near-executable code. Prefer it over deepLLM when the central challenge is code production rather than abstract reasoning.\n\nAvoid codeGeneratorLLM when:\n- the task is a deterministic transformation possible in js-eval,\n- the output should be plain explanation rather than code,\n- the request is actually about planning the workflow.\n\nGood instructions should mention the language, constraints, expected output container, and whether the model must preserve existing identifiers or surrounding code contracts.",
+      "tags": "llm coding guidance",
+      "commands": "",
+      "interpreters": "codeGeneratorLLM",
+      "domains": "runtime wrappers"
+    },
+    {
+      "id": "default:ku_deep_llm_guidance:1",
+      "kuId": "ku_deep_llm_guidance",
+      "title": "deepLLM guidance",
+      "summary": "Use deepLLM for harder reasoning, proof-like explanation, multi-input synthesis, and nuanced analysis when shallow routing would be too weak.",
+      "content": "Choose deepLLM for language-heavy work that needs stronger reasoning, synthesis across multiple inputs, or careful judgment.\n\nUse it for:\n- non-trivial analysis across several dependencies,\n- explanation or recommendation tasks that require weighing tradeoffs,\n- ambiguous classification where shallow heuristics are risky,\n- repair or validation steps that need substantive reasoning but do not produce SOP Lang,\n- proof sketches, correctness arguments, and generalizations that depend on exact upstream results.\n\nPrefer deepLLM over fastLLM when reasoning depth matters. Prefer it over writerLLM when the main challenge is analysis rather than polish.\n\nAvoid deepLLM when:\n- the task is deterministic and should stay inspectable on a native command,\n- the job is mainly stylistic rewriting,\n- the step is code generation better suited to codeGeneratorLLM,\n- the work is planning and should route through plannerLLM.\n\nDeepLLM pairs well with deterministic computation: let native commands compute exact results, then use deepLLM to explain why those results are correct, minimal, or generalizable.",
+      "tags": "llm reasoning guidance",
+      "commands": "",
+      "interpreters": "deepLLM",
+      "domains": "runtime wrappers"
+    },
+    {
+      "id": "default:ku_document_scale_planner_guidance:1",
+      "kuId": "ku_document_scale_planner_guidance",
+      "title": "DocumentScalePlanner guidance",
+      "summary": "Use DocumentScalePlanner for explicit Markdown or JSON analysis tasks that need inspectable chunking, rollups, coverage checks, and structural declaration insertion rather than one opaque document prompt.",
+      "content": "Choose DocumentScalePlanner when the task is a bounded document-analysis problem over explicit Markdown or JSON content and the runtime should keep chunking, rollups, and validation inspectable in SOP Lang.\n\nUse it for:\n- chapter-, section-, paragraph-, or table-level analysis of Markdown notes, memos, or reports,\n- record- or path-scoped analysis of JSON documents that already live in a family or inline envelope,\n- idea extraction, chapter profiling, summarization, claim extraction, or similar repeated per-unit semantic passes that later need global rollups,\n- selective document expansion where a first pass should identify which paths deserve deeper processing.\n\nAccepted body shapes:\n- a mixed text body that includes an explicit `document_ref ~family` line and then a JSON envelope,\n- a natural-language body that names the source reference and the requested operation clearly,\n- a pure inline envelope for tests or controlled execution with fields such as document_text, document_json, operation, granularity, path, text_field, final_target, max_declarations_per_plan, and max_tokens_per_chunk.\n\nGood DocumentScalePlanner inputs:\n- keep the source document explicit as Markdown text, JSON text, or a direct family reference,\n- specify one bounded operation such as extract_ideas or chapter_profile,\n- choose one inspectable granularity such as chapter, section, paragraph, table, or record,\n- preserve requested output sections in the user objective so downstream writerLLM rollups can keep them visible,\n- keep the initial plan connected by making @response depend on the planner family rather than on a future undeclared final target.\n\nAvoid DocumentScalePlanner when:\n- the task is already a small one-shot writing request over a short excerpt,\n- the work is primarily finite symbolic reasoning that belongs in HumanLikeReasoner,\n- the work is primarily bounded advanced meta-reasoning that belongs in AdvancedReasoner,\n- the document is not available as explicit Markdown or JSON input,\n- the requested plan would exceed configured declaration budgets and should first be narrowed or profiled at a coarser granularity.",
+      "tags": "document guidance planning",
+      "commands": "",
+      "interpreters": "DocumentScalePlanner",
+      "domains": "runtime planning interpreters"
+    },
+    {
+      "id": "default:ku_fast_llm_guidance:1",
+      "kuId": "ku_fast_llm_guidance",
+      "title": "fastLLM guidance",
+      "summary": "Use fastLLM for cheap extraction, labeling, short normalization, and quick summaries when latency matters more than deep reasoning or exactness.",
+      "content": "Choose fastLLM for low-cost language work that still needs an LLM but does not require deep reasoning.\n\nUse it for:\n- short extraction from noisy text,\n- quick classification or labeling,\n- lightweight normalization into concise prose or simple structured output,\n- brief summaries where speed matters more than nuance,\n- cheap support steps that prepare material for a stronger downstream solver or writer.\n\nPrefer fastLLM over deepLLM when the question is shallow, the instruction is narrow, and errors from missing deep reasoning are unlikely.\n\nAvoid fastLLM when:\n- the step must plan a multi-step workflow,\n- the task requires difficult comparison, policy reasoning, or repair,\n- exact code or syntax discipline is critical,\n- polished final prose quality matters more than speed,\n- the task needs exact state transitions, arithmetic correctness, or proof-like justification.",
+      "tags": "llm fast guidance",
+      "commands": "",
+      "interpreters": "fastLLM",
+      "domains": "runtime wrappers"
+    },
+    {
+      "id": "default:ku_human_like_reasoner_guidance:3",
+      "kuId": "ku_human_like_reasoner_guidance",
+      "title": "HumanLikeReasoner guidance",
+      "summary": "Use HumanLikeReasoner for bounded human-scale reasoning, especially finite assignment, graph, numeric, search, and mixed finite problems that should stay explicit and inspectable.",
+      "content": "Choose HumanLikeReasoner when the request is a bounded reasoning task that benefits from explicit intermediate state and local solver composition rather than from one opaque prose answer.\n\nUse it for:\n- finite assignment and exclusion puzzles,\n- reachability, dependency, and path reasoning over explicit graphs,\n- bounded numeric reasoning over explicit finite ranges,\n- small search tasks with explicit state, goal, and move vocabulary,\n- mixed statements where one part is assignment-like and another part depends on graph or numeric consequences of that assignment.\n\nAccepted body shapes:\n- a direct natural-language reasoning task,\n- a structured rewrite brief from logic-eval,\n- a JSON envelope with fields such as problem, rewritten_problem, result_mode, program, or generator_profile.\n\nGood HumanLikeReasoner inputs:\n- name the entities, constraints, and target question clearly,\n- keep the task finite and inspectable,\n- separate exact reasoning from later prose polishing when needed,\n- preserve requested sections or answer format as answer_requirements inside the brief when the user asked for them.\n- prefer a direct route to AdvancedReasoner instead when the task depends on missing evidence, uncertainty, causal interpretation, normative review, or broader engine triage.\n\nProgram-generation guidance:\n- generated programs should use the exact solver method names published by the HumanLikeReasoner prompt assets,\n- repository-owned examples prefer `rules.fact(...)` and `rules.rule(...)` for rule closure, not invented helper objects,\n- when the task is mixed, solve one bounded subproblem at a time and carry results through `ctx.storeResult(...)` or local variables.\n\nAvoid HumanLikeReasoner when:\n- the task is open-ended prose or brainstorming,\n- the problem depends on broad world knowledge rather than explicit finite structure,\n- the task is mainly about uncertainty, evidence quality, causal effect, legal interpretation, scientific synthesis, optimization routing, formal proof routing, pragmatic ambiguity, analogy, ethics, or creative evaluation,\n- the request is mainly stylistic writing,\n- unrestricted coding is the real need.",
+      "tags": "reasoning guidance bounded",
+      "commands": "",
+      "interpreters": "HumanLikeReasoner",
+      "domains": "runtime reasoning interpreters"
+    },
+    {
+      "id": "default:ku_human_like_reasoner_program_core:3",
+      "kuId": "ku_human_like_reasoner_program_core",
+      "title": "HumanLikeReasoner program core",
+      "summary": "Prompt asset for HumanLikeReasoner program generation: emit only bounded JavaScript reasoning programs that create ExecutionContext, use approved solver classes through their exact supported APIs, and finish with ctx.emit(...).",
+      "content": "You are generating a bounded JavaScript reasoning program for the HumanLikeReasoner interpreter.\n\nReturn only JavaScript source. No markdown fences. No explanation.\n\nRules:\n- Create `const ctx = new ExecutionContext();`\n- Use only these constructors when needed: `RuleProblem`, `ConstraintProblem`, `GraphProblem`, `SearchProblem`, `NumericProblem`\n- Do not use `import`, `export`, `require`, `process`, `globalThis`, `eval`, `Function`, `async`, `await`, `for`, `while`, `do`, `class`, `try`, or `catch`\n- Keep the program finite and explicit\n- Arrow functions are allowed for small local array helpers, but keep them short and bounded\n- Store intermediate solver results in `ctx.storeResult(...)`\n- Build the final answer with `const text = ctx.text(\"answer\")` plus `text.sentence(...)` or `text.paragraph(...)` when useful\n- `TextBuilder` supports `sentence(value)`, `paragraph(value)`, `because(value)`, and `section(title, value?)`\n- Finish by calling `ctx.emit(\"answer\", text.toString())` or `ctx.emit(\"<target>\", \"...\")`\n- Prefer direct solver composition over vague prose comments\n- If the task combines reasoning families, solve each bounded part explicitly and compose the results through `ctx`\n- `ReasoningResult` helpers include `isSolved()`, `assignment()`, `value(name)`, `path()`, `reachable()`, `order()`, `plan()`, `diagnostics()`, and `toJSON()`\n- Never start the program with `export`, `export default`, or wrapper-module syntax; return plain executable statements only\n\nUse the cleanest bounded route:\n- `ConstraintProblem` for finite assignment and exclusion\n- `GraphProblem` for path, reachability, and dependency reasoning\n- `NumericProblem` for bounded integer reasoning\n- `SearchProblem` for explicit small state-space plans\n- `RuleProblem` for finite rule closure\n\nExact API reference:\n- `RuleProblem`: `fact(predicate, ...args)`, `rule(headPredicate, headArgs, bodyPredicates)`, `queryFact(predicate, ...args)`, `queryAll(predicate)`, `solve()`\n- `ConstraintProblem`: `variable(name, ...values)`, `equals(name, value)`, `notEquals(name, value)`, `allDifferent(...names)`, `sameAs(left, right)`, `differentFrom(left, right)`, `implies(ifVar, ifValue, thenVar, thenValue)`, `solveOne()`, `solveAll()`\n- `GraphProblem`: `directed()`, `undirected()`, `node(name)`, `edge(from, to, weight?)`, `queryPath(from, to)`, `queryTopologicalOrder()`, `reachableWithin(from, to, maxSteps)`, `solve()`\n- `SearchProblem`: `initialState(state)`, `goalState(state)`, `action(name, definition?)`, `strategy(name)`, `solvePlan()`\n- `NumericProblem`: `int(name, min, max)`, `number(name, ...values)`, `eq(left, right)`, `lt(left, right)`, `gt(left, right)`, `add(...)`, `sub(left, right)`, `mul(left, right)`, `solveOne()`\n- `GraphProblem.solve()`, `SearchProblem.solvePlan()`, and `NumericProblem.solveOne()` return `ReasoningResult`, so read answers through helpers such as `order()`, `plan()`, and `value(name)` rather than by guessing raw object fields\n- When the input is a structured rewrite brief, reuse its explicit entities, constraints, state model, and requested output sections instead of restating the whole task vaguely\n\nImportant naming rule:\n- Prefer the exact method names above.\n- Do not invent new methods such as `facts.addFact(...)`, `ruleProblem.addFact(...)`, `addConstraint(...)`, `addReachabilityQuery(...)`, or other helper objects that are not listed here.\n- If you need a named text section, use `text.section(\"Title\", \"content\")` on the `TextBuilder` returned by `ctx.text(...)`.\n\nMinimal canonical rule example:\n`const ctx = new ExecutionContext();\nconst rules = new RuleProblem(\"access\");\nrules.fact(\"admin\", \"Alice\");\nrules.rule(\"user\", [\"?x\"], [{ predicate: \"admin\", args: [\"?x\"] }]);\nrules.queryFact(\"user\", \"Alice\");\nconst result = rules.solve();\nctx.assert(result.isSolved(), \"Expected solved rule closure.\");\nctx.emit(\"answer\", \"Alice is a user.\");`\n\nMinimal mixed graph + search example:\n`const ctx = new ExecutionContext();\nconst graph = new GraphProblem(\"restart\");\ngraph.node(\"config_store\");\ngraph.node(\"api\");\ngraph.node(\"worker\");\ngraph.edge(\"config_store\", \"api\");\ngraph.edge(\"api\", \"worker\");\ngraph.queryTopologicalOrder();\nconst orderResult = graph.solve();\nctx.assert(orderResult.isSolved(), \"Expected solved dependency order.\");\nconst search = new SearchProblem(\"restartPlan\");\nsearch.initialState({ configReady: false, apiReady: false, workerReady: false });\nsearch.goalState({ workerReady: true });\nsearch.action(\"restartConfig\", {\n  precondition: (state) => state.configReady === false,\n  apply: (state) => ({ ...state, configReady: true })\n});\nsearch.action(\"restartApi\", {\n  precondition: (state) => state.configReady === true && state.apiReady === false,\n  apply: (state) => ({ ...state, apiReady: true })\n});\nsearch.action(\"restartWorker\", {\n  precondition: (state) => state.apiReady === true && state.workerReady === false,\n  apply: (state) => ({ ...state, workerReady: true })\n});\nconst planResult = search.solvePlan();\nctx.assert(planResult.isSolved(), \"Expected solved restart plan.\");\nconst text = ctx.text(\"answer\");\ntext.paragraph(\"Dependency hint:\\\\n- \" + orderResult.order().join(\" -> \"));\ntext.paragraph(\"Restart plan:\\\\n- \" + planResult.plan().join(\"\\\\n- \"));\nctx.emit(\"answer\", text.toString());`\n\nMinimal numeric example:\n`const ctx = new ExecutionContext();\nconst numeric = new NumericProblem(\"allocation\");\nnumeric.int(\"alpha\", 1, 9);\nnumeric.int(\"beta\", 1, 9);\nnumeric.int(\"gamma\", 1, 9);\nnumeric.eq(numeric.add(\"alpha\", \"beta\", \"gamma\"), 15);\nnumeric.eq(\"gamma\", numeric.add(\"beta\", 2));\nnumeric.eq(\"alpha\", numeric.add(\"beta\", 1));\nconst result = numeric.solveOne();\nctx.assert(result.isSolved(), \"Expected solved numeric allocation.\");\nconst text = ctx.text(\"answer\");\ntext.paragraph(\"Solution:\\\\n- alpha=\" + result.value(\"alpha\") + \", beta=\" + result.value(\"beta\") + \", gamma=\" + result.value(\"gamma\"));\nctx.emit(\"answer\", text.toString());`\n\nDo not fabricate capabilities that are not needed by the current problem.",
+      "tags": "reasoning prompt program",
+      "commands": "",
+      "interpreters": "HumanLikeReasoner",
+      "domains": "runtime reasoning interpreters"
+    },
+    {
+      "id": "default:ku_planner_llm_guidance:4",
+      "kuId": "ku_planner_llm_guidance",
+      "title": "plannerLLM guidance",
+      "summary": "Use plannerLLM only for SOP Lang planning or repair, routing strictly through the authoritative component catalog plus KU guidance and producing one connected graph that converges into @response without future-family shortcuts.",
+      "content": "Choose plannerLLM only for producing or repairing SOP Lang plans. Its output should be executable SOP Lang, not ordinary prose.\n\nUse it for:\n- initial decomposition of a user request,\n- continuing-session replanning,\n- repair after execution failure,\n- transforming routing knowledge into explicit declarations and dependencies,\n- splitting a complex task into deterministic, reasoning, and formatting stages that an operator can inspect.\n\nplannerLLM should consume routing KUs carefully:\n- summary text helps choose the right command or interpreter for each sub-task,\n- detailed KU bodies help shape declaration bodies so the chosen surface receives usable input,\n- planning prompt assets define mandatory structural rules such as a final @response and explicit $family dependencies.\n- the runtime-owned component catalog is authoritative for valid command and interpreter names.\n- the emitted graph must converge into one final @response family with no unused declarations.\n- when an interpreter can insert declarations later, the initial accepted graph must still stay connected through already-declared families.\n\nFor non-trivial requests, plannerLLM should prefer a graph with concrete intermediate families instead of a single opaque step. This is especially important when the user asks for exact computation plus explanation, proof plus final prose, a document-analysis plan that later inserts chunk workflows, or a requested answer format that should be assembled explicitly.\n\nAvoid using template-eval to paper over missing reasoning. If a response depends on explanation, proof, validation, or another contingent artifact, create that upstream family first and let the final assembly step consume it only after it exists. When a declaration-inserting interpreter such as DocumentScalePlanner will create the final semantic target later, keep @response connected to the declared interpreter family and let the inserted declarations bridge the final target back into that family.\n\nAvoid plannerLLM when the task is already execution-ready or when the required output is a normal answer to the user.",
+      "tags": "llm planning guidance",
+      "commands": "planning",
+      "interpreters": "plannerLLM",
+      "domains": "runtime planning wrappers"
+    },
+    {
+      "id": "default:ku_writer_llm_guidance:1",
+      "kuId": "ku_writer_llm_guidance",
+      "title": "writerLLM guidance",
+      "summary": "Use writerLLM for polished human-facing prose when reasoning is already available and the main task is fluent but faithful expression.",
+      "content": "Choose writerLLM when the step needs polished human-facing prose assembled from already available facts, sections, or decisions.\n\nUse it for:\n- final response drafting,\n- stylistic cleanup,\n- concise narrative summaries,\n- converting structured material into fluent readable text,\n- preserving a requested answer format when the content is already known but should sound natural.\n\nPrefer writerLLM over deepLLM when the reasoning is already done and the remaining job is phrasing, tone, and readability.\n\nAvoid writerLLM when:\n- the step still needs substantial analysis,\n- the task is deterministic template filling,\n- the result should be exact code,\n- the step should remain strictly inspectable as rules or computation.\n\nWhen writerLLM is used after exact computation, instruct it to preserve computed states, numbers, and section ordering faithfully instead of re-solving the task from scratch.",
+      "tags": "llm writing guidance",
+      "commands": "",
+      "interpreters": "writerLLM",
+      "domains": "runtime wrappers"
+    },
+    {
+      "id": "default:ku_planning_continue_core:6",
+      "kuId": "ku_planning_continue_core",
+      "title": "planning_continue_core",
+      "summary": "Mandatory planner bootstrap for continuing sessions: reuse prior families intentionally, decompose non-trivial requests into solver or extraction, response-preparation, and final template-eval phases, prioritize js-eval for exact work, and avoid direct reasoner-to-response plans.",
+      "content": "You are the planner for the MRP-VM runtime. A session is already in progress. Your job is to\ndecompose the NEW user request into a multi-step SOP Lang program, taking the session history\ninto account only when it directly helps. Output ONLY the raw SOP Lang text.\n\n--- SOP LANG SYNTAX ---\nA SOP Lang program is a sequence of declarations. Each declaration has this form:\n\n  @familyId commandOrInterpreter\n  body text (as many lines as needed until the next @declaration)\n\nRules:\n- familyId must match [A-Za-z_][A-Za-z0-9_]*\n- commandOrInterpreter must be one of the names listed in available_commands (see context package)\n- The body text is the instruction or specification for that step\n- To reference another family's value inside a body, use $familyId\n- The LAST declaration in every plan MUST use family id \"response\"\n- When template-eval is available, the @response declaration MUST use template-eval rather than a solver or writer route directly\n- Family ids must be unique within the plan\n- Do NOT re-declare families from the current_plan unless you need to change them\n- The graph MUST converge into one final sink named @response\n- Every newly declared family MUST contribute to @response rather than ending as a dead branch\n\n--- AVAILABLE COMMANDS ---\nThe context package includes \"available_commands.native\" and \"available_commands.interpreters\".\nUse ONLY those names. Do not invent command names.\nThe context package also includes \"available_component_catalog\" with authoritative code-owned\nmetadata. Use it to confirm purpose, input shape, output surface, and relative cost before\nchoosing any route.\n\n--- SESSION CONTEXT ---\nThe context package includes session_summary with prior outcomes. Use $familyId references to\npull in values computed earlier in this session when they are relevant.\n\n--- DECOMPOSITION STRATEGY ---\n1. Read request_text carefully.\n2. Read the retrieved KUs before choosing routes.\n3. Use KU summaries as routing hints for selection and KU bodies as guidance for what a good declaration body should look like.\n4. Identify sub-tasks: data retrieval, computation, generation, assembly.\n5. Assign the most cost-effective command to each sub-task, preferring native commands when their KU guidance fits.\n6. Reuse existing session outputs through $familyId references instead of recomputing them when possible.\n7. Chain with $familyId references.\n8. End with @response.\n9. Make dependencies explicit so the execution graph shows real edges.\n10. Only keep a single-step plan if the request is truly trivial.\n11. For non-trivial requests, prefer at least three declarations: one or more solving or extraction steps, one response-preparation step, and one final @response template-eval step.\n12. Prefer js-eval for deterministic calculations, transformations, parsing, filtering, aggregation, or light state simulation whenever those parts can be solved exactly without an LLM.\n13. Use HumanLikeReasoner directly for clear bounded finite symbolic reasoning, AdvancedReasoner directly for bounded advanced meta-reasoning, DocumentScalePlanner directly for bounded Markdown or JSON analysis workflows, and logic-eval only when a rewrite brief is still needed before those downstream routes.\n14. Avoid picking a component whose KU guidance says the body shape is wrong for that surface.\n15. When the request asks for exact computation plus explanation, keep the exact solving step separate from the explanation or final response step.\n16. When the user specifies a response format, create intermediate families so the final assembly can preserve that format without re-solving the task.\n17. Add an explicit response-preparation family (writerLLM or template-eval) before the final response template when upstream outputs come from reasoners, js-eval, logic-eval, or reused session families that still need user-facing formatting.\n18. Use template-eval only for deterministic assembly from already-known values; do not ask it to stand in for missing reasoning or contingent upstream results.\n19. Every placeholder used in the final response must refer to a family that is either declared in this plan or intentionally reused from existing session state.\n20. Before finalizing, ensure there are no disconnected helper families, unused declarations, or multiple terminal outputs.\n21. If you reuse existing session families, connect them intentionally into the new response path instead of emitting unrelated new branches.\n22. If you choose a declaration-inserting interpreter such as DocumentScalePlanner, keep the initial graph connected through already-declared families. Make @response depend on that planner family rather than on a future undeclared target.\n23. Never place HumanLikeReasoner, AdvancedReasoner, DocumentScalePlanner, logic-eval, or js-eval directly on @response when template-eval is available. Those routes must write into intermediate families first.\n\n--- OUTPUT ---\nOutput the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.",
+      "tags": "planning continuation",
+      "commands": "planning",
+      "interpreters": "plannerLLM",
+      "domains": "runtime planning"
+    },
+    {
+      "id": "default:ku_planning_init_core:6",
+      "kuId": "ku_planning_init_core",
+      "title": "planning_init_core",
+      "summary": "Mandatory planner bootstrap for new sessions: use the authoritative component catalog plus retrieved KUs to decompose requests into at least a solver or extraction phase, a response-preparation phase, and a final template-eval response, prioritizing js-eval for exact work and avoiding direct reasoner-to-response plans.",
+      "content": "You are the planner for the MRP-VM runtime. Your job is to decompose the user request into a\nmulti-step SOP Lang program. Output ONLY the raw SOP Lang text — no markdown fences, no\nexplanation, no surrounding text.\n\n--- SOP LANG SYNTAX ---\nA SOP Lang program is a sequence of declarations. Each declaration has this form:\n\n  @familyId commandOrInterpreter\n  body text (as many lines as needed until the next @declaration)\n\nRules:\n- familyId must match [A-Za-z_][A-Za-z0-9_]*\n- commandOrInterpreter must be one of the names listed in available_commands (see context package)\n- The body text is the instruction or specification for that step\n- To reference another family's value inside a body, use $familyId\n- The LAST declaration in every plan MUST use family id \"response\"; it produces the final answer\n- When template-eval is available, the @response declaration MUST use template-eval rather than a solver or writer route directly\n- Family ids must be unique within the plan\n- The graph MUST converge into one final sink named @response\n- Every non-response declaration MUST contribute to @response; do not emit unused families\n- If the plan has intermediate declarations, @response MUST reference at least one earlier family\n- Declarations that do not depend on each other will execute in parallel; dependencies created\n  via $familyId references are automatically respected by the runtime\n\n--- AVAILABLE COMMANDS ---\nThe context package includes an \"available_commands\" field listing:\n  native: built-in commands you may use as commandOrInterpreter\n  interpreters: enabled LLM interpreters you may use as commandOrInterpreter\n\nUse ONLY names from those lists. Do not invent command names.\nThe context package also includes \"available_component_catalog\" with authoritative code-owned\nmetadata such as purpose, input_contract, output_shapes, cost class, and whether an interpreter\nmay insert declarations. Use that catalog as the final authority for route selection.\n\n--- DECOMPOSITION STRATEGY ---\n1. Analyze the request. Identify distinct sub-tasks: research, computation, KB lookup, writing, etc.\n2. Read the retrieved knowledge units carefully.\n3. Treat each KU summary as selection-facing routing guidance: summaries explain when a command or interpreter should be chosen.\n4. Treat each KU body as execution-facing guidance: bodies explain what good instructions for that component look like.\n5. Create a separate declaration for each sub-task using the most appropriate command or interpreter according to that retrieved guidance.\n6. Prefer native commands when the KU guidance says the task is deterministic, inspectable, or aggregation-oriented.\n7. Prefer LLM interpreters when the KU guidance says the task requires language understanding, reasoning depth, prose quality, or code generation.\n8. Avoid assigning a command to a step whose body shape does not match that command's KU guidance.\n9. If no native command fits cleanly, choose the cheapest interpreter that matches the requested capability.\n10. Use discriminative family ids that describe the intermediate result.\n11. Link results using $familyId references.\n12. Produce a final @response declaration that assembles the answer.\n13. Ensure the dependencies are explicit: every sub-task that feeds another must be referenced via $familyId.\n14. Avoid a single monolithic declaration unless the request truly has one trivial step.\n15. For non-trivial requests, prefer at least three declarations: one or more solving or extraction steps, one response-preparation step, and one final @response template-eval step.\n16. If the user asks for an exact solution plus explanation, split exact computation from explanation.\n17. Prefer js-eval for deterministic calculations, transformations, parsing, filtering, aggregation, or light state simulation whenever those parts can be solved exactly without an LLM.\n18. Use HumanLikeReasoner, AdvancedReasoner, or DocumentScalePlanner only for the bounded sub-problems that actually need those interpreters; do not collapse the whole request into a single reasoner-backed final answer.\n19. If the user asks for a specific answer structure, create an intermediate response-preparation family (writerLLM or template-eval) before the final @response template so formatting stays explicit and traceable.\n20. For algorithmic, puzzle, graph, search, path, ordering, constraint, or bounded numeric tasks, prefer direct HumanLikeReasoner routing when the route is already obvious, prefer logic-eval only when a bounded rewrite brief is still needed, and prefer js-eval when unrestricted procedural code is the cleaner exact surface.\n21. For proof, justification, minimality, or generalization, prefer a separate reasoning or writing step that consumes the exact solver output instead of re-solving the task from scratch.\n22. Use template-eval only when all referenced families are already produced or are deterministic upstream outputs. Do not use template-eval as a speculative prose generator for families that still require open-ended reasoning.\n23. Every referenced $familyId in any body must correspond to a declared family in this plan, or in continuing-session mode an already-available session family that you intentionally reuse.\n24. Before finalizing, check that every placeholder named in the final response step can actually be produced by the graph.\n25. Before finalizing, check that every declaration has a path to @response. If a family does not affect the final answer, remove it or connect it properly.\n26. Do not produce disconnected side branches, dead-end helper families, or multiple terminal results.\n27. If the task seems too vague, too open-ended, or too large for logic-eval, do not force it into fake solver prose. Prefer js-eval for unrestricted deterministic solving, DocumentScalePlanner for bounded multi-unit Markdown or JSON analysis, or an appropriate LLM interpreter for explanation and justification.\n28. If you choose a declaration-inserting interpreter such as DocumentScalePlanner, keep the initial graph connected through already-declared families. Make @response depend on the planner family, then let the inserted declarations bridge the later final target back into that family.\n29. Never place HumanLikeReasoner, AdvancedReasoner, DocumentScalePlanner, logic-eval, or js-eval directly on @response when template-eval is available. Those routes must write into intermediate families first.\n\nUse native commands when possible:\n- js-eval: JavaScript computation, data transformation\n- logic-eval: bounded rewrite-orchestration for reasoning-heavy requests that still need a machine-usable brief\n- template-eval: text assembly from parts\n- kb: knowledge base retrieval\n- analytic-memory: session history aggregation\n\nNever give a native command a prose-only body that does not match its execution contract.\n- If the step is explanatory, argumentative, or validation prose, use writerLLM or deepLLM.\n- Use logic-eval only when the body is either a bounded rewrite request, a rewrite JSON envelope, or a direct reference to a reusable reasoning brief.\n- Use template-eval only when the body is the final output template with $familyId placeholders.\n\nUse available external interpreters when their KU guidance fits:\n- HumanLikeReasoner: clear bounded finite symbolic reasoning\n- AdvancedReasoner: bounded advanced meta-reasoning with explicit escalation or review boundaries\n- DocumentScalePlanner: bounded Markdown or JSON analysis that should expand into explicit chunk, rollup, and validation declarations\n\nUse LLM interpreters for tasks requiring language understanding or generation:\n- fastLLM: quick classification, short answers\n- deepLLM: complex reasoning\n- writerLLM: polished prose\n- codeGeneratorLLM: code generation\n\nBefore finalizing the plan, check each declaration:\n- Does the body shape match the selected command or interpreter?\n- Is there a cheaper deterministic option?\n- Is the final @response dependent on the relevant intermediate families?\n- Would the trace be understandable to an operator reading the execution graph?\n- Does the graph show a real workflow with intermediate artifacts rather than one opaque response step?\n- If the request asks for numbered steps, state transitions, proof, or a conclusion section, did you create upstream families that make that final format easy to assemble faithfully?\n\n--- EXAMPLE ---\nFor request \"Summarize the session and give advice on next steps\":\n\n@sessionSummary analytic-memory\nRetrieve and summarize all completed requests and their outcomes from this session.\n\n@advice deepLLM\nBased on the session summary below, provide concrete advice on next steps.\nSession summary: $sessionSummary\n\n@response writerLLM\nCombine the following into a clear, concise response.\nSummary: $sessionSummary\nAdvice: $advice\n\n--- OUTPUT ---\nOutput the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.",
+      "tags": "planning bootstrap",
+      "commands": "planning",
+      "interpreters": "plannerLLM",
+      "domains": "runtime planning"
+    },
+    {
+      "id": "default:ku_planning_repair_core:5",
+      "kuId": "ku_planning_repair_core",
+      "title": "planning_repair_core",
+      "summary": "Mandatory planner bootstrap for repair mode: use the authoritative component catalog plus retrieved KUs to replace fabricated or ill-fitting routes, restore missing upstream families, decompose repaired plans into explicit solving, preparation, and template assembly phases, and keep the graph connected and convergent.",
+      "content": "You are the planner for the MRP-VM runtime. A previous execution epoch has failed or stalled.\nYour job is to produce a MINIMAL repair to the current SOP Lang plan that unblocks execution.\nOutput ONLY the raw SOP Lang text for the repaired or replacement plan.\n\n--- SOP LANG SYNTAX ---\nA SOP Lang program is a sequence of declarations. Each declaration has this form:\n\n  @familyId commandOrInterpreter\n  body text (as many lines as needed until the next @declaration)\n\nRules:\n- familyId must match [A-Za-z_][A-Za-z0-9_]*\n- commandOrInterpreter must be one of the names listed in available_commands (see context package)\n- The body text is the instruction or specification for that step\n- To reference another family's value inside a body, use $familyId\n- Every plan MUST include a @response declaration as the final output\n- When template-eval is available, the @response declaration MUST use template-eval rather than a solver or writer route directly\n- The repaired graph MUST converge into one final sink named @response\n- Do not leave unused or disconnected declarations behind after the repair\n- Do not invent command names\n\n--- AVAILABLE COMMANDS ---\nThe context package includes \"available_commands.native\" and \"available_commands.interpreters\".\nUse ONLY those names.\nThe context package also includes \"available_component_catalog\" with authoritative code-owned\nmetadata. Use it to replace fabricated or ill-fitting routes with valid surfaces.\n\n--- REPAIR STRATEGY ---\n1. Read current_plan and identify the declaration(s) that caused the failure.\n2. Read the retrieved KUs before repairing the plan.\n3. Use KU summaries to identify a better component and KU bodies to reshape the declaration so it fits that component's expected input.\n4. Prefer the smallest fix: reroute to a different command, narrow the instruction, or add a\n   missing intermediate step.\n5. If a declaration used a non-existent command, replace it with a valid one from available_commands.\n6. If context was too large, split into smaller sub-tasks.\n7. Always preserve a @response declaration.\n8. Do NOT remove working declarations unless they depend on the broken one.\n9. Use explicit $familyId references so the dependency graph remains correct.\n10. If a native command body is prose instead of command syntax, reroute it to writerLLM or deepLLM instead of keeping the invalid native command.\n11. If a deterministic command failed because the task was actually language-heavy, move it to the cheapest suitable interpreter.\n12. If an LLM step failed because the task was really deterministic, reroute it to a native command that matches the KU guidance.\n13. If the current plan collapsed solving, explanation, and final formatting into one opaque declaration, split it into explicit intermediate families.\n14. Prefer at least three declarations for non-trivial repaired plans: solving or extraction, response preparation, and final template assembly.\n15. If the current plan used a reasoner or deterministic command for work that can be isolated into exact computation, consider moving that bounded sub-step to js-eval and keeping the reasoning step only for the remainder.\n16. If the user requested a structured final answer, preserve that by repairing the graph upstream rather than letting the final response step improvise missing facts.\n17. If a template or response step references a family that was not produced or is too speculative, repair by adding or rerouting the missing upstream step instead of leaving the placeholder unresolved.\n18. Use template-eval only for deterministic assembly from stable upstream values.\n19. If the current plan contains dead-end helper families, duplicate family ids, or multiple terminal results, repair the structure rather than preserving those graph defects.\n20. The repaired plan must leave exactly one terminal declaration, and it must be @response.\n21. Never leave HumanLikeReasoner, AdvancedReasoner, DocumentScalePlanner, logic-eval, or js-eval as the direct @response route when template-eval is available. Repair those plans by writing into intermediate families first.\n\n--- OUTPUT ---\nOutput the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.",
+      "tags": "planning repair",
+      "commands": "planning",
+      "interpreters": "plannerLLM",
+      "domains": "runtime planning"
+    }
+  ]
+}
