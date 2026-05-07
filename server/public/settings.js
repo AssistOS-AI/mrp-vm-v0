@@ -8,6 +8,7 @@ import {
   getApiKey,
   getSavedApiKeys,
   notify,
+  reportClientError,
   rememberApiKey,
   renderSystemContext,
   setActiveSessionId,
