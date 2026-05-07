@@ -3,6 +3,58 @@ import { rewriteJsReferences } from '../lang/references.mjs';
 import { createEmptyEffects } from '../runtime/effects.mjs';
 import { createFailureRecord, normalizeFailureDetails } from '../utils/errors.mjs';
 
+const NON_RETURNABLE_LINE_PREFIXES = [
+  'return',
+  'const ',
+  'let ',
+  'var ',
+  'function ',
+  'async function ',
+  'if ',
+  'for ',
+  'while ',
+  'switch ',
+  'try',
+  'catch ',
+  'finally',
+  'class ',
+  'throw ',
+  'import ',
+  'export ',
+];
+
+function canImplicitlyReturnLine(trimmedLine) {
+  if (!trimmedLine || trimmedLine === '{' || trimmedLine === '}' || trimmedLine.startsWith('//')) {
+    return false;
+  }
+  if (trimmedLine.startsWith('/*') || trimmedLine.startsWith('*') || trimmedLine.startsWith('*/')) {
+    return false;
+  }
+  if (trimmedLine.endsWith('{') || trimmedLine.endsWith('=>')) {
+    return false;
+  }
+  return !NON_RETURNABLE_LINE_PREFIXES.some((prefix) => trimmedLine.startsWith(prefix));
+}
+
+function withImplicitReturn(body) {
+  const lines = String(body ?? '').split('\n');
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index];
+    const trimmedLine = line.trim();
+    if (!trimmedLine) {
+      continue;
+    }
+    if (!canImplicitlyReturnLine(trimmedLine)) {
+      return String(body ?? '');
+    }
+    const indentation = line.match(/^\s*/) ? line.match(/^\s*/)[0] : '';
+    const expression = trimmedLine.replace(/;+\s*$/, '');
+    lines[index] = `${indentation}return ${expression};`;
+    return lines.join('\n');
+  }
+  return String(body ?? '');
+}
+
 function createSopRef(runtime, collector, token, tools) {
   const raw = token.slice(1);
   const [familyId, variantId] = raw.split(':');
@@ -121,7 +173,7 @@ export async function executeJsEval(context) {
     }
   }
 
-  const source = rewriteJsReferences(context.body, (token) => {
+  const source = rewriteJsReferences(withImplicitReturn(context.body), (token) => {
     if (token.startsWith('$')) {
       return `__sop_values[${JSON.stringify(token)}]`;
     }

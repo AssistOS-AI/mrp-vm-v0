@@ -70,6 +70,8 @@ Host APIs must not be exposed through the helper surface in the v0 baseline.
 
 `js-eval` default KUs must describe the preferred body format, the allowed helper surface, and any regex-friendly cues that help planning produce executable bodies predictably. LLM fallback is not part of `js-eval` execution itself; if planning needs help producing code, that happens before `js-eval` runs.
 
+When a `js-eval` step is meant to populate its declared target family directly without calling `sop.emit()` or `~family.set()`, the preferred planner-facing form is an explicit final `return ...;` statement. The runtime may treat one simple final expression as shorthand for that return, but KU guidance should still steer planning toward the explicit form so emitted outputs remain obvious in the source.
+
 Those KUs must be planner-facing and execution-facing at the same time. Their summaries must make it clear when `js-eval` is the right tool instead of `logic-eval`, `template-eval`, or an LLM wrapper, and their bodies must contain concrete do-or-don't guidance plus small canonical patterns. One-line labels are not sufficient.
 
 The helper surface remains intentionally minimal in v0. Additional deterministic helper libraries are deferred until repeated implementation pressure justifies them.

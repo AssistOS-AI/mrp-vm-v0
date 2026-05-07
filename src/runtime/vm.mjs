@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { compileGraph } from './graph.mjs';
 import { buildContextPackage } from './context-package.mjs';
-import { createEmptyEffects, hasStructuralEffects } from './effects.mjs';
+import { createEmptyEffects, hasStructuralEffects, hasStructuralMetadataUpdates } from './effects.mjs';
 import { createDeterministicTools, createLiveTools } from '../utils/deterministic.mjs';
 import { createFailureRecord, isUsableVariant, normalizeErrorLike, normalizeFailureDetails } from '../utils/errors.mjs';
 import { StateStore } from './state-store.mjs';
@@ -1302,6 +1302,7 @@ export class MRPVM {
               last_execution_timing: executionTiming,
               last_route: commandLabel(node.declaration),
             },
+            structuralImpact: false,
           });
           if (effects.failure) {
             effects.failure = {
@@ -1336,6 +1337,7 @@ export class MRPVM {
           }
 
           if (effects.metadataUpdates.length > 0) {
+            const metadataStructuralImpact = hasStructuralMetadataUpdates(effects.metadataUpdates);
             await this.emitTrace(sessionId, 'metadata_updated', {
               session_id: sessionId,
               request_id: requestId,
@@ -1344,10 +1346,11 @@ export class MRPVM {
               target_family: node.targetFamily,
               target_ids: effects.metadataUpdates.map((entry) => entry.targetId),
               changed_keys: effects.metadataUpdates.flatMap((entry) => Object.keys(entry.patch)),
-              structural_impact: true,
+              structural_impact: metadataStructuralImpact,
               updates: effects.metadataUpdates.map((entry) => ({
                 target_id: entry.targetId,
                 patch: entry.patch,
+                structural_impact: entry.structuralImpact !== false,
               })),
               execution_timing: effects.executionTiming,
             });

@@ -43,6 +43,7 @@ metadata. Use it to replace fabricated or ill-fitting routes with valid surfaces
 13. If the current plan collapsed solving, explanation, and final formatting into one opaque declaration, split it into explicit intermediate families.
 14. Prefer at least three declarations for non-trivial repaired plans: solving or extraction, response preparation, and final template assembly.
 15. If the current plan used a reasoner or deterministic command for work that can be isolated into exact computation, consider moving that bounded sub-step to js-eval and keeping the reasoning step only for the remainder.
+- If a repaired js-eval declaration should emit its target family directly, end the body with `return ...;` or a simple final expression instead of leaving the script with no emitted result.
 16. If the user requested a structured final answer, preserve that by repairing the graph upstream rather than letting the final response step improvise missing facts.
 17. If a template or response step references a family that was not produced or is too speculative, repair by adding or rerouting the missing upstream step instead of leaving the placeholder unresolved.
 18. Use template-eval only for deterministic assembly from stable upstream values.
@@ -54,12 +55,12 @@ metadata. Use it to replace fabricated or ill-fitting routes with valid surfaces
 Output the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.
 @ku_planning_repair_core:meta json
 {
-  "rev": 5,
+  "rev": 6,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
   "title": "planning_repair_core",
-  "summary": "Mandatory planner bootstrap for repair mode: use the authoritative component catalog plus retrieved KUs to replace fabricated or ill-fitting routes, restore missing upstream families, decompose repaired plans into explicit solving, preparation, and template assembly phases, and keep the graph connected and convergent.",
+  "summary": "Mandatory planner bootstrap for repair mode: use the authoritative component catalog plus retrieved KUs to replace fabricated or ill-fitting routes, restore missing upstream families, decompose repaired plans into explicit solving, preparation, and template assembly phases, keep js-eval outputs explicitly emitted, and keep the graph connected and convergent.",
   "priority": 20,
   "trust": "canonical",
   "domains": [

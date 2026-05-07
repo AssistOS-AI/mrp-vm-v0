@@ -136,6 +136,8 @@ Structural effects for v0 are:
 5. logical withdrawal of an active variant,
 6. accepted insertion of new SOP declarations.
 
+Purely observational metadata such as last-route notes or execution-timing diagnostics must not count as a structural effect on their own. Metadata-only changes consume structural budget only when they can change filtering, representative choice, or downstream visibility.
+
 Effects emitted by one branch are buffered transactionally for that branch. If the branch ends in failure before successful completion, the branch-local buffered variants, metadata updates, withdrawals, and declaration insertions must be discarded rather than partially committed.
 
 One scheduler step in v0 is one dispatched executable branch or one accepted control action. The request must track at least wall-clock budget, total step budget, planning budget, and structural-change budget.

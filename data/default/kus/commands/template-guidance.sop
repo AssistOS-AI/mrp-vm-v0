@@ -8,6 +8,8 @@ Use it for:
 
 Good bodies:
 - use $value or ${value} for straightforward placeholders,
+- accept {{value}} only as compatibility syntax when a legacy or planner-generated template still uses braces for plain value insertion,
+- prefer {{#each items as item}}$item{{/each}} for loops and treat alias-free {{#each items}}...{{/each}} with {{this}} or {{$value}} as compatibility syntax only,
 - reserve {{#if}} and {{#each}} for simple structural control only when needed,
 - keep the template readable and explicit about sections.
 
@@ -25,12 +27,12 @@ Avoid template-eval when:
 - the task needs procedural state updates instead of rendering.
 @ku_template_guidance:meta json
 {
-  "rev": 1,
+  "rev": 2,
   "ku_type": "content",
   "scope": "default",
   "status": "active",
   "title": "template guidance",
-  "summary": "Use template-eval for deterministic assembly of known values into stable sectioned output with $placeholders; avoid using it as a hidden prose generator.",
+  "summary": "Use template-eval for deterministic assembly of known values into stable sectioned output with $placeholders; keep brace-based value insertion and alias-free loops as compatibility syntax only, and avoid using it as a hidden prose generator.",
   "priority": 9,
   "trust": "trusted",
   "domains": [

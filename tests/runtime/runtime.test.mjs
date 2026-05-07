@@ -145,6 +145,62 @@ test('runtime promotes successful LLM calls into cache and reuses them on identi
   assert.ok(cacheEntries.some((entry) => Number(entry.hit_count ?? 0) > 0));
 });
 
+test('runtime completes a js-eval planner step that ends with a final expression instead of an explicit return', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, {
+    deterministic: {},
+    fakeAdapterConfig: {
+      scriptedSequences: {
+        plannerLLM: [[
+          '@digits js-eval',
+          '"1".repeat(10)',
+          '',
+          '@response template-eval',
+          '$digits',
+        ].join('\n')],
+      },
+    },
+  });
+
+  const outcome = await runtime.submitRequest({
+    requestText: 'scrie de 10 ori 1',
+  });
+
+  assert.equal(outcome.stop_reason, 'completed');
+  assert.equal(outcome.response, '1111111111');
+});
+
+test('runtime does not exhaust the structural-change budget on metadata-only execution effects', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, {
+    deterministic: {},
+    fakeAdapterConfig: {
+      scriptedSequences: {
+        plannerLLM: [[
+          '@draft js-eval',
+          'const message = "hello";',
+          '',
+          '@response template-eval',
+          '$draft',
+        ].join('\n')],
+      },
+    },
+  });
+
+  const outcome = await runtime.submitRequest({
+    requestText: 'produce a greeting',
+    budgets: {
+      steps_remaining: 8,
+      planning_remaining: 3,
+      structural_changes_remaining: 2,
+    },
+  });
+
+  assert.equal(outcome.stop_reason, 'unknown_outcome');
+  assert.equal(outcome.error.code, 'UNKNOWN_OUTCOME');
+  assert.equal(outcome.remaining_budgets.structural_changes_remaining, 2);
+});
+
 test('runtime uses Explainable Memory by default for KB retrieval metadata', async () => {
   const rootDir = await createTempRuntimeRoot();
   const sessionId = 'session-explainable';

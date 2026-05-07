@@ -9,6 +9,9 @@ Use it for:
 - bounded graph traversal, search, simulation, or exact state transition generation.
 
 Prefer bodies that are real JavaScript, make the data flow obvious, and stay narrowly focused on the declared target family.
+When the step should populate its declared target family directly, finish with an explicit
+`return ...;` statement. The runtime also accepts a simple final expression as shorthand, but
+planner-generated code should still prefer the explicit return form.
 
 Good patterns:
 - compute a derived object from one or more $families,
@@ -34,12 +37,12 @@ Avoid js-eval when:
 Do not assume unrestricted filesystem, process, or network access.
 @ku_js_guidance:meta json
 {
-  "rev": 1,
+  "rev": 2,
   "ku_type": "content",
   "scope": "default",
   "status": "active",
   "title": "js guidance",
-  "summary": "Use js-eval for bounded procedural computation, data reshaping, exact arithmetic, state-space search, and explicit state updates; avoid prose-only or rule-style bodies.",
+  "summary": "Use js-eval for bounded procedural computation, data reshaping, exact arithmetic, state-space search, and explicit state updates; prefer explicit return statements when the step should emit its target value, and avoid prose-only or rule-style bodies.",
   "priority": 9,
   "trust": "trusted",
   "domains": [

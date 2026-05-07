@@ -1,15 +1,36 @@
 import { createEmptyEffects } from '../runtime/effects.mjs';
 
 function resolvePath(pathExpression, context) {
-  const segments = pathExpression.split('.');
+  const source = String(pathExpression ?? '').trim();
+  const segments = source.split('.');
   let current = context;
   for (const segment of segments) {
     if (current == null) {
       return undefined;
     }
+    if (Object.prototype.hasOwnProperty.call(Object(current), segment)) {
+      current = current[segment];
+      continue;
+    }
+    const fallbackSegment = segment.startsWith('$') ? segment.slice(1) : null;
+    if (fallbackSegment && Object.prototype.hasOwnProperty.call(Object(current), fallbackSegment)) {
+      current = current[fallbackSegment];
+      continue;
+    }
     current = current[segment];
   }
   return current;
+}
+
+function renderCompatibilityValue(expression, context) {
+  if (!/^(?:this|\$?[A-Za-z_][A-Za-z0-9_]*)(?:\.[A-Za-z0-9_]+)*$/.test(expression)) {
+    return null;
+  }
+  const value = resolvePath(expression, context);
+  if (value === undefined) {
+    throw new Error(`Missing required placeholder: ${expression}`);
+  }
+  return String(value);
 }
 
 function renderHelpers(expression, context) {
@@ -65,7 +86,22 @@ function renderTemplate(source, context) {
     }
     return value.map((item) => renderTemplate(body, {
       ...context,
+      this: item,
+      $value: item,
       [itemName]: item,
+    })).join('');
+  });
+
+  output = output.replace(/\{\{#each\s+(.+?)\}\}([\s\S]*?)\{\{\/each\}\}/g, (_match, expression, body) => {
+    const value = resolvePath(expression.trim(), context);
+    if (!Array.isArray(value)) {
+      throw new Error(`Loop source ${expression} is not list-like.`);
+    }
+    return value.map((item) => renderTemplate(body, {
+      ...context,
+      this: item,
+      $value: item,
+      value: item,
     })).join('');
   });
 
@@ -73,6 +109,10 @@ function renderTemplate(source, context) {
     const helperValue = renderHelpers(expression.trim(), context);
     if (helperValue !== null) {
       return helperValue;
+    }
+    const compatibilityValue = renderCompatibilityValue(expression.trim(), context);
+    if (compatibilityValue !== null) {
+      return compatibilityValue;
     }
     throw new Error(`Unsupported template expression: ${expression}. Use $variable for simple placeholders or helpers like {{join ...}}.`);
   });

@@ -51,6 +51,7 @@ may insert declarations. Use that catalog as the final authority for route selec
 15. For non-trivial requests, prefer at least three declarations: one or more solving or extraction steps, one response-preparation step, and one final @response template-eval step.
 16. If the user asks for an exact solution plus explanation, split exact computation from explanation.
 17. Prefer js-eval for deterministic calculations, transformations, parsing, filtering, aggregation, or light state simulation whenever those parts can be solved exactly without an LLM.
+- When a js-eval declaration should emit its target family directly, end the body with `return ...;` or a simple final expression instead of leaving the script with no emitted result.
 18. Use HumanLikeReasoner, AdvancedReasoner, or DocumentScalePlanner only for the bounded sub-problems that actually need those interpreters; do not collapse the whole request into a single reasoner-backed final answer.
 19. If the user asks for a specific answer structure, create an intermediate response-preparation family (writerLLM or template-eval) before the final @response template so formatting stays explicit and traceable.
 20. For algorithmic, puzzle, graph, search, path, ordering, constraint, or bounded numeric tasks, prefer direct HumanLikeReasoner routing when the route is already obvious, prefer logic-eval only when a bounded rewrite brief is still needed, and prefer js-eval when unrestricted procedural code is the cleaner exact surface.
@@ -105,21 +106,24 @@ Retrieve and summarize all completed requests and their outcomes from this sessi
 Based on the session summary below, provide concrete advice on next steps.
 Session summary: $sessionSummary
 
-@response writerLLM
-Combine the following into a clear, concise response.
+@delivery writerLLM
+Prepare a clear concise answer that keeps the session summary and the concrete advice distinct.
 Summary: $sessionSummary
 Advice: $advice
+
+@response template-eval
+$delivery
 
 --- OUTPUT ---
 Output the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.
 @ku_planning_init_core:meta json
 {
-  "rev": 6,
+  "rev": 7,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
   "title": "planning_init_core",
-  "summary": "Mandatory planner bootstrap for new sessions: use the authoritative component catalog plus retrieved KUs to decompose requests into at least a solver or extraction phase, a response-preparation phase, and a final template-eval response, prioritizing js-eval for exact work and avoiding direct reasoner-to-response plans.",
+  "summary": "Mandatory planner bootstrap for new sessions: use the authoritative component catalog plus retrieved KUs to decompose requests into at least a solver or extraction phase, a response-preparation phase, and a final template-eval response, prioritize js-eval for exact work with explicit emitted results, and avoid direct reasoner-to-response plans.",
   "priority": 20,
   "trust": "canonical",
   "domains": [

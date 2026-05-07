@@ -172,7 +172,7 @@ test('planning retries when the planner emits a disconnected graph with unused d
   assert.doesNotMatch(inspection.plan_snapshot, /@deadend writerLLM/);
 });
 
-test('planning retries when the planner emits a direct response interpreter instead of explicit assembly', async () => {
+test('planning normalizes a direct response interpreter into explicit template assembly', async () => {
   const rootDir = await createTempRuntimeRoot();
   const runtime = new MRPVM(rootDir, {
     deterministic: {},
@@ -184,15 +184,6 @@ test('planning retries when the planner emits a direct response interpreter inst
           '',
           '@response writerLLM',
           'Present the final user-facing answer with the requested sections.',
-        ].join('\n'), [
-          '@bounded_reasoning deepLLM',
-          'Solve the bounded reasoning task and preserve the requested sections.',
-          '',
-          '@delivery writerLLM',
-          'Prepare a well-structured answer draft from $bounded_reasoning while preserving the requested sections.',
-          '',
-          '@response template-eval',
-          '$delivery',
         ].join('\n')],
         deepLLM: ['Connected bounded reasoning answer'],
         writerLLM: ['Prepared bounded reasoning answer'],
@@ -209,7 +200,7 @@ test('planning retries when the planner emits a direct response interpreter inst
 
   const inspection = await runtime.inspectRequestPublic(outcome.request_id);
   assert.match(inspection.plan_snapshot, /\$bounded_reasoning/);
-  assert.match(inspection.plan_snapshot, /@delivery writerLLM/);
+  assert.match(inspection.plan_snapshot, /@response_prepared writerLLM/);
   assert.match(inspection.plan_snapshot, /@response template-eval/);
   assert.doesNotMatch(inspection.plan_snapshot, /@response writerLLM/);
 });

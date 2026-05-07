@@ -26,8 +26,14 @@ const state = {
   activeGraphLayerDrag: null,
 };
 
-const GRAPH_LAYER_MIN_WIDTH = 220;
-const GRAPH_DIVIDER_WIDTH = 28;
+const GRAPH_LAYER_MIN_WIDTH = 138;
+const GRAPH_LAYER_MAX_WIDTH = 210;
+const GRAPH_DIVIDER_WIDTH = 16;
+const GRAPH_NODE_FAMILY_LABEL_LENGTH = 18;
+const GRAPH_NODE_COMMAND_LABEL_LENGTH = 18;
+const GRAPH_NODE_NOTE_LABEL_LENGTH = 30;
+const GRAPH_NODE_CHAR_WIDTH_PX = 7;
+const GRAPH_NODE_HORIZONTAL_PADDING_PX = 34;
 
 function humanizeStatus(status) {
   return String(status || 'unknown').replace(/_/g, ' ');
@@ -404,23 +410,31 @@ function hasStoredGraphLayerWidths(layerCount) {
   return true;
 }
 
-function computeDefaultGraphLayerWidths(layerCount) {
-  if (layerCount <= 0) {
+function estimateGraphLayerWidth(layer = {}, nodesById = new Map()) {
+  const longestVisibleLabel = Math.max(0, ...(layer.node_ids || []).map((nodeId) => {
+    const node = nodesById.get(nodeId);
+    if (!node) {
+      return 0;
+    }
+    const familyLength = truncateNodeLabel(node.target_family, GRAPH_NODE_FAMILY_LABEL_LENGTH).length;
+    const commandLength = truncateNodeLabel((node.commands || []).join(', '), GRAPH_NODE_COMMAND_LABEL_LENGTH).length;
+    return Math.max(familyLength, commandLength);
+  }));
+  return Math.max(
+    GRAPH_LAYER_MIN_WIDTH,
+    Math.min(
+      GRAPH_LAYER_MAX_WIDTH,
+      Math.round((Math.max(longestVisibleLabel, 11) * GRAPH_NODE_CHAR_WIDTH_PX) + GRAPH_NODE_HORIZONTAL_PADDING_PX),
+    ),
+  );
+}
+
+function computeDefaultGraphLayerWidths(strata = []) {
+  if (!Array.isArray(strata) || strata.length <= 0) {
     return [];
   }
-  const availableWidth = getGraphViewportWidth();
-  const totalDividerWidth = Math.max(0, layerCount - 1) * GRAPH_DIVIDER_WIDTH;
-  const targetWidth = Math.max(availableWidth - totalDividerWidth, layerCount * GRAPH_LAYER_MIN_WIDTH);
-  const baseWidth = Math.max(GRAPH_LAYER_MIN_WIDTH, Math.floor(targetWidth / layerCount));
-  const widths = Array.from({ length: layerCount }, () => baseWidth);
-  let remainder = targetWidth - (baseWidth * layerCount);
-  let index = 0;
-  while (remainder > 0 && widths.length > 0) {
-    widths[index] += 1;
-    remainder -= 1;
-    index = (index + 1) % widths.length;
-  }
-  return widths;
+  const nodesById = new Map((state.payload?.execution_graph?.nodes || []).map((node) => [node.id, node]));
+  return strata.map((layer) => estimateGraphLayerWidth(layer, nodesById));
 }
 
 function applyGraphLayerWidths(options = {}) {
@@ -434,7 +448,7 @@ function applyGraphLayerWidths(options = {}) {
     || !state.graphManualLayerLayouts.has(requestKey)
     || !hasStoredGraphLayerWidths(layerNodes.length);
   const widths = shouldAutoSize
-    ? computeDefaultGraphLayerWidths(layerNodes.length)
+    ? computeDefaultGraphLayerWidths(state.payload?.execution_graph?.strata ?? [])
     : layerNodes.map((_, index) => getGraphLayerWidth(index) ?? GRAPH_LAYER_MIN_WIDTH);
   setGraphLayerWidths(widths);
   layerNodes.forEach((node, index) => {
@@ -833,10 +847,10 @@ function renderGraph() {
                         <span class="execution-graph-node-status-row">
                           <span class="badge ${statusClass(node.status)}">${escapeHtml(humanizeStatus(node.status))}</span>
                         </span>
-                        <span class="execution-graph-node-family">${escapeHtml(truncateNodeLabel(node.target_family, 20))}</span>
-                        <span class="execution-graph-node-command">${escapeHtml(truncateNodeLabel((node.commands || []).join(', '), 24))}</span>
+                        <span class="execution-graph-node-family">${escapeHtml(truncateNodeLabel(node.target_family, GRAPH_NODE_FAMILY_LABEL_LENGTH))}</span>
+                        <span class="execution-graph-node-command">${escapeHtml(truncateNodeLabel((node.commands || []).join(', '), GRAPH_NODE_COMMAND_LABEL_LENGTH))}</span>
                         ${node.workflow_role ? `<span class="execution-graph-node-note">${escapeHtml(`workflow ${node.workflow_role}`)}</span>` : ''}
-                        ${node.status_reason ? `<span class="execution-graph-node-note">${escapeHtml(truncateNodeLabel(node.status_reason, 42))}</span>` : ''}
+                        ${node.status_reason ? `<span class="execution-graph-node-note">${escapeHtml(truncateNodeLabel(node.status_reason, GRAPH_NODE_NOTE_LABEL_LENGTH))}</span>` : ''}
                         ${node.duration_ms == null ? '' : `<span class="execution-graph-node-duration">${escapeHtml(formatDuration(node.duration_ms))}</span>`}
                       </button>
                     `;

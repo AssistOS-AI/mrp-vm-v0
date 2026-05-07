@@ -101,7 +101,7 @@ This tab shows the accumulated planning, execution-node, and request-level failu
 
 This tab renders the execution graph as a left-to-right workflow ordered by topological layer. The graph must show:
 
-1. small readable nodes,
+1. compact readable nodes aligned to the left edge of each layer column,
 2. the variable name on one line,
 3. the executed command or interpreter name on a second line with a distinct style,
 4. a compact duration indicator such as `42 ms` or `1.2 s` when timing is available,
@@ -111,7 +111,7 @@ This tab renders the execution graph as a left-to-right workflow ordered by topo
 8. resizable layer columns whose `Layer N` heading acts as the horizontal drag handle so the whole column adjusts together without exposing separate resize bars,
 9. subtle vertical dotted guides per layer, visually aligned with the layer heading so the column structure remains readable even when arrows are thin,
 10. execution-graph nodes that open inspection details on click but are not themselves draggable,
-11. a default width strategy that stretches the graph to the available viewport before introducing horizontal scrolling,
+11. a default width strategy that keeps each layer column close to the longest visible node label within sensible minimum and maximum bounds, while the overall graph still stretches to the available viewport before introducing horizontal scrolling,
 12. a fullscreen node inspector with tabbed sections for declaration, input, context, output, diagnostics, and KU references,
 13. a synthetic workflow-start node at `Layer 0` for initial planning,
 14. a synthetic workflow-final node for the terminal request result,

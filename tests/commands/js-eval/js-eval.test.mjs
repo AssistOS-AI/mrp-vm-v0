@@ -24,6 +24,25 @@ test('js-eval resolves $ references and emits return value', async () => {
   assert.equal(effects.emittedVariants[0].value, 'HELLO WORLD');
 });
 
+test('js-eval treats a simple final expression as the emitted result', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, { deterministic: {} });
+
+  const effects = await executeJsEval({
+    runtime,
+    targetFamily: 'response',
+    body: '"1".repeat(10)',
+    node: {
+      dependencies: [],
+    },
+    sessionId: 's1',
+    requestId: 'r1',
+    epochNumber: 1,
+  });
+
+  assert.equal(effects.emittedVariants[0].value, '1111111111');
+});
+
 test('js-eval ~ref property writes emit fresh variants', async () => {
   const rootDir = await createTempRuntimeRoot();
   const runtime = new MRPVM(rootDir, { deterministic: {} });

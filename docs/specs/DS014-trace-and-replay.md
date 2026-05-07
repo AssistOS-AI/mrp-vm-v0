@@ -40,6 +40,8 @@ Trace is separate from executable state. It may reference executable artifacts, 
 
 The event schema must be stable enough that replay tools can parse it without command-specific guesswork.
 
+`metadata_updated.structural_impact` must distinguish graph- or representative-affecting metadata from observational diagnostics. Timing-only or route-only metadata should still be traceable, but it should report `structural_impact: false` and must not by itself imply that another epoch consumed structural-change budget.
+
 When a declaration execution completes, the trace should preserve `started_at`, `finished_at`, and `duration_ms` either directly on the emitted event payload or in a clearly associated timing object. Traceability tooling may derive fallback timing from event timestamps, but persisted timing is preferred when the runtime knows the execution window explicitly.
 
 ### Replay contract

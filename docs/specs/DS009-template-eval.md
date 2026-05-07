@@ -20,13 +20,15 @@ The v0 baseline syntax aligns with SOP Lang references for simple placeholders a
 | Form | Meaning |
 | --- | --- |
 | `$expr` or `${expr}` | Placeholder expansion (preferred for plain values). |
+| `{{expr}}` | Compatibility placeholder form for simple paths when legacy or planner-generated templates still use braces for value insertion. |
 | `{{#if expr}} ... {{else}} ... {{/if}}` | Conditional rendering. |
 | `{{#each expr as item}} ... {{/each}}` | Looping over lists. |
+| `{{#each expr}} ... {{/each}}` | Compatibility loop form that exposes `{{this}}` and `{{$value}}` inside the body when no explicit alias is supplied. |
 | `{{join expr ", "}}` | Join helper. |
 | `{{default expr "fallback"}}` | Default fallback helper. |
 | `{{formatDate expr}}`, `{{formatNumber expr}}`, `{{truncate expr 120}}` | Deterministic formatters. |
 
-`expr` resolves against direct values, representatives, or explicit runtime handles flattened into deterministic renderable values by the command. Simple value insertion must use `$expr`/`${expr}` rather than `{{expr}}`.
+`expr` resolves against direct values, representatives, or explicit runtime handles flattened into deterministic renderable values by the command. Simple value insertion should prefer `$expr`/`${expr}` over `{{expr}}`, but the brace form remains available as compatibility syntax, along with the loop aliases `{{this}}` and `{{$value}}` inside alias-free `#each` blocks.
 
 ### Resolution rules
 

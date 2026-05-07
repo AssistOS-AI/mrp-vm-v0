@@ -45,6 +45,7 @@ pull in values computed earlier in this session when they are relevant.
 10. Only keep a single-step plan if the request is truly trivial.
 11. For non-trivial requests, prefer at least three declarations: one or more solving or extraction steps, one response-preparation step, and one final @response template-eval step.
 12. Prefer js-eval for deterministic calculations, transformations, parsing, filtering, aggregation, or light state simulation whenever those parts can be solved exactly without an LLM.
+- When a js-eval declaration should emit its target family directly, end the body with `return ...;` or a simple final expression instead of leaving the script with no emitted result.
 13. Use HumanLikeReasoner directly for clear bounded finite symbolic reasoning, AdvancedReasoner directly for bounded advanced meta-reasoning, DocumentScalePlanner directly for bounded Markdown or JSON analysis workflows, and logic-eval only when a rewrite brief is still needed before those downstream routes.
 14. Avoid picking a component whose KU guidance says the body shape is wrong for that surface.
 15. When the request asks for exact computation plus explanation, keep the exact solving step separate from the explanation or final response step.
@@ -61,12 +62,12 @@ pull in values computed earlier in this session when they are relevant.
 Output the raw SOP Lang program only. No fences. No explanation. Start directly with @familyId.
 @ku_planning_continue_core:meta json
 {
-  "rev": 6,
+  "rev": 7,
   "ku_type": "prompt_asset",
   "scope": "default",
   "status": "active",
   "title": "planning_continue_core",
-  "summary": "Mandatory planner bootstrap for continuing sessions: reuse prior families intentionally, decompose non-trivial requests into solver or extraction, response-preparation, and final template-eval phases, prioritize js-eval for exact work, and avoid direct reasoner-to-response plans.",
+  "summary": "Mandatory planner bootstrap for continuing sessions: reuse prior families intentionally, decompose non-trivial requests into solver or extraction, response-preparation, and final template-eval phases, prioritize js-eval for exact work with explicit emitted results, and avoid direct reasoner-to-response plans.",
   "priority": 20,
   "trust": "canonical",
   "domains": [

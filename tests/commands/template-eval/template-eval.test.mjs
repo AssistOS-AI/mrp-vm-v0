@@ -63,3 +63,37 @@ test('template-eval ignores sentence punctuation after a placeholder', async () 
 
   assert.equal(effects.emittedVariants[0].value, 'The result is Bounded answer.');
 });
+
+test('template-eval accepts simple brace placeholders as compatibility syntax', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, { deterministic: {} });
+  runtime.stateStore.emitVariant('ones', '1111111111', { created_epoch: 0 });
+
+  const effects = await executeTemplateEval({
+    runtime,
+    targetFamily: 'response',
+    body: '{{ones}}',
+  });
+
+  assert.equal(effects.emittedVariants[0].value, '1111111111');
+});
+
+test('template-eval supports compatibility each loops without an explicit alias', async () => {
+  const effects = await executeTemplateEval({
+    runtime: {
+      createTemplateContext() {
+        return {};
+      },
+    },
+    resolvedDependencies: new Map([
+      ['$digits', {
+        familyId: 'digits',
+        value: ['1', '1', '1'],
+      }],
+    ]),
+    targetFamily: 'response',
+    body: '{{#each $digits}}{{$value}} {{/each}}|{{#each $digits}}{{this}} {{/each}}',
+  });
+
+  assert.equal(effects.emittedVariants[0].value, '1 1 1 |1 1 1 ');
+});

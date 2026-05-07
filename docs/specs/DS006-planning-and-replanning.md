@@ -86,6 +86,8 @@ Planning does not mutate the graph directly. It proposes declaration content, an
 
 Every accepted request plan must define one canonical user-facing response family for that request. The v0 reserved family name is `response`, but it is request-local rather than session-global. There is no global session response variable.
 
+Before rejecting a proposal for response-shape issues alone, the native planning command may normalize clear canonical-equivalent mistakes such as moving `@response` to the end of the plan or wrapping a direct response interpreter into an explicit intermediate response-preparation family plus a final `@response template-eval` step. That normalization must stay fully visible in the accepted SOP snapshot rather than becoming an invisible execution-time rewrite.
+
 ### Input-shape guidance for callers
 
 Every planning-oriented interpreter and helper command must have default KUs that describe:
@@ -119,6 +121,8 @@ For non-trivial requests, planning should ordinarily emit at least three declara
 When `template-eval` is available, the final `@response` declaration must use it rather than placing `HumanLikeReasoner`, `AdvancedReasoner`, `DocumentScalePlanner`, `logic-eval`, `js-eval`, or a prose interpreter directly on `response`. Upstream solver or interpreter outputs should land in intermediate families first so the final answer remains auditable and structurally stable.
 
 Planning should also prefer `js-eval` ahead of LLM-backed reasoning for any bounded sub-problem that is already a clean deterministic computation, transformation, parsing, filtering, or aggregation task. The reasoners remain appropriate for bounded symbolic or meta-reasoning fragments, but they must not become a catch-all route for work that could have been solved exactly and cheaply in `js-eval`.
+
+When planning selects `js-eval` to populate its declared target family directly, it should usually end the body with an explicit `return ...;` statement. A simple final expression may still be accepted as shorthand, but prompt assets and planner-side guidance should prefer the explicit returned-value form.
 
 When planning selects an interpreter that may insert declarations later, the initially accepted graph must still remain connected and valid on its own. The initial `@response` step must therefore depend only on declared or intentionally reused families. If the later inserted workflow will produce the final semantic target, the inserted declarations must bridge that target back into an already-declared family rather than relying on an undeclared future dependency in the initial graph.
 

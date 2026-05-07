@@ -275,6 +275,33 @@ function renderPlan(parsed) {
   }).join('\n\n').trim();
 }
 
+function createDeclarationReference(target) {
+  return {
+    kind: '$',
+    family: target,
+    variant: null,
+    raw: `$${target}`,
+  };
+}
+
+function reindexDeclarations(declarations) {
+  return declarations.map((declaration, index) => ({
+    ...declaration,
+    declaration_id: `decl-${String(index + 1).padStart(4, '0')}`,
+  }));
+}
+
+function createUniqueResponsePreparationTarget(declarations, preferredTarget = 'response_prepared') {
+  const takenTargets = new Set(declarations.map((declaration) => declaration.target));
+  let candidate = preferredTarget;
+  let suffix = 2;
+  while (takenTargets.has(candidate) || candidate === 'response') {
+    candidate = `${preferredTarget}_${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
 function usesNarrativeRoute(routeName) {
   return ['writerLLM', 'deepLLM', 'fastLLM'].includes(routeName);
 }
@@ -352,13 +379,69 @@ function ensureResponseDeclaration(declarations, nativeCommands, enabledInterpre
     declaration_kind: 'single',
     commands: [fallback],
     body: `Using $${lastTarget}, produce the final user-facing answer that preserves the requested structure and conclusions.`,
-    references: [{
-      kind: '$',
-      family: lastTarget,
-      variant: null,
-      raw: `$${lastTarget}`,
-    }],
+    references: [createDeclarationReference(lastTarget)],
   });
+}
+
+function wrapDirectResponseDeclaration(declarations, nativeCommands) {
+  if (!nativeCommands.includes('template-eval')) {
+    return declarations;
+  }
+  const responseIndex = declarations.findIndex((declaration) => declaration.target === 'response');
+  if (responseIndex === -1) {
+    return declarations;
+  }
+  const responseDeclaration = declarations[responseIndex];
+  if (responseDeclaration.declaration_kind !== 'single' || responseDeclaration.commands[0] === 'template-eval') {
+    return declarations;
+  }
+  const responsePreparationTarget = createUniqueResponsePreparationTarget(declarations);
+  const upstreamTargets = declarations
+    .filter((declaration, index) => index !== responseIndex && declaration.target !== 'response')
+    .map((declaration) => declaration.target);
+  let wrappedDeclaration = {
+    ...responseDeclaration,
+    target: responsePreparationTarget,
+  };
+  if (wrappedDeclaration.references.length === 0 && upstreamTargets.length > 0 && usesNarrativeRoute(wrappedDeclaration.commands[0])) {
+    const requiredTarget = upstreamTargets.at(-1);
+    const guidanceLine = `Use $${requiredTarget} as a required source for the final answer.`;
+    const body = String(wrappedDeclaration.body ?? '').trim();
+    wrappedDeclaration = {
+      ...wrappedDeclaration,
+      body: body ? `${body}\n\n${guidanceLine}` : guidanceLine,
+      references: [createDeclarationReference(requiredTarget)],
+    };
+  }
+  const finalResponseDeclaration = {
+    declaration_id: responseDeclaration.declaration_id,
+    target: 'response',
+    declaration_kind: 'single',
+    commands: ['template-eval'],
+    body: `$${responsePreparationTarget}`,
+    references: [createDeclarationReference(responsePreparationTarget)],
+  };
+  const nextDeclarations = [
+    ...declarations.slice(0, responseIndex),
+    ...declarations.slice(responseIndex + 1),
+    wrappedDeclaration,
+    finalResponseDeclaration,
+  ];
+  return reindexDeclarations(nextDeclarations);
+}
+
+function ensureResponseIsFinal(declarations) {
+  const responseIndex = declarations.findIndex((declaration) => declaration.target === 'response');
+  if (responseIndex === -1 || responseIndex === declarations.length - 1) {
+    return declarations;
+  }
+  const responseDeclaration = declarations[responseIndex];
+  const nextDeclarations = [
+    ...declarations.slice(0, responseIndex),
+    ...declarations.slice(responseIndex + 1),
+    responseDeclaration,
+  ];
+  return reindexDeclarations(nextDeclarations);
 }
 
 function appendResponseDependencies(declarations) {
@@ -394,12 +477,7 @@ function appendResponseDependencies(declarations) {
       ? `${body}\n\n${dependencyAppendix}`
       : dependencyAppendix,
     references: responseDeclaration.references.concat(
-      missingTargets.map((target) => ({
-        kind: '$',
-        family: target,
-        variant: null,
-        raw: `$${target}`,
-      })),
+      missingTargets.map((target) => createDeclarationReference(target)),
     ),
   };
 
@@ -411,8 +489,10 @@ function normalizePlannedProgram(text, nativeCommands, enabledInterpreters) {
   try {
     const parsed = parsePlan(normalizedText);
     const normalizedDeclarations = normalizeDeclarations(parsed.declarations, nativeCommands, enabledInterpreters);
-    const finalizedDeclarations = appendResponseDependencies(
-      ensureResponseDeclaration(normalizedDeclarations, nativeCommands, enabledInterpreters),
+    const withResponseDeclaration = ensureResponseDeclaration(normalizedDeclarations, nativeCommands, enabledInterpreters);
+    const withWrappedResponse = wrapDirectResponseDeclaration(withResponseDeclaration, nativeCommands);
+    const finalizedDeclarations = ensureResponseIsFinal(
+      appendResponseDependencies(withWrappedResponse),
     );
     return renderPlan({
       declarations: finalizedDeclarations,
