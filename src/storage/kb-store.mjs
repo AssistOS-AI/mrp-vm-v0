@@ -370,34 +370,44 @@ export class KbStore {
       return left.entry.kuId.localeCompare(right.entry.kuId);
     });
 
+    const candidates = scored.map((item) => ({
+      ...item.entry,
+      lexicalTokens,
+      score: item.score,
+      baseScore: item.score,
+    }));
+
     const selected = [];
     const pruned = [];
     let usedBytes = 0;
 
-    for (const item of scored) {
+    for (const item of candidates) {
       const rendered = canonicalText([
-        item.entry.meta.title,
-        item.entry.meta.summary,
-        item.entry.content,
+        item.meta.title,
+        item.meta.summary,
+        item.content,
       ].filter(Boolean).join('\n'));
       const size = byteLength(rendered);
       if (usedBytes + size > byteBudget && selected.length > 0) {
-        pruned.push({ kuId: item.entry.kuId, reason: 'byte_budget' });
+        pruned.push({ kuId: item.kuId, reason: 'byte_budget' });
         continue;
       }
-      selected.push({
-        ...item.entry,
-        lexicalTokens,
-        score: item.score,
-      });
+      selected.push(item);
       usedBytes += size;
     }
 
     return {
       callerProfile,
+      mode: 'naive_symbolic',
+      candidates,
       selected,
       pruned,
       usedBytes,
+      explanation: {
+        snapshotVersion: null,
+        activeAspects: [],
+        lexicalFallbackUsed: lexicalTokens.length > 0,
+      },
     };
   }
 }

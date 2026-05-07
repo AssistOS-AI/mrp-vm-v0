@@ -26,6 +26,9 @@ import { createRuntimeConfig, resolveLlmProfile } from '../config/runtime-config
 import { executeHumanLikeReasoner } from '../interpreters/human-like-reasoner/index.mjs';
 import { executeAdvancedReasoner } from '../interpreters/advanced-reasoner/index.mjs';
 import { executeDocumentScalePlanner } from '../interpreters/document-scale-planner/index.mjs';
+import { DiskExplainableMemorySourceStrategy } from '../explainable-memory/disk-source-strategy.mjs';
+import { DiskExplainableMemoryPersistenceStrategy } from '../explainable-memory/disk-persistence-strategy.mjs';
+import { ExplainableMemory } from '../explainable-memory/explainable-memory.mjs';
 
 function cloneBudgets(budgets = {}) {
   return {
@@ -271,6 +274,12 @@ export class MRPVM {
     this.sessionManager = new SessionManager(rootDir, this.tools);
     this.requestManager = new RequestManager(rootDir);
     this.kbStore = new KbStore(rootDir);
+    this.explainableMemorySource = new DiskExplainableMemorySourceStrategy(rootDir, this.kbStore);
+    this.explainableMemoryPersistence = new DiskExplainableMemoryPersistenceStrategy(rootDir);
+    this.explainableMemory = new ExplainableMemory({
+      sourceStrategy: this.explainableMemorySource,
+      persistenceStrategy: this.explainableMemoryPersistence,
+    });
     this.traceStore = new TraceStore(rootDir);
     this.analyticStore = new AnalyticStore(rootDir);
     this.llmCacheStore = new LlmCacheStore(this.runtimeConfig, this.tools);
@@ -354,6 +363,57 @@ export class MRPVM {
       output[family.familyId] = representative?.value;
     }
     return output;
+  }
+
+  getKbRetrievalMode() {
+    return this.runtimeConfig?.kb?.mode === 'naive_symbolic' ? 'naive_symbolic' : 'explainable_memory';
+  }
+
+  async prepareKbSnapshot(sessionId) {
+    const catalog = await this.kbStore.snapshotForRequest(sessionId);
+    const retrievalMode = this.getKbRetrievalMode();
+    const explainableMemory = retrievalMode === 'explainable_memory'
+      ? await this.explainableMemory.ensureSnapshot(sessionId, catalog)
+      : null;
+    return {
+      catalog,
+      retrievalMode,
+      explainableMemory,
+    };
+  }
+
+  async retrieveKnowledge(kbSnapshot, input) {
+    const snapshot = Array.isArray(kbSnapshot) ? { catalog: kbSnapshot, retrievalMode: 'naive_symbolic', explainableMemory: null } : kbSnapshot;
+    if (!snapshot?.catalog) {
+      throw new Error('A KB snapshot catalog is required before retrieval.');
+    }
+    const baseResult = this.kbStore.retrieve(snapshot.catalog, input);
+    if (snapshot.retrievalMode === 'explainable_memory' && snapshot.explainableMemory) {
+      return this.explainableMemory.queryRelevant(snapshot.explainableMemory, baseResult, input);
+    }
+    return baseResult;
+  }
+
+  async inspectExplainableMemory(sessionId = null) {
+    const catalog = await this.explainableMemorySource.loadKnowledgeCatalog(sessionId);
+    return this.explainableMemory.getStatus(sessionId, catalog);
+  }
+
+  async listExplainableMemoryAspects() {
+    return this.explainableMemory.listAspects();
+  }
+
+  async upsertExplainableMemoryAspect(input) {
+    return this.explainableMemory.upsertAspect(input);
+  }
+
+  async approveExplainableMemoryAspect(aspectId) {
+    return this.explainableMemory.approveAspect(aspectId);
+  }
+
+  async reindexExplainableMemory(sessionId = null) {
+    const catalog = await this.explainableMemorySource.loadKnowledgeCatalog(sessionId);
+    return this.explainableMemory.reanalyse(sessionId, catalog);
   }
 
   async bootstrapSession(sessionId, sessionConfig = {}) {
@@ -630,9 +690,9 @@ export class MRPVM {
     const callerName = node.declaration.commands?.[0] ?? 'planning';
     const targetCommand = this.commandRegistry.has(callerName) ? callerName : null;
     const targetInterpreter = this.externalInterpreters.has(callerName) ? callerName : null;
-    const callerProfile = this.kbStore.findCallerProfile(request.kbSnapshot, callerName);
+    const callerProfile = this.kbStore.findCallerProfile(request.kbSnapshot.catalog, callerName);
 
-    const kbResult = this.kbStore.retrieve(request.kbSnapshot, {
+    const kbResult = await this.retrieveKnowledge(request.kbSnapshot, {
       callerName,
       retrievalMode: targetCommand ? 'automatic_native_command' : 'automatic_external_interpreter',
       desiredKuTypes: callerProfile?.meta.allowed_ku_types ?? ['content', 'prompt_asset', 'policy_asset', 'template_asset', 'caller_profile'],
@@ -911,7 +971,7 @@ export class MRPVM {
         planText: '',
         planningNotes: [],
         sessionSummary: existingSession ?? {},
-        kbSnapshot: await this.kbStore.snapshotForRequest(sessionId),
+        kbSnapshot: await this.prepareKbSnapshot(sessionId),
       };
 
       this.requestRecords.set(requestId, {
@@ -933,6 +993,10 @@ export class MRPVM {
         user_text: request.requestText,
         file_descriptors: request.files,
         budgets: request.budgets,
+        kb: {
+          retrieval_mode: request.kbSnapshot.retrievalMode,
+          snapshot_version: request.kbSnapshot.explainableMemory?.version ?? null,
+        },
         is_admin: this.isAdmin,
         effective_role: this.effectiveRole,
         session_origin: this.sessionOrigin,

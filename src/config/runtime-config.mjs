@@ -388,6 +388,15 @@ function resolveLlmCacheConfig(env, manualOverrides, baseDir, dataDir) {
   };
 }
 
+function resolveKbConfig(env, manualOverrides) {
+  const requestedMode = manualOverrides.kb?.mode
+    ?? manualOverrides.kbMode
+    ?? env.KB_RETRIEVAL_MODE
+    ?? 'explainable_memory';
+  const mode = requestedMode === 'naive_symbolic' ? 'naive_symbolic' : 'explainable_memory';
+  return { mode };
+}
+
 export function createRuntimeConfig(options = {}) {
   const env = options.env ?? process.env;
   const manualOverrides = options.manualOverrides ?? {};
@@ -411,6 +420,7 @@ export function createRuntimeConfig(options = {}) {
   const llmFallbacks = resolveLlmFallbacks(env, manualOverrides);
   const dataDir = path.resolve(baseDir, manualOverrides.dataDir ?? env.ACHILLES_DATA_DIR ?? 'data');
   const llmCache = resolveLlmCacheConfig(env, manualOverrides, baseDir, dataDir);
+  const kb = resolveKbConfig(env, manualOverrides);
 
   return {
     baseDir,
@@ -429,6 +439,7 @@ export function createRuntimeConfig(options = {}) {
       cache: llmCache,
     },
     dependencies,
+    kb,
     manualOverrides: {
       ...manualOverrides,
     },
