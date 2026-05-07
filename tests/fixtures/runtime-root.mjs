@@ -11,5 +11,8 @@ export async function createTempRuntimeRoot() {
     recursive: true,
   });
   await mkdir(path.join(tempRoot, 'data', 'kb', 'global'), { recursive: true });
+  await cp(path.join(fixtureRoot, 'data', 'kb', 'aspects'), path.join(tempRoot, 'data', 'kb', 'aspects'), {
+    recursive: true,
+  });
   return tempRoot;
 }

@@ -385,16 +385,16 @@ function renderAuthPanel() {
 
 function renderMemoryStatus() {
   const status = state.memoryStatus || {};
-  const counts = status.aspect_counts || { approved: 0, candidate: 0 };
-  const indexState = status.index_state || {};
-  const lastReanalysis = status.last_reanalysis_at ? new Date(status.last_reanalysis_at).toLocaleString() : 'never';
+  const counts = status.counts || {};
+  const persistence = status.status || {};
+  const lastReanalysis = persistence.last_completed_at ? new Date(persistence.last_completed_at).toLocaleString() : 'never';
   el('kb-mode').value = state.config?.kb_mode || 'explainable_memory';
   el('memory-snapshot-version').value = status.snapshot_version || 'unavailable';
-  el('memory-indexed-count').value = String(status.ku_count || 0);
-  el('memory-aspect-counts').value = `${counts.approved || 0} / ${counts.candidate || 0}`;
+  el('memory-indexed-count').value = String(counts.indexed_ku_count || 0);
+  el('memory-aspect-counts').value = `${counts.approved_aspect_count || 0} / ${counts.candidate_aspect_count || 0}`;
   el('memory-status-strip').innerHTML = [
     `<span class="badge">${escapeHtml(`mode: ${state.config?.kb_mode || 'explainable_memory'}`)}</span>`,
-    `<span class="badge ${indexState.state === 'ready' ? 'status-active' : ''}">${escapeHtml(`index: ${indexState.state || 'unknown'}`)}</span>`,
+    `<span class="badge ${persistence.status === 'ready' ? 'status-active' : ''}">${escapeHtml(`index: ${persistence.status || 'unknown'}`)}</span>`,
     `<span class="badge">${escapeHtml(`last reanalysis: ${lastReanalysis}`)}</span>`,
   ].join('');
 }

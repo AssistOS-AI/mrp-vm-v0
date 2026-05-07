@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ExternalInterpreterRegistry, MRPVM } from '../../src/index.mjs';
 import { createTempRuntimeRoot } from '../fixtures/runtime-root.mjs';
 
@@ -132,4 +132,67 @@ test('runtime promotes successful LLM calls into cache and reuses them on identi
   const cacheEntries = await runtime.listLlmCacheEntries();
   assert.equal(cacheEntries.length, 2);
   assert.ok(cacheEntries.some((entry) => Number(entry.hit_count ?? 0) > 0));
+});
+
+test('runtime uses Explainable Memory by default for KB retrieval metadata', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const sessionId = 'session-explainable';
+  const sessionFile = path.join(rootDir, 'data', 'sessions', sessionId, 'kb', 'notes.sop');
+  await mkdir(path.dirname(sessionFile), { recursive: true });
+  await writeFile(sessionFile, [
+    '@ku_session_note text',
+    'Alpha project note with explainable retrieval guidance.',
+    '@ku_session_note:meta json',
+    '{"rev":1,"ku_type":"content","scope":"session","status":"active","title":"Alpha note","summary":"Session note","priority":1,"trust":"trusted","domains":["runtime"],"commands":["kb"],"interpreters":[],"tags":["alpha"],"input_patterns":[]}',
+  ].join('\n'));
+
+  const runtime = new MRPVM(rootDir, { deterministic: {} });
+  const snapshot = await runtime.prepareKbSnapshot(sessionId);
+  assert.equal(snapshot.retrievalMode, 'explainable_memory');
+  assert.ok(snapshot.explainableMemory);
+
+  const result = await runtime.retrieveKnowledge(snapshot, {
+    callerName: 'kb',
+    targetCommand: 'kb',
+    retrievalMode: 'explicit_kb_query',
+    requestText: 'Alpha retrieval guidance',
+    queryTokens: ['Alpha retrieval guidance'],
+    domainHints: ['runtime'],
+    desiredKuTypes: ['content'],
+    byteBudget: 4096,
+  });
+
+  assert.equal(result.mode, 'explainable_memory');
+  assert.ok(result.candidates.some((entry) => entry.kuId === 'ku_session_note'));
+  assert.ok(result.selected.some((entry) => entry.aspect_ids.length >= 1));
+  assert.ok(result.selected.every((entry) => entry.index_state.indexed));
+  const chosen = result.selected.find((entry) => entry.kuId === 'ku_session_note') ?? result.selected[0];
+  assert.match(chosen.usage, /Use this KU as/);
+  assert.ok(chosen.usage_reference.startsWith('~'));
+});
+
+test('runtime can switch KB retrieval back to naive symbolic mode', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, {
+    deterministic: {},
+    manualOverrides: {
+      kbMode: 'naive_symbolic',
+    },
+  });
+
+  const snapshot = await runtime.prepareKbSnapshot('session-naive');
+  assert.equal(snapshot.retrievalMode, 'naive_symbolic');
+  assert.equal(snapshot.explainableMemory, null);
+
+  const result = await runtime.retrieveKnowledge(snapshot, {
+    callerName: 'kb',
+    retrievalMode: 'explicit_kb_query',
+    requestText: 'planning initialization guidance',
+    queryTokens: ['planning initialization guidance'],
+    desiredKuTypes: ['prompt_asset', 'content'],
+    byteBudget: 4096,
+  });
+
+  assert.equal(result.mode, 'naive_symbolic');
+  assert.equal(result.selected[0].usage_reference, undefined);
 });

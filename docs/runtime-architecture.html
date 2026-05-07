@@ -20,7 +20,7 @@
       <section class="section">
         <h2>Architectural identity</h2>
         <p>MRP-VM v0 is specified as a runtime for local interpretive regimes rather than as a monolithic prompt wrapper. Tasks enter as natural language requests plus bounded context, then become a graph of SOP Lang declarations. Execution is mediated through native commands, external interpreters, family-based state, and auditable trace records.</p>
-        <p>The runtime-facing DS set lives in <a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> through <a href="specsLoader.html?spec=DS032-controlled-successful-request-llm-cache.md">DS032</a>. These files define the implementation contract, and the repository now includes the corresponding runtime source tree, server adapter, declaration-style default KUs, and tests.</p>
+        <p>The runtime-facing DS set lives in <a href="specsLoader.html?spec=DS002-core-semantics.md">DS002</a> through <a href="specsLoader.html?spec=DS033-explainable-memory-and-aspect-administration.md">DS033</a>. These files define the implementation contract, and the repository now includes the corresponding runtime source tree, server adapter, declaration-style default KUs, Explainable Memory aspects, and tests.</p>
       </section>
 
       <section class="section">
@@ -39,11 +39,11 @@
           </article>
           <article class="card">
             <h3>Knowledge and evaluation</h3>
-            <p><a href="specsLoader.html?spec=DS005-context-injection-and-pruning.md">DS005</a>, <a href="specsLoader.html?spec=DS011-kb-command.md">DS011</a>, <a href="specsLoader.html?spec=DS012-credibility.md">DS012</a>, <a href="specsLoader.html?spec=DS017-error-and-refusal-model.md">DS017</a>, and <a href="specsLoader.html?spec=DS019-evaluation-strategy.md">DS019</a> define bounded context, declaration-style prompt assets, independent candidate comparison, normalized failure handling, and evaluation strategy.</p>
+            <p><a href="specsLoader.html?spec=DS005-context-injection-and-pruning.md">DS005</a>, <a href="specsLoader.html?spec=DS011-kb-command.md">DS011</a>, <a href="specsLoader.html?spec=DS012-credibility.md">DS012</a>, <a href="specsLoader.html?spec=DS017-error-and-refusal-model.md">DS017</a>, <a href="specsLoader.html?spec=DS019-evaluation-strategy.md">DS019</a>, and <a href="specsLoader.html?spec=DS033-explainable-memory-and-aspect-administration.md">DS033</a> define bounded context, declaration-style prompt assets, deterministic-yet-explainable KB retrieval, governed aspect administration, independent candidate comparison, normalized failure handling, and evaluation strategy.</p>
           </article>
           <article class="card">
             <h3>Hosting and chat</h3>
-            <p><a href="specsLoader.html?spec=DS018-server-and-admin-model.md">DS018</a> and <a href="specsLoader.html?spec=DS022-server-api-and-chat-interface.md">DS022</a> define the top-level <code>server/</code> adapter, SDK entry points, native APIs, SSE trace streaming, API-key-backed authority, and the five-page operational UI covering a compact conversation-first Chat surface, a dedicated Traceability workspace, a dedicated Cache workspace, a KB Browser, and tab-structured Settings. The current UI exposes syntax-highlighted SOP inspection, a draggable execution graph whose edges follow node movement, a fullscreen tabbed node inspector with a fixed header and scrolling body, explicit successful-request cache promotion and cache-entry deletion surfaces, issued-key-first authentication settings with popup-based key creation, compact model binding controls for both external LLM wrappers and internal stages such as <code>logicGeneratorLLM</code> and <code>formatterLLM</code>, and an operator toggle for managed provider fallback when premium routing fails.</p>
+            <p><a href="specsLoader.html?spec=DS018-server-and-admin-model.md">DS018</a>, <a href="specsLoader.html?spec=DS022-server-api-and-chat-interface.md">DS022</a>, and <a href="specsLoader.html?spec=DS033-explainable-memory-and-aspect-administration.md">DS033</a> define the top-level <code>server/</code> adapter, SDK entry points, native APIs, SSE trace streaming, API-key-backed authority, and the five-page operational UI covering a compact conversation-first Chat surface, a dedicated Traceability workspace, a dedicated Cache workspace, a KB Browser, and tab-structured Settings. The current UI exposes syntax-highlighted SOP inspection, a draggable execution graph whose edges follow node movement, a fullscreen tabbed node inspector with a fixed header and scrolling body, explicit successful-request cache promotion and cache-entry deletion surfaces, issued-key-first authentication settings with popup-based key creation, compact model binding controls for both external LLM wrappers and internal stages such as <code>logicGeneratorLLM</code> and <code>formatterLLM</code>, a Memory settings tab for aspect editing and approval, KB reindex controls, and per-KU index-state visibility.</p>
           </article>
           <article class="card">
             <h3>LLM routing</h3>
@@ -77,7 +77,7 @@
             </tr>
             <tr>
               <td>Knowledge retrieval</td>
-              <td>Ordinary <code>kb</code> retrieval is symbolic and deterministic; LLMs are reserved for induction and maintenance tasks.</td>
+              <td><code>kb</code> defaults to symbolic Explainable Memory retrieval with inspectable aspect and lexical evidence; the naive symbolic path remains selectable, and LLMs stay reserved for governed induction and maintenance tasks.</td>
             </tr>
             <tr>
               <td>Memory naming</td>
