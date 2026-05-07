@@ -1367,12 +1367,12 @@ export function createServer(options = {}) {
         if (!session) {
           return;
         }
-        const catalog = decorateKbCatalog(await loadKbCatalog(kbStore, session.session_id))
-          .filter((item) => item.scope === 'session');
+        const payload = await buildKbCatalogResponse(runtime, kbStore, session.session_id, new URLSearchParams());
         json(response, 200, {
           session_id: session.session_id,
-          items: catalog,
-          summary: summarizeKbCatalog(catalog),
+          items: payload.items.filter((item) => item.scope === 'session'),
+          summary: summarizeKbCatalog(payload.items.filter((item) => item.scope === 'session')),
+          explainable_memory: payload.explainable_memory,
         });
         return;
       }
@@ -1392,11 +1392,12 @@ export function createServer(options = {}) {
       }
 
       if (request.method === 'GET' && url.pathname === '/api/kb/global') {
-        const items = decorateKbCatalog(await loadKbCatalog(kbStore, null))
-          .filter((item) => item.scope === 'global');
+        const payload = await buildKbCatalogResponse(runtime, kbStore, null, new URLSearchParams());
+        const items = payload.items.filter((item) => item.scope === 'global');
         json(response, 200, {
           items,
           summary: summarizeKbCatalog(items),
+          explainable_memory: payload.explainable_memory,
         });
         return;
       }
@@ -1425,14 +1426,7 @@ export function createServer(options = {}) {
             return;
           }
         }
-        const items = filterKbCatalog(
-          decorateKbCatalog(await loadKbCatalog(kbStore, requestedSessionId)),
-          url.searchParams,
-        );
-        json(response, 200, {
-          items,
-          summary: summarizeKbCatalog(items),
-        });
+        json(response, 200, await buildKbCatalogResponse(runtime, kbStore, requestedSessionId, url.searchParams));
         return;
       }
 
@@ -1443,6 +1437,81 @@ export function createServer(options = {}) {
         const body = await readJsonBody(request);
         await kbStore.promoteSessionKu(body.session_id, body.file_name, body.target_file_name);
         json(response, 200, { ok: true });
+        return;
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/kb/explainable-memory') {
+        const requestedSessionId = url.searchParams.get('session_id');
+        if (requestedSessionId) {
+          const session = await requireSessionAccess(runtime, response, callerContext, requestedSessionId);
+          if (!session) {
+            return;
+          }
+        }
+        json(response, 200, await runtime.inspectExplainableMemory(requestedSessionId));
+        return;
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/kb/explainable-memory/aspects') {
+        json(response, 200, await runtime.listExplainableMemoryAspects());
+        return;
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/kb/explainable-memory/aspects') {
+        if (!requireAdmin(response, callerContext)) {
+          return;
+        }
+        const body = await readJsonBody(request);
+        const saved = await runtime.upsertExplainableMemoryAspect({
+          aspectId: body.aspect_id,
+          fileName: body.file_name,
+          rootValue: body.root_value,
+          meta: {
+            rev: body.rev,
+            status: body.status,
+            aspect_type: body.aspect_type,
+            title: body.title,
+            summary: body.summary,
+            priority: body.priority,
+            domains: body.domains,
+            commands: body.commands,
+            interpreters: body.interpreters,
+            tags: body.tags,
+            query_terms: body.query_terms,
+          },
+          definition: body.definition,
+          inclusionCriteria: body.inclusion_criteria,
+          exclusionCriteria: body.exclusion_criteria,
+          protocol: body.protocol,
+          roleVocabulary: body.role_vocabulary,
+          queryTerms: body.query_terms,
+        });
+        json(response, 201, { aspect: saved });
+        return;
+      }
+
+      if (request.method === 'POST' && parts[0] === 'api' && parts[1] === 'kb' && parts[2] === 'explainable-memory' && parts[3] === 'aspects' && parts[5] === 'approve' && parts.length === 6) {
+        if (!requireAdmin(response, callerContext)) {
+          return;
+        }
+        const approved = await runtime.approveExplainableMemoryAspect(parts[4]);
+        json(response, 200, { aspect: approved });
+        return;
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/kb/explainable-memory/reindex') {
+        if (!requireAdmin(response, callerContext)) {
+          return;
+        }
+        const body = await readJsonBody(request);
+        const sessionId = body.session_id ?? null;
+        if (sessionId) {
+          const session = await requireSessionAccess(runtime, response, callerContext, sessionId);
+          if (!session) {
+            return;
+          }
+        }
+        json(response, 200, await runtime.reindexExplainableMemory(sessionId));
         return;
       }
 
