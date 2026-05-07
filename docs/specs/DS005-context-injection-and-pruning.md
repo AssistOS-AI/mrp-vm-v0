@@ -3,7 +3,7 @@ id: DS005
 title: Context Packaging and Injection
 status: implemented
 owner: runtime
-summary: Defines how `kb`-selected material, runtime state, analytics, and planning notes are packaged and delivered to commands and interpreters.
+summary: Defines how `kb`-selected material, Explainable Memory context, runtime state, analytics, and planning notes are packaged and delivered to commands and interpreters.
 ---
 # DS005 Context Packaging and Injection
 
@@ -21,7 +21,7 @@ Before every native-command or external-interpreter invocation, the runtime must
 
 1. Resolve direct declaration dependencies from DS002.
 2. Resolve active family representatives, invoking DS012 when plurality requires explicit judgment.
-3. Call `kb` automatically with the caller profile defined in DS011.
+3. Call `kb` automatically with the caller profile and KB retrieval mode defined in DS011 and DS033.
 4. Add analytic summaries exported from DS010 when the caller profile allows them.
 5. Add planning notes or repair hints when the current request state requires them.
 6. Render the final package for delivery.
@@ -58,13 +58,22 @@ LLM-facing interpreters receive this Markdown package directly. Deterministic na
 
 The `# User Request` section must contain the normalized current request text for the active request. This keeps sub-tasks grounded in the original problem statement even when a declaration body only names one slice of the work.
 
-When the package includes KUs selected through DS011, the rendering must preserve three distinct surfaces for each KU:
+When the package includes KUs selected through DS011, the rendering must preserve these distinct surfaces for each KU:
 
 1. the human-readable title,
 2. the retrieval-facing summary,
-3. the substantive guidance body from the KU root variable.
+3. the substantive guidance body from the KU root variable,
+4. the retrieval-time usage indication that explains why this KU was selected for the current task.
 
-The summary is the short discriminative surface used during selection and auditing. The body is the execution-facing guidance that the receiving command or interpreter actually consumes. Packaging must not collapse those roles into one flat unlabeled text block.
+The summary is the short discriminative surface used during selection and auditing. The body is the execution-facing guidance that the receiving command or interpreter actually consumes. The usage indication is the request-local instruction that tells the receiver how that KU should be used. Packaging must not collapse those roles into one flat unlabeled text block.
+
+When DS011 is operating in `explainable_memory` mode, the `# Knowledge Units` section must also preserve the active retrieval explanation surfaces:
+
+1. the selected aspect ids or names that materially influenced selection,
+2. any lexical-fallback indicator when symbolic aspect coverage was insufficient,
+3. a stable KU reference token in the form `~<ku_id>` attached to the usage indication.
+
+The Markdown package remains the canonical delivery surface. Explainable Memory may produce an internal context-package string as part of retrieval, but DS005 still governs the final rendered runtime package that commands and interpreters receive.
 
 ### Deduplication and trace
 
@@ -74,7 +83,7 @@ Deduplication in v0 must be exact, not semantic in the fuzzy sense. Two context 
 2. They reference the same KU ID and revision.
 3. They have byte-identical rendered payload plus the same source kind.
 
-The trace must record the selected context package and the items rejected by DS011 pruning. DS005 does not define the pruning heuristic; it defines only the final packaging boundary.
+The trace must record the selected context package and the items rejected by DS011 pruning. When Explainable Memory is active, the trace must also record the retrieval mode, the KB snapshot or index version used for the request, the selected aspects, and whether lexical fallback contributed to the final KU set. DS005 does not define the pruning heuristic; it defines only the final packaging boundary.
 
 ## Decisions & Questions
 
@@ -85,6 +94,10 @@ Response: Context selection is an architectural control surface, not a hidden pe
 Question #2: Why is the delivered context package defined as Markdown instead of only as an internal object?
 
 Response: The package must be inspectable by humans, by trace tooling, and by LLM-facing interpreters. Markdown gives the runtime one stable textual form while still allowing deterministic commands to derive structured helper views from it.
+
+Question #3: Why does DS005 require a separate usage indication for each selected KU instead of relying only on title, summary, and body text?
+
+Response: Explainable Memory is meant to explain not only what was retrieved but how that material should shape the next step. A dedicated usage indication keeps selection rationale visible at execution time without forcing commands or interpreters to infer intent from raw metadata alone.
 
 ## Conclusion
 

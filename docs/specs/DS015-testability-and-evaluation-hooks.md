@@ -25,7 +25,8 @@ The runtime must also expose deterministic modes for:
 2. planning output validation,
 3. representative selection,
 4. analytic-memory checkpoints,
-5. replay ordering.
+5. replay ordering,
+6. Explainable Memory aspect activation, lexical fallback, and snapshot-version selection.
 
 ### Fixture contract
 
@@ -52,7 +53,8 @@ The runtime must expose test-facing inspection hooks for:
 5. current context package,
 6. command and interpreter invocation history,
 7. analytic-memory visible checkpoints,
-8. current accepted plan snapshot.
+8. current accepted plan snapshot,
+9. current KB retrieval mode, Explainable Memory snapshot version, and selected aspects for the active request.
 
 ### Benchmarking
 
@@ -77,6 +79,10 @@ Response: Testability should not rely on accidental object shapes or private mod
 Question #4: Why should the chat demo catalog and the automated evaluation catalog share one source of truth?
 
 Response: The operator-facing demos are part of the repository's claimed capability surface. If the chat UI and the automated evaluation suite diverge, the project would effectively advertise one reasoning matrix while testing another. A shared catalog keeps demos, tests, and review claims aligned.
+
+Question #5: Why must Explainable Memory snapshot and aspect-selection data be exposed through explicit inspection hooks?
+
+Response: Once retrieval behavior depends on approved aspects and derived indexes, test failures can no longer be explained by KU ids alone. Explicit inspection hooks keep the retrieval layer observable so contributors can verify mode selection, snapshot isolation, and lexical fallback without reaching into private runtime object shapes.
 
 ## Conclusion
 

@@ -43,7 +43,7 @@ The baseline request bootstrapping sequence is:
 1. Resolve or create the target session.
 2. Assign `session_id` and `request_id`.
 3. Materialize the request envelope: user text, attached file descriptors, selected policy profile, and initial budgets.
-4. Load session-scoped context needed for planning: active KU overlay summary, recent request summaries, and any analytic checkpoints allowed to influence planning.
+4. Load session-scoped context needed for planning: active KU overlay summary, recent request summaries, any Explainable Memory snapshot metadata required by the configured KB mode, and any analytic checkpoints allowed to influence planning.
 5. Invoke `planning` in `new_session_request` or `continuing_session_request` mode, as defined by DS006.
 6. Validate the resulting initial plan against DS002, DS003, and DS017 before any executable epoch opens.
 7. Persist the accepted plan snapshot as `current-plan.sop` and open `epoch_id = 1`.
@@ -63,6 +63,7 @@ The baseline filesystem layout is:
 | `data/sessions/<sessionId>/manifest.json` | Session identity, policy profile, session origin, auth mode, effective role, owner or key identity, timestamps, and active request pointer if any |
 | `data/sessions/<sessionId>/trace/session.jsonl` | Unified session trace stream defined by DS014 |
 | `data/sessions/<sessionId>/kb/**/*.sop` | Session-scoped KU overlay files |
+| `data/sessions/<sessionId>/indexes/explainable-memory/` | Session-local Explainable Memory derived state, lexical index artifacts, and reindex status |
 | `data/sessions/<sessionId>/history/request-summaries.jsonl` | Compact summaries of completed requests |
 | `data/sessions/<sessionId>/analytics/checkpoints.jsonl` | Reloadable analytic-memory checkpoints |
 | `data/sessions/<sessionId>/requests/<requestId>/envelope.json` | Initial request envelope |
@@ -74,7 +75,7 @@ The baseline filesystem layout is:
 | `data/sessions/<sessionId>/requests/<requestId>/state/families/<familyId>/v0001.meta.json` | Concrete variant metadata |
 | `data/sessions/<sessionId>/requests/<requestId>/outcome.json` | Final request outcome |
 
-This layout is intentionally hierarchical so plans, family state, and request outcomes stay easy to load and inspect independently.
+The request envelope must preserve the KB retrieval mode and the Explainable Memory snapshot or index version chosen for the request when that mode is active. This layout is intentionally hierarchical so plans, family state, retrieval state, and request outcomes stay easy to load and inspect independently.
 
 ### Request completion and session continuation
 
@@ -101,6 +102,10 @@ Response: The public runtime surface is intentionally request-oriented and natur
 Question #3: Why is `response` request-local instead of session-global?
 
 Response: Each request needs one clear delivery surface, but a session may contain many requests over time. Making `response` request-local preserves that clarity without inventing a misleading global session-output slot.
+
+Question #4: Why should the request envelope preserve KB retrieval mode and Explainable Memory snapshot metadata?
+
+Response: Request replay and audit become weaker if the runtime records only the user text and final plan while retrieval behavior can change underneath via reindexing or mode switches. Preserving the chosen retrieval snapshot keeps request execution tied to one stable knowledge-selection boundary.
 
 ## Conclusion
 

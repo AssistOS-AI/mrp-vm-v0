@@ -3,7 +3,7 @@ id: DS022
 title: Server, API, and Chat Interface
 status: implemented
 owner: runtime
-summary: Defines the SDK entry points, session executor lifecycle, native and compatibility APIs, the top-level server/ adapter, the /chat application, admin boundaries, and how DS014 trace events drive UI presentation.
+summary: Defines the SDK entry points, session executor lifecycle, native and compatibility APIs, the top-level server/ adapter, the /chat application, admin boundaries, Explainable Memory administration surfaces, and how DS014 trace events drive UI presentation.
 ---
 
 # DS022 Server, API, and Chat Interface
@@ -69,11 +69,17 @@ The server must expose a native programmatic API for full MRP-VM functionality. 
 | `POST` | `/api/sessions/:id/kb` | Upsert a session KU (create, fork, or update). |
 | `POST` | `/api/kb/promote` | Promote a session KU to global scope (admin only). |
 | `GET` | `/api/kb/global` | List global KUs. |
+| `GET` | `/api/kb/catalog` | List merged KB items together with override flags and index-state summaries. |
+| `GET` | `/api/kb/explainable-memory` | Inspect Explainable Memory mode, snapshot status, and reindex metadata. |
+| `GET` | `/api/kb/explainable-memory/aspects` | List approved and candidate aspects. |
+| `POST` | `/api/kb/explainable-memory/aspects` | Create a candidate aspect or update an existing aspect definition. |
+| `POST` | `/api/kb/explainable-memory/aspects/:id/approve` | Approve an aspect and mark reanalysis required (admin only). |
+| `POST` | `/api/kb/explainable-memory/reindex` | Rebuild Explainable Memory derived state for the requested scope (admin only). |
 | `GET` | `/api/cache` | List shared LLM cache entries and summary state. |
 | `GET` | `/api/cache/:entryId` | Inspect one shared LLM cache entry. |
 | `DELETE` | `/api/cache/:entryId` | Delete one shared LLM cache entry (admin only). |
 | `GET` | `/api/config` | Get current VM configuration: active interpreters, LLM mappings, policies. |
-| `PUT` | `/api/config` | Update VM configuration (admin only). |
+| `PUT` | `/api/config` | Update VM configuration including KB retrieval mode (admin only). |
 | `GET` | `/api/models` | Return the discovered model catalog and tags for settings. |
 | `GET` | `/api/auth/context` | Return current caller role, auth mode, key identity, and bootstrap status. |
 | `GET` | `/api/auth/keys` | List issued API keys (admin only). |
@@ -129,6 +135,8 @@ The chat page must behave like a modern messaging application. It should stay co
 6. **System context visibility**: provide a compact summary of the current authority context without moving deep trace or KB content inline.
 
 Raw SOP Lang, trace payloads, KU lists, and execution graphs must not be shown inline on the chat page by default.
+
+The chat-facing admin model may extend the existing Settings and KB Browser pages with Explainable Memory controls, but it must not turn `/chat` itself into a dense operator console. Aspect management, approval, KB mode selection, and reindexing belong on dedicated admin tabs or panels under those existing routes.
 
 ### Traceability page
 

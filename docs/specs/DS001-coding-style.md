@@ -3,7 +3,7 @@ id: DS001
 title: Coding Style
 status: implemented
 owner: repository
-summary: Defines source layout, module boundaries, SOP asset conventions, runtime configuration rules, and DS authoring structure for MRP-VM v0.
+summary: Defines source layout, module boundaries, vendored dependency policy, SOP asset conventions, runtime configuration rules, and DS authoring structure for MRP-VM v0.
 ---
 # DS001 Coding Style
 
@@ -24,9 +24,10 @@ The planned implementation must target Node.js with ECMAScript modules and `.mjs
 | `tests/` | Modular subsystem tests and evaluation fixtures. |
 | `data/` | Default KUs, fixtures, and persistent runtime data that belong to the product. |
 | `docs/` | Product documentation and DS specifications for MRP-VM v0. |
+| `deps/` | Repository-owned vendored third-party dependencies that must be available without runtime package-manager fetches. |
 | `scripts/` | Repository maintenance and validation utilities. |
 
-Modules must follow a single dominant responsibility. Parser code must not mix with storage code. Session orchestration must not mix with HTTP hosting. Provider adapters must not mix with UI logic. When the source tree is created, a healthy top-level split will typically include `src/lang`, `src/runtime`, `src/session`, `src/commands`, `src/interpreters`, `src/storage`, `src/policies`, and `src/utils`.
+Modules must follow a single dominant responsibility. Parser code must not mix with storage code. Session orchestration must not mix with HTTP hosting. Provider adapters must not mix with UI logic. When the source tree is created, a healthy top-level split will typically include `src/lang`, `src/runtime`, `src/session`, `src/commands`, `src/interpreters`, `src/explainable-memory`, `src/storage`, `src/policies`, and `src/utils`.
 
 Server-owned HTML templates and CSS must live in server-side template or asset files under `server/`, not as inline literals inside JavaScript modules. JavaScript may orchestrate interaction logic, but it must not become the canonical storage location for repository-owned HTML or stylesheet content.
 
@@ -50,14 +51,22 @@ Product-owned runtime data should default to this layout:
 1. `data/default/kus/` for bootstrap KUs and prompt assets.
 2. `data/default/callers/` for default caller-profile KUs.
 3. `data/kb/global/` for global curated KB artifacts.
-4. `data/cache/llm/` for promoted shared LLM cache entries and index metadata.
-5. `data/sessions/<sessionId>/manifest.json` for session identity and policy state.
-6. `data/sessions/<sessionId>/trace/` for unified session trace streams.
-7. `data/sessions/<sessionId>/kb/` for session overlay KUs.
-8. `data/sessions/<sessionId>/history/` for compact request summaries.
-9. `data/sessions/<sessionId>/requests/<requestId>/` for `current-plan.sop`, request state, family-state files, request-local LLM cache candidates, and final outcome artifacts.
+4. `data/kb/aspects/approved/` for approved Explainable Memory aspect SOP assets.
+5. `data/kb/aspects/candidates/` for candidate aspect SOP assets that are not yet approved for retrieval.
+6. `data/kb/indexes/explainable-memory/` for inspectable derived Explainable Memory state, lexical indexes, and reindex status files.
+7. `data/cache/llm/` for promoted shared LLM cache entries and index metadata.
+8. `data/sessions/<sessionId>/manifest.json` for session identity and policy state.
+9. `data/sessions/<sessionId>/trace/` for unified session trace streams.
+10. `data/sessions/<sessionId>/kb/` for session overlay KUs.
+11. `data/sessions/<sessionId>/indexes/` for session-local materialized KB catalogs, Explainable Memory state, and reindex metadata.
+12. `data/sessions/<sessionId>/history/` for compact request summaries.
+13. `data/sessions/<sessionId>/requests/<requestId>/` for `current-plan.sop`, request state, family-state files, request-local LLM cache candidates, and final outcome artifacts.
 
-DS001 provides the repository-level summary of that layout. DS011 owns the detailed KB and caller-profile subtrees, DS016 owns the detailed session, request, plan, and family-state layout, and DS032 owns the detailed shared LLM cache contract.
+Explainable Memory implementations must keep their domain logic under `src/explainable-memory/` and may depend only on explicit source and persistence strategy interfaces rather than on hardcoded file-system calls spread across runtime code. Disk-backed persistence may live under that subsystem as one strategy implementation, but it must remain a replaceable boundary.
+
+Vendored dependencies under `deps/` must be checked into the repository in a form that works with the repository's native runtime surfaces. If one dependency must serve both Node.js and browser code, the repository should vendor the compatible artifacts deliberately instead of loading them dynamically from a CDN at runtime.
+
+DS001 provides the repository-level summary of that layout. DS011 owns the detailed KB, aspect, and caller-profile subtrees, DS016 owns the detailed session, request, plan, and family-state layout, DS032 owns the detailed shared LLM cache contract, and DS033 owns the Explainable Memory subsystem and aspect-governance surface.
 
 The root package must expose repository-owned scripts for the baseline workflows. At minimum:
 
@@ -93,6 +102,10 @@ Response: MRP-VM already has one declaration substrate: SOP Lang. Reintroducing 
 Question #3: Why must AchillesAgentLib access be centralized through one managed adapter instead of being called directly from wrappers?
 
 Response: Direct provider calls would scatter credentials, routing policy, task tags, and model-tier choices across many modules. Centralizing them keeps the repository auditable and makes deterministic test fallbacks possible without changing wrapper contracts.
+
+Question #4: Why does DS001 reserve both `src/explainable-memory/` and `deps/` instead of folding those concerns into existing storage and server folders?
+
+Response: Explainable Memory is now a first-class runtime subsystem with its own lifecycle, derived state, and governance rules. Keeping it separate prevents KB source parsing, derived indexing, and admin presentation from collapsing into one mixed layer. The vendored `deps/` boundary serves a similar purpose for third-party code: the repository should make compatibility explicit instead of hiding runtime-critical browser or Node dependencies behind dynamic fetches.
 
 ## Conclusion
 

@@ -3,13 +3,13 @@ id: DS011
 title: kb Command
 status: implemented
 owner: runtime
-summary: Defines declaration-style SOP-backed KU files, deterministic retrieval modes, caller-profile KUs, filtering rules, overlay rules, and file-system serialization for default, global, and session knowledge.
+summary: Defines declaration-style SOP-backed KU files, deterministic and Explainable Memory retrieval modes, caller-profile KUs, aspect governance assets, filtering rules, overlay rules, and file-system serialization for default, global, and session knowledge.
 ---
 # DS011 kb Command
 
 ## Introduction
 
-The `kb` command is the authoritative knowledge-management mechanism of MRP-VM v0. It must handle reusable content KUs, prompt assets, caller profiles, session overlays, revision management, and bounded context injection without relying on hidden LLM-based retrieval.
+The `kb` command is the authoritative knowledge-management mechanism of MRP-VM v0. It must handle reusable content KUs, prompt assets, caller profiles, session overlays, revision management, approved retrieval aspects, and bounded context injection without relying on hidden LLM-based retrieval.
 
 DS005 consumes the final context package. DS016 owns the broader session/request persistence model. DS011 owns the knowledge artifacts and retrieval path that feed both.
 
@@ -77,6 +77,41 @@ The runtime must bootstrap `kb` in this order before any ordinary retrieval happ
 
 This bootstrap order resolves the apparent circularity between "caller profiles are KUs" and "`kb` needs caller profiles to retrieve KUs." Default caller-profile KUs are available before the first retrieval call.
 
+### Retrieval modes
+
+Ordinary `kb` retrieval must support two repository-defined modes:
+
+1. `explainable_memory`, which is the default mode and uses the DS033 aspect-oriented retrieval layer,
+2. `naive_symbolic`, which preserves the current metadata-first plus lexical deterministic retrieval path.
+
+Both modes operate over the same authoritative KU catalog and caller-profile rules. The mode changes how the runtime selects and explains relevant KUs; it does not change what counts as a KU, how overlays work, or which assets remain authoritative on disk.
+
+Ordinary retrieval in either mode must remain symbolic, inspectable, and auditable. The runtime must not hide a provider-backed LLM retrieval call behind automatic `kb` selection. LLM assistance remains reserved for maintenance paths such as aspect proposal, aspect-position induction during reanalysis when policy allows it, or other explicitly operator-triggered KB curation flows.
+
+### Explainable Memory boundary
+
+The Explainable Memory implementation must live in a dedicated subsystem and consume the KB catalog through explicit source and persistence strategies. In v0:
+
+1. the authoritative source of KUs remains the SOP-backed catalog described above,
+2. Explainable Memory may derive summaries, lexical indexes, aspect positions, and inverse aspect views as secondary state,
+3. those derived artifacts must be replaceable, rebuildable, and clearly marked as non-authoritative compared with KU SOP files and aspect SOP files.
+
+The first persistence strategy may use disk under the repository-owned `data/` tree, but the subsystem itself must not hardcode file-system persistence into its query logic. Request execution must see one immutable retrieval snapshot chosen at request start. Reanalysis, aspect approval, or mode changes that happen later become visible only to later requests.
+
+### Aspect asset model
+
+Explainable Memory introduces approved and candidate aspects as governed retrieval assets. The canonical authoring form for an aspect remains declaration-style SOP Lang. A repository-owned aspect asset must provide:
+
+1. a stable aspect identifier,
+2. aspect metadata including `aspect_type`, `status`, `rev`, and human-readable title,
+3. a definition surface,
+4. inclusion criteria,
+5. exclusion criteria,
+6. an interpretation-protocol surface,
+7. the allowed role vocabulary or usage labels for selected KUs.
+
+Approved aspects are active retrieval coordinates. Candidate aspects are editable and inspectable, but they do not affect ordinary retrieval until approval occurs. Approval is the transition that requires reanalysis against the current KU catalog.
+
 ### Retrieval paths
 
 Ordinary retrieval must be symbolic and deterministic. The runtime must support two ordinary retrieval paths:
@@ -96,6 +131,14 @@ Every retrieval request normalizes into an object containing at least:
 - scope preference,
 - byte budget,
 - optional session and task hints.
+
+When `explainable_memory` mode is active, the normalized retrieval request must also carry enough data to explain the final selection:
+
+- the KB retrieval mode,
+- the Explainable Memory snapshot version,
+- any activated aspect ids,
+- whether lexical fallback was used,
+- per-KU usage indications and stable `~<ku_id>` references.
 
 ### Retrieval situations and filtering inputs
 
@@ -128,6 +171,15 @@ The ranking rules are:
 
 This means planning and ordinary pre-execution injection usually rely on metadata-dominant retrieval, while explicit textual knowledge search uses metadata plus lexical ranking.
 
+When `explainable_memory` mode is active, the conceptual retrieval stages are:
+
+1. map the request to approved aspects through explicit deterministic rules over caller profile, domains, metadata hints, and query tokens,
+2. gather KUs positioned under those aspects from the derived Explainable Memory state,
+3. use local lexical retrieval only as a bounded fallback for names, acronyms, rare terms, or uncovered concepts,
+4. synthesize one inspectable context-selection result that keeps usage indications, active aspects, prune reasons, and stable KU references visible.
+
+The lexical mechanism may use MiniSearch or another repository-vendored local symbolic index. It must not introduce a hidden remote dependency or turn ordinary retrieval into opaque semantic search.
+
 The filtering rules per situation are:
 
 1. `planning_bootstrap`: require the mode-mandatory planning prompt asset first, then admit additional planning-relevant `content`, `policy_asset`, and `caller_profile` KUs that describe command and interpreter usage. Use lexical ranking over the request text, request summaries, repair notes, and command/interpreter selection cues that survive normalization.
@@ -148,7 +200,7 @@ Retrieval precedence is:
 
 Session KUs may shadow global parents. Default assets exist to bootstrap the runtime before project-specific curation exists.
 
-KUs resolved for one request are snapshot-isolated for that request. Revisions, promotions, or upserts that occur during the request become visible only to later requests, not mid-request to already running execution.
+KUs resolved for one request are snapshot-isolated for that request. Revisions, promotions, aspect approvals, reanalysis runs, or upserts that occur during the request become visible only to later requests, not mid-request to already running execution.
 
 Before executing a native command or external interpreter, the runtime must automatically resolve the caller profile KU for that component and then run `kb` retrieval using that profile. The caller profile must declare:
 
@@ -161,6 +213,23 @@ Before executing a native command or external interpreter, the runtime must auto
 7. preferred input patterns and LLM-fallback policy.
 
 This is how MRP-VM makes explicit that every command and external interpreter should have default guidance about the input it prefers.
+
+### Explainable Memory lifecycle and serialization
+
+The disk-backed first implementation must keep these artifact classes inspectable:
+
+| Path | Meaning |
+| --- | --- |
+| `data/kb/aspects/approved/**/*.sop` | Approved aspects that participate in ordinary retrieval. |
+| `data/kb/aspects/candidates/**/*.sop` | Candidate aspects awaiting approval. |
+| `data/kb/indexes/explainable-memory/global-state.json` | Derived global Explainable Memory state and version metadata. |
+| `data/kb/indexes/explainable-memory/global-lexical-index.json` | Derived lexical index state for global/default retrieval. |
+| `data/kb/indexes/explainable-memory/status.json` | Reindex status, last-completed version, and error metadata. |
+| `data/sessions/<sessionId>/indexes/explainable-memory/state.json` | Session-aware derived state that includes session overlay KUs. |
+| `data/sessions/<sessionId>/indexes/explainable-memory/lexical-index.json` | Session-aware lexical index state. |
+| `data/sessions/<sessionId>/indexes/explainable-memory/status.json` | Session-aware reindex status. |
+
+The authoritative KU and aspect sources remain the SOP files. The JSON artifacts above are materialized state that may be rebuilt from those sources. The admin surface must be able to inspect their versions and health without treating them as the source of truth.
 
 Repository-owned default KUs must therefore satisfy a stronger baseline than "exists in the catalog". For every shipped native command and every shipped external interpreter, the default layer must provide enough KU coverage that planning and execution can answer these questions without hidden code knowledge:
 
@@ -228,6 +297,14 @@ Question #5: Why are KU revisions snapshot-isolated per request instead of becom
 
 Response: Mid-request knowledge changes would make execution and replay depend on timing accidents rather than on one stable retrieval view. Snapshot isolation preserves determinism for the current request while still allowing later requests to see newly curated knowledge.
 
+Question #6: Why does DS011 define both `explainable_memory` and `naive_symbolic` modes instead of replacing the existing path outright?
+
+Response: The repository needs one governed upgrade path that can be enabled by default without deleting the simpler deterministic baseline. Keeping both modes makes comparison, rollback, and targeted debugging possible while preserving one authoritative KU catalog and one caller-profile contract.
+
+Question #7: Why are aspects stored as SOP assets instead of as hidden JSON records inside the derived Explainable Memory state?
+
+Response: Approved aspects are part of the retrieval contract, not an implementation accident. Storing them as SOP assets keeps them editable, reviewable, revision-aware, and aligned with the same declaration-style authoring rules already used for KUs and caller profiles.
+
 ## Conclusion
 
-`kb` must remain the authoritative, SOP-backed, revision-aware knowledge substrate of MRP-VM v0, with caller profiles and prompt assets stored in the same inspectable ecosystem as ordinary knowledge units.
+`kb` must remain the authoritative, SOP-backed, revision-aware knowledge substrate of MRP-VM v0, with caller profiles, aspect assets, and prompt assets stored in the same inspectable ecosystem as ordinary knowledge units while retrieval stays symbolic, bounded, and explicitly explainable.
