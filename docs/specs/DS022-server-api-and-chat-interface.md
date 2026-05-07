@@ -151,9 +151,10 @@ The traceability page must focus on one request timeline at a time while allowin
 
 1. a compact request timeline with previews of the originating user request and final assistant response, or an explicit failure or stop-cause summary when no terminal response was captured,
 2. a dedicated detail workspace for the selected request, separate from the timeline rail,
-3. exactly three primary tabs: `SOP Lang`, `Variables`, and `Execution Graph`,
+3. exactly four primary tabs: `SOP Lang`, `Variables`, `Errors`, and `Execution Graph`,
 4. no redundant request or outcome summary tiles above the main tab workspace,
-5. node-level inspection for executed declarations, including declaration definition, resolved runtime context, selected KUs, outputs, diagnostics, retries, timing, and execution layer information.
+5. node-level inspection for executed declarations, including declaration definition, resolved runtime context, selected KUs, outputs, diagnostics, retries, timing, and execution layer information,
+6. synthetic workflow-boundary nodes that remain visible even when execution fails before any ordinary declaration completes: a layer-0 planning start node and one final result node.
 
 The fullscreen node inspector must keep its header and tab strip fixed while the selected tab content scrolls inside the body region. Changing tabs must not cause the header area itself to grow unpredictably.
 
@@ -162,6 +163,8 @@ The `Variables` tab must use a split layout:
 1. a left list of families or variables,
 2. a right detail area for the selected variable,
 3. three nested tabs named `Current Value`, `Metadata`, and `Definition`.
+
+The `Current Value` panel must resolve from the final representative variant when one exists, and otherwise fall back to the latest persisted variant payload rather than rendering an empty view for a family that actually captured output.
 
 The `SOP Lang` tab should present executed SOP in a readable code surface with lightweight syntax differentiation so family names, command names, and `$var` / `~var` references are easy to scan at a glance.
 
@@ -229,13 +232,13 @@ DS014 defines the trace event types and minimum payloads. The chat UI and native
 | `context_packaged` | Collapsible detail showing selected KU references, pruned items, byte counts, and structured context sections without embedding full KU text into the trace payload. |
 | `family_resolved` | Show which family was resolved, which variant was selected, and why. Update the family state panel. |
 | `variant_emitted` | Show the new variant value (truncated if long) and update the family state panel. |
-| `failure_recorded` | Surface an error or repair state in the active request status, and keep the detailed failure payload on the traceability page. |
+| `failure_recorded` | Surface an error or repair state in the active request status, and keep the detailed failure payload, structured details, and stack when available on the traceability page. |
 | `metadata_updated` | Show which metadata keys changed and whether the change has structural impact. |
 | `analytic_memory_updated` | Collapsible detail showing updated keys and export flag. |
 | `declarations_inserted` | Show the inserted declaration text (truncated), insertion source, and new declaration IDs. Update the plan panel. |
 | `planning_triggered` | Show planning mode, trigger reason, and blocked-region summary. Mark request as "replanning". |
-| `planning_stopped` | Show planning outcome: accepted actions, rejected actions. Return to execution view or stop view. |
-| `request_stopped` | Replace the in-progress placeholder with the final assistant response when one exists; otherwise show the explicit stop cause or error summary, and persist that request in the traceability timeline. |
+| `planning_stopped` | Show planning mode and outcome, accepted actions, rejected actions, bounded attempt history, and accepted declaration text when available. Populate the synthetic workflow-start node. |
+| `request_stopped` | Replace the in-progress placeholder with the final assistant response when one exists; otherwise show the explicit stop cause or error summary, persist that request in the traceability timeline, and preserve the structured request-level error payload for the `Errors` tab and synthetic final node. |
 
 The chat route may stay intentionally compact, but live request state must still be driven by the trace stream rather than by speculative client-side bookkeeping. The detailed plan, variable state, and execution-graph inspection surfaces live on the dedicated traceability page, which must remain reconstructable from persisted request snapshots plus trace-derived status updates when a user reconnects mid-request.
 

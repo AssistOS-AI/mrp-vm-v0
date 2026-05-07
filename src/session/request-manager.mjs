@@ -15,8 +15,10 @@ export class RequestManager {
     await ensureDir(familyPath);
     await writeJson(path.join(familyPath, 'family.meta.json'), family.familyMeta);
     for (const variant of family.variants) {
-      await writeText(path.join(familyPath, `v${String(variant.version).padStart(4, '0')}.value.txt`), `${variant.rendered}\n`);
-      await writeJson(path.join(familyPath, `v${String(variant.version).padStart(4, '0')}.meta.json`), variant.meta);
+      const version = Number(variant.version ?? String(variant.id ?? '').split(':v')[1] ?? 0);
+      const versionName = `v${String(version).padStart(4, '0')}`;
+      await writeText(path.join(familyPath, `${versionName}.value.txt`), `${variant.rendered}\n`);
+      await writeJson(path.join(familyPath, `${versionName}.meta.json`), variant.meta);
     }
   }
 
@@ -49,6 +51,21 @@ export class RequestManager {
           meta,
         });
         version += 1;
+      }
+
+      if (variants.length === 0) {
+        const legacyValue = await readText(path.join(familyDir, 'vundefined.value.txt'), null);
+        if (legacyValue !== null) {
+          const legacyMeta = await readJson(path.join(familyDir, 'vundefined.meta.json'), {});
+          const rendered = legacyValue.trimEnd();
+          variants.push({
+            id: `${familyId}:v1`,
+            version: 1,
+            value: rendered,
+            rendered,
+            meta: legacyMeta,
+          });
+        }
       }
 
       families.push({

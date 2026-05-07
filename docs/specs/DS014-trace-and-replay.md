@@ -30,13 +30,13 @@ Trace is separate from executable state. It may reference executable artifacts, 
 | `context_packaged` | selected items, pruned items, byte counts, source tiers |
 | `family_resolved` | family id, chosen representative, resolution reason |
 | `variant_emitted` | emitted ids, family ids, source component, execution timing when available |
-| `failure_recorded` | failure kind, affected family or request scope, repairable flag, originating component, execution timing when available |
+| `failure_recorded` | failure kind, affected family or request scope, repairable flag, originating component, execution timing when available, plus structured failure details and stack when the runtime has them |
 | `metadata_updated` | target ids, changed keys, structural-impact flag, execution timing when available |
 | `analytic_memory_updated` | updated keys, scope, export flag, checkpoint hash if any |
 | `declarations_inserted` | inserted declaration hash, insertion source, new declaration ids |
 | `planning_triggered` | mode, trigger reason, blocked-region summary |
-| `planning_stopped` | outcome, accepted actions, rejected actions |
-| `request_stopped` | final outcome, stop reason, remaining blocked regions, and `error_message` when execution stops without a terminal response |
+| `planning_stopped` | mode, outcome, accepted actions, rejected actions, accepted declaration text when available, bounded attempt history, planning-side retrieval summary, and structured error details when planning fails |
+| `request_stopped` | final outcome, stop reason, remaining blocked regions, `error_message` when execution stops without a terminal response, and the structured request-level error object with stack/details when available |
 
 The event schema must be stable enough that replay tools can parse it without command-specific guesswork.
 
@@ -56,7 +56,7 @@ A replayable run requires:
 
 Replay may not reproduce identical model text when wrappers are nondeterministic, but it must reproduce the structural execution path as far as the preserved artifacts allow.
 
-When a command, wrapper, or scheduler path records a normalized refusal, error, or blocked state under DS017, the trace must record that through either `failure_recorded` or a more specific event whose payload still carries the normalized failure fields.
+When a command, wrapper, or scheduler path records a normalized refusal, error, or blocked state under DS017, the trace must record that through either `failure_recorded` or a more specific event whose payload still carries the normalized failure fields. When the failure originated from a thrown local exception, the trace should preserve the local stack and any structured diagnostic details rather than collapsing the event to one flat message string.
 
 ## Decisions & Questions
 

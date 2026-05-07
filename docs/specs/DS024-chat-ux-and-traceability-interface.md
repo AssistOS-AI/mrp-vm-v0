@@ -56,11 +56,12 @@ The traceability page uses two primary columns:
 
 The page must not show redundant placeholder headers such as "Select a request" or request/response summary tiles above the main workspace once a request is selected.
 
-The detail workspace exposes exactly three tabs:
+The detail workspace exposes exactly four tabs:
 
 1. `SOP Lang`
 2. `Variables`
-3. `Execution Graph`
+3. `Errors`
+4. `Execution Graph`
 
 #### SOP Lang tab
 
@@ -84,6 +85,18 @@ The right detail area contains exactly three nested tabs:
 2. `Metadata` for family and representative metadata, including execution timing when available,
 3. `Definition` for the SOP declaration that defines the variable in the executed plan.
 
+When a representative cannot be reconstructed from the live in-memory request record, `Current Value` must fall back to the latest persisted variant payload. A successful request must not show an empty current-value panel merely because the traceability page was reconstructed from disk.
+
+#### Errors tab
+
+This tab shows the accumulated planning, execution-node, and request-level failures for the selected request. Each entry should expose:
+
+1. the normalized kind and stage,
+2. the message,
+3. target family or declaration when applicable,
+4. stack trace when available,
+5. structured details payload when available.
+
 #### Execution Graph tab
 
 This tab renders the execution graph as a left-to-right workflow ordered by topological layer. The graph must show:
@@ -99,7 +112,10 @@ This tab renders the execution graph as a left-to-right workflow ordered by topo
 9. subtle vertical dotted guides per layer, visually aligned with the layer heading so the column structure remains readable even when arrows are thin,
 10. execution-graph nodes that open inspection details on click but are not themselves draggable,
 11. a default width strategy that stretches the graph to the available viewport before introducing horizontal scrolling,
-12. a fullscreen node inspector with tabbed sections for declaration, input, context, output, diagnostics, and KU references.
+12. a fullscreen node inspector with tabbed sections for declaration, input, context, output, diagnostics, and KU references,
+13. a synthetic workflow-start node at `Layer 0` for initial planning,
+14. a synthetic workflow-final node for the terminal request result,
+15. both workflow-boundary nodes rendered by default even when the request fails before ordinary declaration output appears.
 
 Inside the fullscreen node inspector, the header and tab strip remain fixed and only the selected tab body scrolls. The modal must not grow vertically when switching tabs with longer content.
 

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { ExternalInterpreterRegistry, MRPVM } from '../../src/index.mjs';
+import { RequestManager } from '../../src/session/request-manager.mjs';
 import { createTempRuntimeRoot } from '../fixtures/runtime-root.mjs';
 
 test('runtime submits a request end-to-end and persists trace and state', async () => {
@@ -30,6 +31,14 @@ test('runtime submits a request end-to-end and persists trace and state', async 
   const inspection = runtime.inspect();
   assert.ok(Array.isArray(inspection.invocationHistory));
   assert.ok(inspection.contextPackage);
+
+  const persistedProbe = new MRPVM(rootDir, { deterministic: {} });
+  persistedProbe.sessionId = outcome.session_id;
+  const persistedRequest = await persistedProbe.inspectRequestPublic(outcome.request_id);
+  const responseFamily = persistedRequest.family_state.find((family) => family.familyId === 'response');
+  assert.ok(responseFamily);
+  assert.ok((responseFamily.variants ?? []).length >= 1);
+  assert.equal(typeof responseFamily.variants[0].value, 'string');
 });
 
 test('runtime persists an execution_error outcome when an interpreter throws', async () => {
@@ -206,6 +215,21 @@ test('runtime reloads persisted Explainable Memory snapshots from disk without J
 
   assert.equal(result.mode, 'explainable_memory');
   assert.ok(result.selected.some((entry) => entry.kuId === 'ku_session_note'));
+});
+
+test('request manager loads legacy vundefined variant files for persisted family state', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const requestManager = new RequestManager(rootDir);
+  const familyDir = path.join(rootDir, 'data', 'sessions', 'session-legacy', 'requests', 'request-legacy', 'state', 'families', 'response');
+  await mkdir(familyDir, { recursive: true });
+  await writeFile(path.join(familyDir, 'family.meta.json'), `${JSON.stringify({ status: 'completed' }, null, 2)}\n`);
+  await writeFile(path.join(familyDir, 'vundefined.value.txt'), 'legacy value\n');
+  await writeFile(path.join(familyDir, 'vundefined.meta.json'), `${JSON.stringify({ origin: 'legacy-test' }, null, 2)}\n`);
+
+  const families = await requestManager.loadFamilyState('session-legacy', 'request-legacy');
+  assert.equal(families.length, 1);
+  assert.equal(families[0].variants.length, 1);
+  assert.equal(families[0].variants[0].value, 'legacy value');
 });
 
 test('runtime can switch KB retrieval back to naive symbolic mode', async () => {

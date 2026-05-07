@@ -67,7 +67,9 @@ export class StateStore {
       familyMeta: { ...family.familyMeta },
       variants: family.variants.map((variant) => ({
         id: variant.id,
+        version: variant.version,
         value: variant.value,
+        rendered: variant.rendered,
         meta: { ...variant.meta },
       })),
     }));
