@@ -582,7 +582,10 @@ async function loadKeys() {
   try {
     const payload = await fetchJson('/api/auth/keys');
     state.keys = payload.items || [];
-  } catch {
+  } catch (error) {
+    if (error?.status !== 401 && error?.status !== 403) {
+      reportClientError(error, 'settings.load-keys');
+    }
     state.keys = [];
   }
 }
@@ -592,7 +595,8 @@ async function loadModels() {
     const payload = await fetchJson('/api/models');
     state.models = payload.models || [];
     state.availableTags = payload.available_tags || [];
-  } catch {
+  } catch (error) {
+    reportClientError(error, 'settings.load-models');
     state.models = [];
     state.availableTags = [];
   }
@@ -613,7 +617,8 @@ async function loadMemory() {
     if (state.selectedAspectId && !selectedAspect()) {
       state.selectedAspectId = '';
     }
-  } catch {
+  } catch (error) {
+    reportClientError(error, 'settings.load-memory');
     state.memoryStatus = null;
     state.memoryAspects = { approved: [], candidates: [], proposed: [] };
     state.selectedAspectId = '';
@@ -655,7 +660,7 @@ async function saveModelSettings(event) {
     notify('Model routing updated.');
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.save-models');
   }
 }
 
@@ -674,7 +679,7 @@ async function saveInterpreters(event) {
     notify('Interpreter states updated.');
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.save-interpreters');
   }
 }
 
@@ -691,7 +696,7 @@ async function saveMemoryMode(event) {
     notify('KB retrieval mode updated.');
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.save-memory-mode');
   }
 }
 
@@ -737,7 +742,7 @@ async function saveMemoryAspect(event) {
     notify('Aspect saved.');
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.save-memory-aspect');
   }
 }
 
@@ -751,7 +756,7 @@ async function scanMemoryAspects() {
     notify(`Scanned recent logs and generated ${payload.generated_count || 0} proposal(s).`);
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.scan-memory-aspects');
   }
 }
 
@@ -769,7 +774,7 @@ async function approveMemoryAspect() {
     notify('Aspect approved.');
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.approve-memory-aspect');
   }
 }
 
@@ -783,7 +788,7 @@ async function reindexMemory() {
     notify('Explainable Memory reindexed.');
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.reindex-memory');
   }
 }
 
@@ -858,7 +863,7 @@ async function createBootstrapKey() {
     notify('Bootstrap admin key created.');
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.create-bootstrap-key');
   }
 }
 
@@ -877,7 +882,7 @@ async function createServerKey() {
     notify(`Created ${payload.record.role} API key ${payload.record.id}.`);
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.create-server-key');
   }
 }
 
@@ -889,7 +894,7 @@ async function revokeKey(keyId) {
     notify('API key invalidated.');
     await refresh();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'settings.revoke-key');
   }
 }
 
@@ -902,7 +907,7 @@ function useModalKey() {
   setActiveSessionId('');
   hideKeyModal();
   notify('API key activated for this browser.');
-  refresh().catch((error) => notify(error.message, 'error'));
+  refresh().catch((error) => reportClientError(error, 'settings.refresh-auth-state'));
 }
 
 function attachHandlers() {
@@ -915,10 +920,10 @@ function attachHandlers() {
   el('memory-mode-settings').addEventListener('submit', saveMemoryMode);
   el('memory-aspect-editor').addEventListener('submit', saveMemoryAspect);
   el('memory-aspect-editor').addEventListener('input', () => syncAuthority());
-  el('refresh-auth').addEventListener('click', () => refresh().catch((error) => notify(error.message, 'error')));
-  el('reindex-memory').addEventListener('click', () => reindexMemory().catch((error) => notify(error.message, 'error')));
-  el('scan-memory-aspects').addEventListener('click', () => scanMemoryAspects().catch((error) => notify(error.message, 'error')));
-  el('approve-memory-aspect').addEventListener('click', () => approveMemoryAspect().catch((error) => notify(error.message, 'error')));
+  el('refresh-auth').addEventListener('click', () => refresh().catch((error) => reportClientError(error, 'settings.refresh-auth')));
+  el('reindex-memory').addEventListener('click', () => reindexMemory().catch((error) => reportClientError(error, 'settings.reindex-memory-click')));
+  el('scan-memory-aspects').addEventListener('click', () => scanMemoryAspects().catch((error) => reportClientError(error, 'settings.scan-memory-click')));
+  el('approve-memory-aspect').addEventListener('click', () => approveMemoryAspect().catch((error) => reportClientError(error, 'settings.approve-memory-click')));
   el('new-memory-aspect').addEventListener('click', () => {
     state.selectedAspectId = '';
     const aspect = emptyAspect();
@@ -973,7 +978,7 @@ function attachHandlers() {
         notify('This browser does not have a local copy of that API key.', 'error');
         return;
       }
-      copyText(token).then(() => notify('API key copied.')).catch((error) => notify(error.message, 'error'));
+      copyText(token).then(() => notify('API key copied.')).catch((error) => reportClientError(error, 'settings.copy-key'));
       return;
     }
     const revokeButton = event.target.closest('[data-revoke-key]');
@@ -989,11 +994,11 @@ function attachHandlers() {
     }
     if (event.target.closest('#settings-key-modal-submit')) {
       const action = state.keyModal.mode === 'bootstrap-create' ? createBootstrapKey : createServerKey;
-      action().catch((error) => notify(error.message, 'error'));
+      action().catch((error) => reportClientError(error, 'settings.key-modal-submit'));
       return;
     }
     if (event.target.closest('#settings-key-modal-copy')) {
-      copyText(state.keyModal.token).then(() => notify('API key copied.')).catch((error) => notify(error.message, 'error'));
+      copyText(state.keyModal.token).then(() => notify('API key copied.')).catch((error) => reportClientError(error, 'settings.copy-modal-key'));
       return;
     }
     if (event.target.closest('#settings-key-modal-remember')) {
@@ -1023,4 +1028,4 @@ refresh()
       activateTab('settings-auth-tab');
     }
   })
-  .catch((error) => notify(error.message, 'error'));
+  .catch((error) => reportClientError(error, 'settings.init'));

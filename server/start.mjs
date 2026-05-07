@@ -9,6 +9,16 @@ const runtimeConfig = createRuntimeConfig({
   env: process.env,
 });
 
+function logLine(level, event, context = {}) {
+  const logger = level === 'error' ? console.error : console.log;
+  logger(JSON.stringify({
+    ts: new Date().toISOString(),
+    level,
+    event,
+    ...context,
+  }));
+}
+
 const server = createServer({
   rootDir,
   verboseLogging: true,
@@ -20,41 +30,37 @@ const server = createServer({
 server.listen(port, host, () => {
   const address = server.address();
   const activePort = typeof address === 'object' && address ? address.port : port;
-  console.log(`MRP-VM server listening on http://${host}:${activePort}/chat`);
-  console.log(`LLM adapter: ${runtimeConfig.llm.adapter}`);
+  logLine('info', 'server.listening', {
+    url: `http://${host}:${activePort}/chat`,
+    llm_adapter: runtimeConfig.llm.adapter,
+  });
 });
 
 server.on('error', (error) => {
-  console.error('[MRP-VM] server.error', {
+  logLine('error', 'server.error', {
     message: error?.message ?? String(error),
     code: error?.code ?? null,
+    stack: error?.stack ?? null,
   });
-  if (error?.stack) {
-    console.error(error.stack);
-  }
 });
 
 server.on('clientError', (error, socket) => {
-  console.error('[MRP-VM] server.client_error', {
+  logLine('error', 'server.client_error', {
     message: error?.message ?? String(error),
     code: error?.code ?? null,
     remote_address: socket?.remoteAddress ?? null,
+    stack: error?.stack ?? null,
   });
-  if (error?.stack) {
-    console.error(error.stack);
-  }
 });
 
 for (const eventName of ['uncaughtException', 'unhandledRejection']) {
   process.on(eventName, (error) => {
     const normalized = error instanceof Error ? error : new Error(String(error));
-    console.error(`[MRP-VM] process.${eventName}`, {
+    logLine('error', `process.${eventName}`, {
       message: normalized.message,
       code: normalized.code ?? null,
+      stack: normalized.stack ?? null,
     });
-    if (normalized.stack) {
-      console.error(normalized.stack);
-    }
   });
 }
 

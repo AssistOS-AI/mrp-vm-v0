@@ -49,7 +49,8 @@ function previewApiKey(token) {
   if (!normalized) {
     return null;
   }
-  return normalized.length <= 8 ? normalized : `${normalized.slice(0, 8)}...`;
+  const withoutPrefix = normalized.startsWith('key_') ? normalized.slice(4) : normalized;
+  return withoutPrefix.length <= 4 ? withoutPrefix : `${withoutPrefix.slice(0, 4)}…`;
 }
 
 function serverLog(level, event, context = {}) {
@@ -58,15 +59,12 @@ function serverLog(level, event, context = {}) {
     : level === 'warn'
       ? console.warn
       : console.log;
-  const printable = { ...context };
-  if (printable.stack) {
-    const stack = printable.stack;
-    delete printable.stack;
-    logger(`[MRP-VM] ${event}`, printable);
-    logger(stack);
-    return;
-  }
-  logger(`[MRP-VM] ${event}`, printable);
+  logger(JSON.stringify({
+    ts: new Date().toISOString(),
+    level,
+    event,
+    ...context,
+  }));
 }
 
 function errorMessage(error) {
@@ -77,7 +75,16 @@ function errorMessage(error) {
     return error;
   }
   if (typeof error.message === 'string' && error.message.trim()) {
+    if (error.message === '[object Object]' && error.payload) {
+      return errorMessage(error.payload);
+    }
     return error.message;
+  }
+  if (typeof error.message === 'object' && error.message) {
+    return errorMessage(error.message);
+  }
+  if (error.payload) {
+    return errorMessage(error.payload);
   }
   try {
     return JSON.stringify(error);
@@ -1158,8 +1165,7 @@ export function createServer(options = {}) {
           duration_ms: Date.now() - startedAt,
           session_id: callerContext?.callerSession?.session_id ?? sessionHint,
           role: callerContext ? getCallerRole(callerContext) : 'anonymous',
-          api_key_prefix: previewApiKey(rawApiKey),
-          api_key_id: callerContext?.apiKey?.id ?? null,
+          api_key_hint: previewApiKey(rawApiKey),
           remote_address: request.socket?.remoteAddress ?? null,
         });
       }
@@ -1172,8 +1178,7 @@ export function createServer(options = {}) {
           path: url.pathname,
           session_id: callerContext?.callerSession?.session_id ?? sessionHint,
           role: getCallerRole(callerContext),
-          api_key_prefix: previewApiKey(rawApiKey),
-          api_key_id: callerContext?.apiKey?.id ?? null,
+          api_key_hint: previewApiKey(rawApiKey),
           remote_address: request.socket?.remoteAddress ?? null,
         });
       }
@@ -1848,8 +1853,7 @@ export function createServer(options = {}) {
         duration_ms: Date.now() - startedAt,
         session_id: callerContext?.callerSession?.session_id ?? sessionHint,
         role: callerContext ? getCallerRole(callerContext) : 'anonymous',
-        api_key_prefix: previewApiKey(rawApiKey),
-        api_key_id: callerContext?.apiKey?.id ?? null,
+        api_key_hint: previewApiKey(rawApiKey),
         remote_address: request.socket?.remoteAddress ?? null,
         error: diagnostic.error,
         message: diagnostic.message,

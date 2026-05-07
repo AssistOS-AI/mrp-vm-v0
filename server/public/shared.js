@@ -122,7 +122,6 @@ export async function fetchJson(url, options = {}) {
     error.payload = payload;
     if (payload?.stack) {
       error.serverStack = payload.stack;
-      console.error(payload.stack);
     }
     throw error;
   }
@@ -191,7 +190,16 @@ export function formatErrorMessage(error) {
     return error;
   }
   if (typeof error.message === 'string' && error.message.trim()) {
+    if (error.message === '[object Object]' && error.payload) {
+      return formatErrorMessage(error.payload);
+    }
     return error.message;
+  }
+  if (typeof error.message === 'object' && error.message) {
+    return formatErrorMessage(error.message);
+  }
+  if (error.payload) {
+    return formatErrorMessage(error.payload);
   }
   try {
     return JSON.stringify(error);

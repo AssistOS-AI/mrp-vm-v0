@@ -205,6 +205,7 @@ async function renderSharedDetails(item) {
       });
     }
   } catch (error) {
+    reportClientError(error, 'cache.render-shared-details');
     container.innerHTML = `<div class="muted small">${escapeHtml(error.message)}</div>`;
   }
 }

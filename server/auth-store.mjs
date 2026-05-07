@@ -14,7 +14,17 @@ async function readJson(filePath, fallback) {
   try {
     const source = await readFile(filePath, 'utf8');
     return JSON.parse(source);
-  } catch {
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      console.error(JSON.stringify({
+        ts: new Date().toISOString(),
+        level: 'warn',
+        event: 'auth_store.read_json_failed',
+        file_path: filePath,
+        message: error?.message ?? String(error),
+        stack: error?.stack ?? null,
+      }));
+    }
     return fallback;
   }
 }

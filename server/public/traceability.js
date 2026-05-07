@@ -7,6 +7,7 @@ import {
   formatDate,
   notify,
   queryParam,
+  reportClientError,
   renderSystemContext,
   setActiveSessionId,
   statusClass,
@@ -742,7 +743,7 @@ function attachHandlers() {
     if (!button) {
       return;
     }
-    loadTraceability(button.dataset.requestId).catch((error) => notify(error.message, 'error'));
+    loadTraceability(button.dataset.requestId).catch((error) => reportClientError(error, 'traceability.load-request'));
   });
   el('copy-sop').addEventListener('click', async () => {
     await copyText(state.payload?.sop_lang || '');
@@ -837,4 +838,4 @@ async function init() {
   await loadTraceability(state.requestId);
 }
 
-init().catch((error) => notify(error.message, 'error'));
+init().catch((error) => reportClientError(error, 'traceability.init'));
