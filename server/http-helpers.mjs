@@ -2,6 +2,27 @@ export function parseUrl(request) {
   return new URL(request.url, 'http://127.0.0.1');
 }
 
+function summarizeText(value, maxLength = 220) {
+  const textValue = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (textValue.length <= maxLength) {
+    return textValue;
+  }
+  return `${textValue.slice(0, maxLength - 3)}...`;
+}
+
+export function parseJsonText(raw, source = 'request body') {
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const wrapped = new Error(`Invalid JSON in ${source}: ${error.message}`);
+    wrapped.code = 'INVALID_JSON_BODY';
+    wrapped.statusCode = 400;
+    wrapped.bodyPreview = summarizeText(raw, 240);
+    wrapped.cause = error;
+    throw wrapped;
+  }
+}
+
 export function json(response, statusCode, payload) {
   response.writeHead(statusCode, {
     'content-type': 'application/json; charset=utf-8',
@@ -58,7 +79,7 @@ export async function readJsonBody(request) {
   if (!raw) {
     return {};
   }
-  return JSON.parse(raw);
+  return parseJsonText(raw, 'request body');
 }
 
 export function parseMultipart(body, boundary) {

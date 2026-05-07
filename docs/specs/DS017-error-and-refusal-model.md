@@ -85,6 +85,8 @@ When the runtime exhausts the recovery budget and can no longer make meta-ration
 
 Error messages, user-facing stop summaries, and repair guidance text should be shaped by KU-managed assets rather than hardcoded large message templates in code. The code must normalize the failure; the presentation layer may then render it using curated knowledge.
 
+Hosted adapters may wrap normalized failures in transport-shaped envelopes, but they must not discard the normalized `kind` or collapse unexpected exceptions into opaque generic text. When an adapter detects malformed JSON input or an unexpected internal exception, it should preserve the original error message and may expose stack diagnostics on operator-oriented local surfaces so debugging does not depend on reproducing the failure blindly.
+
 ## Decisions & Questions
 
 Question #1: Why must `pending` stay distinct from `error`?
@@ -98,6 +100,10 @@ Response: Error normalization and human presentation are different responsibilit
 Question #3: Why is `unknown_outcome` treated as non-usable for automatic representative selection?
 
 Response: `unknown_outcome` records a visible non-success, not a soft success. If the runtime treated it as usable, downstream dependencies could proceed on artifacts that explicitly failed to yield a stable answer.
+
+Question #4: Why should hosted adapters preserve original exception details instead of always collapsing them into one generic bad-request message?
+
+Response: Operational debugging depends on seeing whether a failure came from malformed client JSON, policy gates, provider issues, or an internal bug. A hosted adapter may still normalize the transport shape, but it should preserve the original message and stack for operator-facing diagnostics so failures remain actionable.
 
 ## Conclusion
 

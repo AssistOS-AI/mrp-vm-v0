@@ -11,6 +11,7 @@ const runtimeConfig = createRuntimeConfig({
 
 const server = createServer({
   rootDir,
+  verboseLogging: true,
   runtimeOptions: {
     runtimeConfig,
   },
@@ -22,6 +23,40 @@ server.listen(port, host, () => {
   console.log(`MRP-VM server listening on http://${host}:${activePort}/chat`);
   console.log(`LLM adapter: ${runtimeConfig.llm.adapter}`);
 });
+
+server.on('error', (error) => {
+  console.error('[MRP-VM] server.error', {
+    message: error?.message ?? String(error),
+    code: error?.code ?? null,
+  });
+  if (error?.stack) {
+    console.error(error.stack);
+  }
+});
+
+server.on('clientError', (error, socket) => {
+  console.error('[MRP-VM] server.client_error', {
+    message: error?.message ?? String(error),
+    code: error?.code ?? null,
+    remote_address: socket?.remoteAddress ?? null,
+  });
+  if (error?.stack) {
+    console.error(error.stack);
+  }
+});
+
+for (const eventName of ['uncaughtException', 'unhandledRejection']) {
+  process.on(eventName, (error) => {
+    const normalized = error instanceof Error ? error : new Error(String(error));
+    console.error(`[MRP-VM] process.${eventName}`, {
+      message: normalized.message,
+      code: normalized.code ?? null,
+    });
+    if (normalized.stack) {
+      console.error(normalized.stack);
+    }
+  });
+}
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {

@@ -90,16 +90,43 @@ function buildHeaders(options = {}) {
   return headers;
 }
 
+function summarizePayload(value, maxLength = 240) {
+  const textValue = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (textValue.length <= maxLength) {
+    return textValue;
+  }
+  return `${textValue.slice(0, maxLength - 3)}...`;
+}
+
 export async function fetchJson(url, options = {}) {
   const response = await fetch(url, {
     ...options,
     headers: buildHeaders(options),
   });
-  if (!response.ok) {
-    const payload = await response.text();
-    throw new Error(payload || `HTTP ${response.status}`);
+  const raw = await response.text();
+  let payload = null;
+  if (raw) {
+    try {
+      payload = JSON.parse(raw);
+    } catch (error) {
+      if (response.ok) {
+        throw new Error(`Expected JSON response but received: ${summarizePayload(raw)}`);
+      }
+      throw new Error(summarizePayload(raw) || `HTTP ${response.status}`);
+    }
   }
-  return response.json();
+  if (!response.ok) {
+    const message = payload?.message || payload?.error || summarizePayload(raw) || `HTTP ${response.status}`;
+    const error = new Error(message);
+    error.status = response.status;
+    error.payload = payload;
+    if (payload?.stack) {
+      error.serverStack = payload.stack;
+      console.error(payload.stack);
+    }
+    throw error;
+  }
+  return payload ?? {};
 }
 
 export async function fetchText(url, options = {}) {
@@ -108,8 +135,23 @@ export async function fetchText(url, options = {}) {
     headers: buildHeaders(options),
   });
   if (!response.ok) {
-    const payload = await response.text();
-    throw new Error(payload || `HTTP ${response.status}`);
+    const raw = await response.text();
+    let payload = null;
+    if (raw) {
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        payload = null;
+      }
+    }
+    const message = payload?.message || payload?.error || raw || `HTTP ${response.status}`;
+    const error = new Error(message);
+    error.status = response.status;
+    error.payload = payload;
+    if (payload?.stack) {
+      error.serverStack = payload.stack;
+    }
+    throw error;
   }
   return response.text();
 }
@@ -139,6 +181,51 @@ export function notify(message, type = 'info') {
   }
   notice.textContent = message;
   notice.className = `notice visible ${type === 'error' ? 'error' : ''}`.trim();
+}
+
+export function formatErrorMessage(error) {
+  if (error == null) {
+    return 'Unknown client error.';
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (typeof error.message === 'string' && error.message.trim()) {
+    return error.message;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+export function reportClientError(error, context = 'client') {
+  const message = formatErrorMessage(error);
+  console.error(`[MRP-VM client] ${context}`, {
+    message,
+    status: error?.status ?? null,
+    payload: error?.payload ?? null,
+    stack: error?.stack ?? null,
+    serverStack: error?.serverStack ?? null,
+  });
+  if (error?.serverStack) {
+    console.error(error.serverStack);
+  } else if (error?.stack) {
+    console.error(error.stack);
+  }
+  notify(message, 'error');
+  return message;
+}
+
+if (typeof window !== 'undefined' && !window.__mrpVmErrorHooksInstalled) {
+  window.__mrpVmErrorHooksInstalled = true;
+  window.addEventListener('error', (event) => {
+    reportClientError(event.error ?? new Error(event.message), 'window.error');
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    reportClientError(event.reason instanceof Error ? event.reason : new Error(formatErrorMessage(event.reason)), 'window.unhandledrejection');
+  });
 }
 
 export function clearNotice() {

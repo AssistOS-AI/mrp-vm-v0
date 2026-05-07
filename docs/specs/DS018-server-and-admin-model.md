@@ -36,6 +36,8 @@ Admin operations such as session inspection, trace export, policy override, KU p
 
 At minimum, hosted sessions should persist `session_origin`, `auth_mode`, `effective_role`, and owner or key identity when applicable so audit, policy enforcement, and UI transparency do not depend on inferred state.
 
+The server adapter should also emit operator-readable request diagnostics for the local hosted process. At minimum, the local startup path should be able to log request start and finish, status code, duration, session hint, effective role, and a short API-key prefix preview, while unexpected exceptions and malformed JSON payloads should be written to the server console with stack traces.
+
 ### Hosting surfaces
 
 The optional hosting layer may provide:
@@ -69,6 +71,10 @@ Response: Approved aspects and reindexed retrieval state change how future reque
 Question #4: Why are cross-session pending-cache promotion and log-derived aspect scanning also treated as admin operations?
 
 Response: Both features inspect or mutate state derived from multiple sessions instead of from one caller's active request. That makes them repository- or deployment-level operational controls rather than session-local conveniences, so they belong behind the same governed admin boundary as other multi-session maintenance actions.
+
+Question #5: Why should the hosted process log API-key prefixes and stack traces locally?
+
+Response: Operational debugging often needs to answer who triggered a failing route, whether the caller was authenticated, and what internal stack produced the failure. Logging only a short key prefix preserves operator traceability without dumping the full secret token, while stack traces keep severe failures actionable during local administration.
 ## Conclusion
 
 MRP-VM v0 may be embedded in servers and admin tools, but those surfaces must remain adapters around the SDK rather than substitutes for it.

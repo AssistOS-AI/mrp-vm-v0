@@ -267,3 +267,31 @@ test('server exposes cache promotion and cache management endpoints', async () =
     await once(server, 'close');
   }
 });
+
+test('server returns structured diagnostics for malformed JSON request bodies', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const server = createServer({ rootDir, allowFakeLlm: true, runtimeOptions: { deterministic: {} } });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+
+  try {
+    const address = server.address();
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const response = await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: '[object Object]',
+    });
+    assert.equal(response.status, 400);
+    const payload = await response.json();
+    assert.equal(payload.error, 'invalid_json_body');
+    assert.match(String(payload.message), /Invalid JSON in request body/i);
+    assert.match(String(payload.body_preview), /\[object Object\]/);
+    assert.match(String(payload.stack), /Invalid JSON in request body/i);
+  } finally {
+    server.close();
+    await once(server, 'close');
+  }
+});

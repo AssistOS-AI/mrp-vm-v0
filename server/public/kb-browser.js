@@ -5,6 +5,7 @@ import {
   fetchJson,
   loadAuthContext,
   notify,
+  reportClientError,
   queryParam,
   renderSystemContext,
 } from './shared.js';
@@ -384,7 +385,7 @@ async function saveKu(event) {
     renderInfoPanel();
     renderAspectStatePanel();
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'kb-browser.save-ku');
   }
 }
 
@@ -422,7 +423,7 @@ function attachHandlers() {
         renderAspectStatePanel();
         renderEditor();
       })
-      .catch((error) => notify(error.message, 'error'));
+      .catch((error) => reportClientError(error, 'kb-browser.refresh'));
   });
   document.querySelectorAll('[data-kb-tab]').forEach((button) => {
     button.addEventListener('click', () => activateKbTab(button.dataset.kbTab));
@@ -505,4 +506,4 @@ async function init() {
   activateKbTab(state.activeTab);
 }
 
-init().catch((error) => notify(error.message, 'error'));
+init().catch((error) => reportClientError(error, 'kb-browser.init'));

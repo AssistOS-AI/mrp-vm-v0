@@ -12,6 +12,7 @@ import {
   loadAuthContext,
   notify,
   openTraceability,
+  reportClientError,
   renderSystemContext,
   setActiveSessionId,
   setApiKey,
@@ -620,7 +621,13 @@ function openStream(requestId) {
     'request_stopped',
   ]) {
     state.eventSource.addEventListener(eventName, async (event) => {
-      const payload = JSON.parse(event.data);
+      let payload;
+      try {
+        payload = JSON.parse(event.data);
+      } catch (error) {
+        reportClientError(error, `chat.stream.${eventName}.parse`);
+        return;
+      }
       const liveStatus = payload.stop_reason || payload.final_outcome || (eventName === 'planning_triggered' ? 'planning' : 'running');
       if (state.pendingRequest?.request_id === requestId) {
         state.pendingRequest = {
@@ -696,7 +703,7 @@ async function submitRequest(event) {
     updateComposerStatus();
     setAdvancedOpen(false);
   } catch (error) {
-    notify(error.message, 'error');
+    reportClientError(error, 'chat.submit-request');
   }
 }
 
@@ -799,9 +806,9 @@ async function insertTextFilesIntoInput(fileList) {
 }
 
 function attachEventHandlers() {
-  el('new-session').addEventListener('click', () => createSession().catch((error) => notify(error.message, 'error')));
-  el('reload-session').addEventListener('click', () => reloadActiveSession().catch((error) => notify(error.message, 'error')));
-  el('chat-logout').addEventListener('click', () => logoutFromChat().catch((error) => notify(error.message, 'error')));
+  el('new-session').addEventListener('click', () => createSession().catch((error) => reportClientError(error, 'chat.create-session')));
+  el('reload-session').addEventListener('click', () => reloadActiveSession().catch((error) => reportClientError(error, 'chat.reload-session')));
+  el('chat-logout').addEventListener('click', () => logoutFromChat().catch((error) => reportClientError(error, 'chat.logout')));
   el('chat-composer').addEventListener('submit', submitRequest);
 
   el('session-selector-btn').addEventListener('click', (event) => {
@@ -814,7 +821,7 @@ function attachEventHandlers() {
     if (!btn) {
       return;
     }
-    loadSession(btn.dataset.sessionId).catch((error) => notify(error.message, 'error'));
+    loadSession(btn.dataset.sessionId).catch((error) => reportClientError(error, 'chat.load-session'));
   });
 
   el('advanced-toggle').addEventListener('click', (event) => {
@@ -891,7 +898,7 @@ function attachEventHandlers() {
       return;
     }
     if (actionButton.dataset.action === 'cache') {
-      promoteRequestCache(requestId).catch((error) => notify(error.message, 'error'));
+      promoteRequestCache(requestId).catch((error) => reportClientError(error, 'chat.promote-cache'));
       return;
     }
     if (actionButton.dataset.action === 'retry') {
@@ -915,20 +922,20 @@ function attachEventHandlers() {
   });
 
   el('text-insert-input').addEventListener('change', (event) => {
-    insertTextFilesIntoInput(event.target.files).catch((error) => notify(error.message, 'error'));
+    insertTextFilesIntoInput(event.target.files).catch((error) => reportClientError(error, 'chat.insert-files'));
     event.target.value = '';
   });
   el('step-budget').addEventListener('input', updateComposerStatus);
   el('planning-budget').addEventListener('input', updateComposerStatus);
 
   el('chat-use-api-key').addEventListener('click', () => {
-    applyAuthKey({ remember: false }).catch((error) => notify(error.message, 'error'));
+    applyAuthKey({ remember: false }).catch((error) => reportClientError(error, 'chat.apply-key'));
   });
   el('chat-remember-api-key').addEventListener('click', () => {
-    applyAuthKey({ remember: true }).catch((error) => notify(error.message, 'error'));
+    applyAuthKey({ remember: true }).catch((error) => reportClientError(error, 'chat.apply-key-remember'));
   });
   el('chat-bootstrap-key').addEventListener('click', () => {
-    bootstrapAuthKey().catch((error) => notify(error.message, 'error'));
+    bootstrapAuthKey().catch((error) => reportClientError(error, 'chat.bootstrap-key'));
   });
   el('chat-auth-saved-keys').addEventListener('click', (event) => {
     const useButton = event.target.closest('[data-auth-use]');
@@ -937,7 +944,7 @@ function attachEventHandlers() {
       const saved = getSavedApiKeys().find((entry) => entry.token === token);
       el('chat-api-key-input').value = token;
       el('chat-api-key-label').value = saved?.label || '';
-      applyAuthKey({ remember: false }).catch((error) => notify(error.message, 'error'));
+      applyAuthKey({ remember: false }).catch((error) => reportClientError(error, 'chat.apply-key-enter'));
       return;
     }
     const forgetButton = event.target.closest('[data-auth-forget]');
@@ -963,4 +970,4 @@ async function init() {
   await refreshSessions({ autoLoad: true });
 }
 
-init().catch((error) => notify(error.message, 'error'));
+init().catch((error) => reportClientError(error, 'chat.init'));

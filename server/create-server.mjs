@@ -2,10 +2,12 @@ import http from 'node:http';
 import path from 'node:path';
 import { createRuntime, compileGraph, KbStore, MRPVM, listAchillesModels } from '../src/index.mjs';
 import { deriveFamilyExecutionStatus } from '../src/runtime/state-store.mjs';
-import { parseUrl, json, html, text, notFound, badRequest, forbidden, unauthorized, readJsonBody, readRequestBody, parseMultipart, startSse, writeSseEvent } from './http-helpers.mjs';
+import { parseUrl, json, html, text, notFound, forbidden, unauthorized, parseJsonText, readJsonBody, readRequestBody, parseMultipart, startSse, writeSseEvent } from './http-helpers.mjs';
 import { loadPublicAsset, loadTemplate } from './asset-loader.mjs';
 import { AuthStore } from './auth-store.mjs';
 import { loadDemoTasks } from './demo-catalog.mjs';
+
+const EXPOSE_SERVER_STACKS = process.env.MRP_VM_EXPOSE_STACKS !== '0';
 
 function parsePathname(pathname) {
   return pathname.split('/').filter(Boolean);
@@ -40,6 +42,120 @@ function summarizeText(value, maxLength = 180) {
     return textValue;
   }
   return `${textValue.slice(0, maxLength - 3)}...`;
+}
+
+function previewApiKey(token) {
+  const normalized = String(token || '').trim();
+  if (!normalized) {
+    return null;
+  }
+  return normalized.length <= 8 ? normalized : `${normalized.slice(0, 8)}...`;
+}
+
+function serverLog(level, event, context = {}) {
+  const logger = level === 'error'
+    ? console.error
+    : level === 'warn'
+      ? console.warn
+      : console.log;
+  const printable = { ...context };
+  if (printable.stack) {
+    const stack = printable.stack;
+    delete printable.stack;
+    logger(`[MRP-VM] ${event}`, printable);
+    logger(stack);
+    return;
+  }
+  logger(`[MRP-VM] ${event}`, printable);
+}
+
+function errorMessage(error) {
+  if (!error) {
+    return 'Unknown server error.';
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (typeof error.message === 'string' && error.message.trim()) {
+    return error.message;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function classifyServerError(error) {
+  const message = errorMessage(error);
+  if (error?.code === 'ACTIVE_REQUEST') {
+    return {
+      statusCode: 409,
+      error: 'active_request',
+      message,
+      level: 'warn',
+      exposeStack: false,
+    };
+  }
+  if (error?.code === 'INVALID_JSON_BODY') {
+    return {
+      statusCode: 400,
+      error: 'invalid_json_body',
+      message,
+      level: 'warn',
+      exposeStack: true,
+      bodyPreview: error.bodyPreview ?? null,
+    };
+  }
+  if (String(message).includes('disabled')) {
+    return {
+      statusCode: 403,
+      error: 'forbidden',
+      message,
+      level: 'warn',
+      exposeStack: false,
+    };
+  }
+  if (String(message).includes('api key')) {
+    return {
+      statusCode: 401,
+      error: 'unauthorized',
+      message,
+      level: 'warn',
+      exposeStack: false,
+    };
+  }
+  if (Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 500) {
+    return {
+      statusCode: error.statusCode,
+      error: error.code ? String(error.code).toLowerCase() : 'bad_request',
+      message,
+      level: 'warn',
+      exposeStack: false,
+    };
+  }
+  return {
+    statusCode: 500,
+    error: 'internal_server_error',
+    message,
+    level: 'error',
+    exposeStack: true,
+    bodyPreview: error?.bodyPreview ?? null,
+  };
+}
+
+function errorPayload(diagnostic, error) {
+  const payload = {
+    error: diagnostic.error,
+    message: diagnostic.message,
+  };
+  if (diagnostic.bodyPreview) {
+    payload.body_preview = diagnostic.bodyPreview;
+  }
+  if (EXPOSE_SERVER_STACKS && diagnostic.exposeStack && error?.stack) {
+    payload.stack = error.stack;
+  }
+  return payload;
 }
 
 function filterCacheEntries(entries, searchParams) {
@@ -200,7 +316,7 @@ async function parseRequestPayload(request) {
       } else if (name === 'request') {
         result.request = part.content;
       } else if (name === 'budgets') {
-        result.budgets = JSON.parse(part.content);
+        result.budgets = parseJsonText(part.content, 'multipart budgets field');
       }
     }
     return result;
@@ -995,6 +1111,7 @@ async function buildTraceabilityPayload(runtime, session, requestId) {
 
 export function createServer(options = {}) {
   const rootDir = options.rootDir ?? process.cwd();
+  const verboseLogging = options.verboseLogging ?? process.env.MRP_VM_VERBOSE_SERVER === '1';
   const demoTasksPromise = loadDemoTasks(rootDir);
   const runtimeOptions = {
     ...(options.runtimeOptions ?? {}),
@@ -1024,10 +1141,42 @@ export function createServer(options = {}) {
   };
 
   const server = http.createServer(async (request, response) => {
+    const startedAt = Date.now();
+    const url = parseUrl(request);
+    const parts = parsePathname(url.pathname);
+    const rawApiKey = extractApiKey(request, url);
+    const sessionHint = request.headers['x-session-id'] ?? url.searchParams.get('session_id') ?? null;
+    let callerContext = null;
+    let requestFinished = false;
+    response.on('finish', () => {
+      requestFinished = true;
+      if (verboseLogging) {
+        serverLog('info', 'request.finish', {
+          method: request.method,
+          path: url.pathname,
+          status: response.statusCode,
+          duration_ms: Date.now() - startedAt,
+          session_id: callerContext?.callerSession?.session_id ?? sessionHint,
+          role: callerContext ? getCallerRole(callerContext) : 'anonymous',
+          api_key_prefix: previewApiKey(rawApiKey),
+          api_key_id: callerContext?.apiKey?.id ?? null,
+          remote_address: request.socket?.remoteAddress ?? null,
+        });
+      }
+    });
     try {
-      const url = parseUrl(request);
-      const parts = parsePathname(url.pathname);
-      const callerContext = await resolveCallerContext(runtime, authStore, request, url);
+      callerContext = await resolveCallerContext(runtime, authStore, request, url);
+      if (verboseLogging) {
+        serverLog('info', 'request.start', {
+          method: request.method,
+          path: url.pathname,
+          session_id: callerContext?.callerSession?.session_id ?? sessionHint,
+          role: getCallerRole(callerContext),
+          api_key_prefix: previewApiKey(rawApiKey),
+          api_key_id: callerContext?.apiKey?.id ?? null,
+          remote_address: request.socket?.remoteAddress ?? null,
+        });
+      }
 
       if (url.pathname === '/' || (request.method === 'GET' && url.pathname === '/chat')) {
         await servePage(response, 'chat.html');
@@ -1691,22 +1840,41 @@ export function createServer(options = {}) {
 
       notFound(response);
     } catch (error) {
-      if (error.code === 'ACTIVE_REQUEST') {
-        json(response, 409, {
-          error: 'active_request',
-          message: error.message,
-        });
+      const diagnostic = classifyServerError(error);
+      serverLog(diagnostic.level, 'request.error', {
+        method: request.method,
+        path: url.pathname,
+        status: diagnostic.statusCode,
+        duration_ms: Date.now() - startedAt,
+        session_id: callerContext?.callerSession?.session_id ?? sessionHint,
+        role: callerContext ? getCallerRole(callerContext) : 'anonymous',
+        api_key_prefix: previewApiKey(rawApiKey),
+        api_key_id: callerContext?.apiKey?.id ?? null,
+        remote_address: request.socket?.remoteAddress ?? null,
+        error: diagnostic.error,
+        message: diagnostic.message,
+        body_preview: diagnostic.bodyPreview ?? null,
+        stack: error?.stack ?? null,
+      });
+      if (response.headersSent) {
+        if (!requestFinished) {
+          response.end();
+        }
         return;
       }
-      if (String(error.message).includes('disabled')) {
-        forbidden(response, error.message);
+      if (diagnostic.statusCode === 403) {
+        json(response, diagnostic.statusCode, errorPayload(diagnostic, error));
         return;
       }
-      if (String(error.message).includes('api key')) {
-        unauthorized(response, error.message);
+      if (diagnostic.statusCode === 401) {
+        json(response, diagnostic.statusCode, errorPayload(diagnostic, error));
         return;
       }
-      badRequest(response, error.message);
+      if (diagnostic.statusCode === 400) {
+        json(response, diagnostic.statusCode, errorPayload(diagnostic, error));
+        return;
+      }
+      json(response, diagnostic.statusCode, errorPayload(diagnostic, error));
     }
   });
 

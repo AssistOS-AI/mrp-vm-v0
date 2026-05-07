@@ -92,6 +92,8 @@ The server must expose a native programmatic API for full MRP-VM functionality. 
 
 All native API responses must be JSON. The request submission endpoint accepts JSON bodies for ordinary requests and multipart form data when attached files are present.
 
+For non-success responses, the server should return a structured JSON error payload with at least `error` and `message`. When the failure is an operator-relevant local diagnostic such as malformed JSON input or an unexpected internal exception, the hosted adapter may also include bounded debugging fields such as a stack trace or body preview so the repository-owned UI and local operators can inspect the failure without opening a second log channel first.
+
 ### OpenAI-compatible API
 
 The server may expose a compatibility endpoint at `/v1/chat/completions` to lower integration friction for existing tooling. This endpoint translates chat-completion requests into MRP-VM request envelopes and returns the final `response` family value as a chat-completion response.
@@ -125,6 +127,8 @@ The repository baseline must also expose `npm run server` as the canonical way t
 HTML templates and CSS must live in server-owned files under `server/`, not in JavaScript string literals. JavaScript is responsible for interaction logic and API orchestration only.
 
 The ordinary server startup path must not run with the fake LLM adapter. If the runtime resolves to the `fake` adapter or cannot resolve a managed provider path such as AchillesAgentLib, the server must refuse to start and report that a managed provider integration is missing. Fake-LLM operation is reserved for tests and explicit harness-level construction, not for the user-facing server entry point.
+
+The repository-owned startup path should also install local-process diagnostics for `server`-level failures such as `clientError`, `uncaughtException`, and `unhandledRejection`, and the request adapter should log request start and finish with method, route, status, duration, session hint, effective role, and a short API-key prefix preview.
 
 ### Chat page
 

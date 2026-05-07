@@ -6,6 +6,7 @@ import {
   formatDate,
   loadAuthContext,
   notify,
+  reportClientError,
   renderSystemContext,
 } from './shared.js';
 
@@ -199,7 +200,7 @@ async function renderSharedDetails(item) {
           notify('Cache entry deleted.');
           await loadCache();
         } catch (error) {
-          notify(error.message, 'error');
+          reportClientError(error, 'cache.delete-entry');
         }
       });
     }
@@ -276,7 +277,7 @@ async function renderPendingDetails(item) {
         notify('Pending request promoted into the shared cache.');
         await loadCache();
       } catch (error) {
-        notify(error.message, 'error');
+        reportClientError(error, 'cache.promote-pending');
       }
     });
   }
@@ -338,11 +339,11 @@ async function loadCache() {
 
 function attachHandlers() {
   el('cache-refresh').addEventListener('click', () => {
-    loadCache().catch((error) => notify(error.message, 'error'));
+    loadCache().catch((error) => reportClientError(error, 'cache.refresh'));
   });
   el('cache-search').addEventListener('input', (event) => {
     state.query = event.target.value.trim();
-    loadCache().catch((error) => notify(error.message, 'error'));
+    loadCache().catch((error) => reportClientError(error, 'cache.search'));
   });
   el('cache-list').addEventListener('click', (event) => {
     const button = event.target.closest('[data-cache-key]');
@@ -371,4 +372,4 @@ async function init() {
   await loadCache();
 }
 
-init().catch((error) => notify(error.message, 'error'));
+init().catch((error) => reportClientError(error, 'cache.init'));
