@@ -26,14 +26,14 @@ const state = {
   activeGraphLayerDrag: null,
 };
 
-const GRAPH_LAYER_MIN_WIDTH = 138;
-const GRAPH_LAYER_MAX_WIDTH = 210;
-const GRAPH_DIVIDER_WIDTH = 16;
-const GRAPH_NODE_FAMILY_LABEL_LENGTH = 18;
-const GRAPH_NODE_COMMAND_LABEL_LENGTH = 18;
-const GRAPH_NODE_NOTE_LABEL_LENGTH = 30;
-const GRAPH_NODE_CHAR_WIDTH_PX = 7;
-const GRAPH_NODE_HORIZONTAL_PADDING_PX = 34;
+const GRAPH_LAYER_MIN_WIDTH = 148;
+const GRAPH_LAYER_MAX_WIDTH = 340;
+const GRAPH_DIVIDER_WIDTH = 32;
+const GRAPH_NODE_FAMILY_LABEL_LENGTH = 22;
+const GRAPH_NODE_COMMAND_LABEL_LENGTH = 22;
+const GRAPH_NODE_NOTE_LABEL_LENGTH = 34;
+const GRAPH_NODE_CHAR_WIDTH_PX = 7.2;
+const GRAPH_NODE_HORIZONTAL_PADDING_PX = 20;
 
 function humanizeStatus(status) {
   return String(status || 'unknown').replace(/_/g, ' ');
@@ -434,7 +434,19 @@ function computeDefaultGraphLayerWidths(strata = []) {
     return [];
   }
   const nodesById = new Map((state.payload?.execution_graph?.nodes || []).map((node) => [node.id, node]));
-  return strata.map((layer) => estimateGraphLayerWidth(layer, nodesById));
+  const contentWidths = strata.map((layer) => estimateGraphLayerWidth(layer, nodesById));
+  const layerCount = contentWidths.length;
+  const viewportWidth = getGraphViewportWidth();
+  if (viewportWidth <= 0) {
+    return contentWidths;
+  }
+  const totalDividerWidth = Math.max(0, layerCount - 1) * GRAPH_DIVIDER_WIDTH;
+  const availableForLayers = Math.max(0, viewportWidth - totalDividerWidth);
+  const equalShare = Math.floor(availableForLayers / layerCount);
+  return contentWidths.map((contentWidth) => {
+    const targetWidth = Math.max(contentWidth, equalShare);
+    return Math.max(GRAPH_LAYER_MIN_WIDTH, Math.min(GRAPH_LAYER_MAX_WIDTH, Math.round(targetWidth)));
+  });
 }
 
 function applyGraphLayerWidths(options = {}) {

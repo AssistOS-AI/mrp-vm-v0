@@ -168,7 +168,7 @@ The `Current Value` panel must resolve from the final representative variant whe
 
 The `SOP Lang` tab should present executed SOP in a readable code surface with lightweight syntax differentiation so family names, command names, and `$var` / `~var` references are easy to scan at a glance.
 
-The `Execution Graph` tab must render the graph as a left-to-right topological workflow with visually distinct nodes and explicit dependency arrows rather than as a flat list of edge names. Operators must also be able to drag nodes locally inside the graph view while the dependency lines follow the moved nodes.
+The `Execution Graph` tab must render the graph as a left-to-right topological workflow with visually distinct nodes and explicit dependency arrows rather than as a flat list of edge names. Operators must also be able to resize layer columns by dragging the `Layer N` heading horizontally while the dependency lines follow the adjusted column positions.
 
 ### KB Browser page
 
