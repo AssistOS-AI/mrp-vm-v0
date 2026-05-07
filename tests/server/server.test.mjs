@@ -122,6 +122,7 @@ test('server exposes native session and request APIs plus /chat', async () => {
     assert.equal(kbCatalog.explainable_memory.mode, 'explainable_memory');
     assert.equal(indexedSessionNote.index_state.indexed, true);
     assert.equal(typeof indexedSessionNote.index_state.snapshot_version, 'string');
+    assert.ok(Array.isArray(indexedSessionNote.index_state.aspect_signals));
 
     const updatedConfig = await fetch(`${baseUrl}/api/config`, {
       method: 'PUT',
@@ -189,6 +190,9 @@ test('server exposes native session and request APIs plus /chat', async () => {
     assert.match(chatPage, /KB Browser/);
     const settingsPage = await fetch(`${baseUrl}/settings`).then((response) => response.text());
     assert.match(settingsPage, /Explainable Memory/);
+    assert.match(settingsPage, /Scan logs/);
+    const kbPage = await fetch(`${baseUrl}/kb-browser`).then((response) => response.text());
+    assert.match(kbPage, /Aspect state/);
   } finally {
     server.close();
     await once(server, 'close');
@@ -220,13 +224,21 @@ test('server exposes cache promotion and cache management endpoints', async () =
     const started = await requestResponse.json();
     await waitForOutcome(baseUrl, session.session_id, started.request_id);
 
-    const promoted = await fetch(`${baseUrl}/api/sessions/${session.session_id}/requests/${started.request_id}/cache/promote`, {
+    const pendingCache = await fetch(`${baseUrl}/api/cache/pending`, {
+      headers: { 'x-session-id': session.session_id },
+    }).then((response) => response.json());
+    assert.ok(pendingCache.items.some((item) => item.request_id === started.request_id));
+
+    const promoted = await fetch(`${baseUrl}/api/cache/pending/promote`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'x-session-id': session.session_id,
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({
+        session_id: session.session_id,
+        request_id: started.request_id,
+      }),
     }).then((response) => response.json());
     assert.ok(promoted.promoted_count >= 1);
 
@@ -243,6 +255,7 @@ test('server exposes cache promotion and cache management endpoints', async () =
 
     const cachePage = await fetch(`${baseUrl}/cache`).then((response) => response.text());
     assert.match(cachePage, /Stored LLM calls/);
+    assert.match(cachePage, /Pending promotion/);
 
     const deleted = await fetch(`${baseUrl}/api/cache/${entryId}`, {
       method: 'DELETE',

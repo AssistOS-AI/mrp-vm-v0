@@ -1261,6 +1261,30 @@ h4 { font-size: 0.85rem; }
   border-color: rgba(37, 99, 235, 0.18);
 }
 
+.memory-management-shell {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.35fr);
+}
+
+.memory-aspect-list-panel,
+.memory-aspect-detail-panel {
+  min-height: 0;
+}
+
+.memory-aspect-list-panel #memory-aspect-list {
+  max-height: 70dvh;
+  overflow: auto;
+}
+
+.memory-preview-item {
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--row-alt);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
 #memory-aspect-editor textarea {
   min-height: 84px;
 }
@@ -2516,7 +2540,21 @@ body.is-resizing {
   justify-content: flex-end;
 }
 
+.kb-editor-tabs {
+  padding: 0 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+#kb-tab-info pre,
+#kb-tab-aspects pre,
+#memory-aspect-summary pre,
+.cache-detail pre {
+  max-height: 220px;
+  overflow: auto;
+}
+
 @media (max-width: 980px) {
+  .memory-management-shell,
   .trace-page-shell,
   .variable-meta-grid {
     grid-template-columns: 1fr;

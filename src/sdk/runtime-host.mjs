@@ -255,6 +255,11 @@ export class RuntimeHost {
     const handle = typeof handleOrId === 'string' ? await this.getSession(handleOrId) : handleOrId;
     return handle.executor.promoteRequestLlmCache(requestId, handle.session_id);
   }
+
+  async promoteRequestCacheEntries(sessionId, requestId) {
+    const handle = await this.getSession(sessionId);
+    return handle.executor.promoteRequestLlmCache(requestId, handle.session_id);
+  }
 }
 
 export function createRuntime(rootDirOrConfig, options = {}) {

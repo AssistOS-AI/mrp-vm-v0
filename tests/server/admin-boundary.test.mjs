@@ -92,6 +92,36 @@ test('admin-only server endpoints enforce bootstrap-admin and user boundaries', 
     });
     assert.equal(rejectedReindex.status, 403);
 
+    const rejectedPendingCache = await fetch(`${baseUrl}/api/cache/pending`, {
+      headers: {
+        'x-session-id': userSession.session_id,
+      },
+    });
+    assert.equal(rejectedPendingCache.status, 403);
+
+    const rejectedPendingPromotion = await fetch(`${baseUrl}/api/cache/pending/promote`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': userSession.session_id,
+      },
+      body: JSON.stringify({
+        session_id: userSession.session_id,
+        request_id: 'request_fake',
+      }),
+    });
+    assert.equal(rejectedPendingPromotion.status, 403);
+
+    const rejectedAspectScan = await fetch(`${baseUrl}/api/kb/explainable-memory/aspects/scan`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': userSession.session_id,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(rejectedAspectScan.status, 403);
+
     const accepted = await fetch(`${baseUrl}/api/config`, {
       method: 'PUT',
       headers: {
@@ -163,6 +193,16 @@ test('admin-only server endpoints enforce bootstrap-admin and user boundaries', 
       body: JSON.stringify({}),
     });
     assert.equal(acceptedReindex.status, 200);
+
+    const acceptedAspectScan = await fetch(`${baseUrl}/api/kb/explainable-memory/aspects/scan`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': adminSession.session_id,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(acceptedAspectScan.status, 200);
   } finally {
     server.close();
     await once(server, 'close');

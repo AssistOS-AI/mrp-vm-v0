@@ -23,6 +23,7 @@ const state = {
   typeFilter: '',
   openNodes: new Set(),
   treeWidth: Number(localStorage.getItem('mrpvm.kbTreeWidth')) || 280,
+  activeTab: 'info',
 };
 
 function clamp(value, min, max) {
@@ -208,7 +209,7 @@ function renderPermissionMessage() {
     : 'User mode is active. Global KU edits stay disabled; save session overrides instead.';
 }
 
-function renderInspector() {
+function renderInfoPanel() {
   const item = state.selected;
   if (!item) {
     el('kb-details-body').innerHTML = '<div class="muted small">Select a KU from the tree to inspect or edit it.</div>';
@@ -223,9 +224,6 @@ function renderInspector() {
     ...(item.meta?.commands || []).map((tag) => `<span class="badge dependency-pill">${escapeHtml(tag)}</span>`),
     ...(item.meta?.interpreters || []).map((tag) => `<span class="badge dependency-pill">${escapeHtml(tag)}</span>`),
   ];
-  const matchedAspects = (indexState.matched_aspects || []).length
-    ? (indexState.matched_aspects || []).map((aspectId) => `<span class="badge dependency-pill">${escapeHtml(aspectId)}</span>`).join('')
-    : '<span class="muted small">No matched aspects recorded.</span>';
   el('kb-details-body').innerHTML = `
     <div class="stack compact">
       <strong>${escapeHtml(item.ku_id)}</strong>
@@ -237,12 +235,58 @@ function renderInspector() {
         <div class="muted small">Indexed at: ${escapeHtml(indexState.indexed_at ? new Date(indexState.indexed_at).toLocaleString() : 'not indexed')}</div>
         <div class="muted small">Lexical document id: ${escapeHtml(indexState.lexical_document_id || 'unavailable')}</div>
       </div>
-      <div class="stack compact">
-        <div class="small muted">Matched aspects</div>
-        <div class="row wrap">${matchedAspects}</div>
+      <div class="inset-card stack compact">
+        <div class="small muted">Content</div>
+        <pre>${escapeHtml(item.content || '')}</pre>
       </div>
     </div>
   `;
+}
+
+function renderAspectStatePanel() {
+  const item = state.selected;
+  if (!item) {
+    el('kb-aspect-state-body').innerHTML = '<div class="muted small">Select a KU to inspect its aspect state.</div>';
+    return;
+  }
+  const signals = item.index_state?.aspect_signals || [];
+  if (!signals.length) {
+    el('kb-aspect-state-body').innerHTML = '<div class="muted small">This KU has no recorded aspect signals in the current snapshot.</div>';
+    return;
+  }
+  el('kb-aspect-state-body').innerHTML = signals.map((signal) => `
+    <section class="inset-card stack compact">
+      <div class="between">
+        <div class="stack compact">
+          <strong>${escapeHtml(signal.title || signal.aspectId)}</strong>
+          <div class="muted small">${escapeHtml(signal.aspectId)}</div>
+        </div>
+        <div class="row wrap">
+          <span class="badge">${escapeHtml(signal.aspectType || 'operational')}</span>
+          <span class="badge status-active">${escapeHtml(`score ${signal.score ?? 0}`)}</span>
+        </div>
+      </div>
+      ${signal.rootValue ? `<div class="stack compact"><div class="small muted">Aspect value</div><pre>${escapeHtml(signal.rootValue)}</pre></div>` : ''}
+      ${signal.definition ? `<div class="muted small">${escapeHtml(signal.definition)}</div>` : ''}
+      ${Array.isArray(signal.matchedTokens) && signal.matchedTokens.length
+        ? `<div class="row wrap">${signal.matchedTokens.map((token) => `<span class="badge dependency-pill">${escapeHtml(token)}</span>`).join('')}</div>`
+        : ''}
+      ${Array.isArray(signal.evidence) && signal.evidence.length
+        ? `<div class="stack compact">
+            <div class="small muted">KU evidence</div>
+            ${signal.evidence.map((evidence) => `
+              <div class="cache-source-request">
+                <div class="row wrap">
+                  <span class="badge">${escapeHtml(evidence.source || 'content')}</span>
+                  ${(evidence.matched_tokens || []).map((token) => `<span class="badge dependency-pill">${escapeHtml(token)}</span>`).join('')}
+                </div>
+                <div class="muted small">${escapeHtml(evidence.excerpt || '')}</div>
+              </div>
+            `).join('')}
+          </div>`
+        : '<div class="muted small">No evidence excerpts were stored for this signal.</div>'}
+    </section>
+  `).join('');
 }
 
 function renderEditor() {
@@ -261,6 +305,16 @@ function renderEditor() {
   el('editor-source').value = item?.source_text || '';
   el('load-default-ku').disabled = !defaultVariant;
   renderPermissionMessage();
+}
+
+function activateKbTab(tab) {
+  state.activeTab = ['info', 'editor', 'aspects'].includes(tab) ? tab : 'info';
+  document.querySelectorAll('[data-kb-tab]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.kbTab === state.activeTab);
+  });
+  ['info', 'editor', 'aspects'].forEach((name) => {
+    el(`kb-tab-${name}`)?.classList.toggle('active', name === state.activeTab);
+  });
 }
 
 function applyTreeWidth() {
@@ -327,6 +381,8 @@ async function saveKu(event) {
     await loadKb();
     summarizeItems();
     renderTree();
+    renderInfoPanel();
+    renderAspectStatePanel();
   } catch (error) {
     notify(error.message, 'error');
   }
@@ -362,9 +418,14 @@ function attachHandlers() {
       .then(() => {
         summarizeItems();
         renderTree();
+        renderInfoPanel();
+        renderAspectStatePanel();
         renderEditor();
       })
       .catch((error) => notify(error.message, 'error'));
+  });
+  document.querySelectorAll('[data-kb-tab]').forEach((button) => {
+    button.addEventListener('click', () => activateKbTab(button.dataset.kbTab));
   });
   el('kb-tree').addEventListener('click', (event) => {
     const toggle = event.target.closest('[data-tree-node]');
@@ -385,7 +446,8 @@ function attachHandlers() {
     state.selected = state.items.find((item) => item.ku_id === leaf.dataset.kuId && item.scope === leaf.dataset.scope) || null;
     ensureSelectionVisible(state.selected);
     renderTree();
-    renderInspector();
+    renderInfoPanel();
+    renderAspectStatePanel();
     renderEditor();
   });
   el('kb-editor').addEventListener('submit', saveKu);
@@ -437,8 +499,10 @@ async function init() {
   applyTreeWidth();
   summarizeItems();
   renderTree();
-  renderInspector();
+  renderInfoPanel();
+  renderAspectStatePanel();
   renderEditor();
+  activateKbTab(state.activeTab);
 }
 
 init().catch((error) => notify(error.message, 'error'));

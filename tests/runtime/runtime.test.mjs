@@ -196,3 +196,30 @@ test('runtime can switch KB retrieval back to naive symbolic mode', async () => 
   assert.equal(result.mode, 'naive_symbolic');
   assert.equal(result.selected[0].usage_reference, undefined);
 });
+
+test('runtime scans recent logs into proposed Explainable Memory aspects', async () => {
+  const rootDir = await createTempRuntimeRoot();
+  const runtime = new MRPVM(rootDir, {
+    deterministic: {},
+    manualOverrides: {
+      forceFakeLlm: true,
+    },
+  });
+
+  const outcome = await runtime.submitRequest({
+    requestText: 'Need zebra pathway memory guidance and zebra escalation notes.',
+  });
+  assert.equal(outcome.stop_reason, 'completed');
+
+  const scan = await runtime.scanExplainableMemoryAspects({
+    maxSessions: 4,
+    maxRequestsPerSession: 4,
+    maxProposals: 4,
+  });
+  assert.ok(scan.generated_count >= 1);
+  assert.ok(scan.proposals.some((aspect) => aspect.meta?.status === 'proposed'));
+
+  const status = await runtime.inspectExplainableMemory(outcome.session_id);
+  assert.ok((status.proposed_aspects || []).length >= 1);
+  assert.ok((status.counts?.proposed_aspect_count || 0) >= 1);
+});
