@@ -465,11 +465,12 @@ function syncAuthority() {
   const canEdit = canEditGlobalState();
   const auth = state.config?.auth || {};
   const canBootstrap = !auth.has_api_keys && auth.bootstrap_admin_available;
+  const currentAspect = selectedAspect();
   el('save-model-settings').disabled = !canEdit;
   el('save-interpreters').disabled = !canEdit;
   el('save-memory-mode').disabled = !canEdit;
   el('save-memory-aspect').disabled = !canEdit;
-  el('approve-memory-aspect').disabled = !canEdit;
+  el('approve-memory-aspect').disabled = !canEdit || !el('memory-aspect-id').value.trim() || (currentAspect?.meta?.status === 'approved');
   el('reindex-memory').disabled = !canEdit;
   el('new-memory-aspect').disabled = !canEdit;
   el('default-llm').disabled = !canEdit;
@@ -621,6 +622,99 @@ async function saveInterpreters(event) {
   }
 }
 
+async function saveMemoryMode(event) {
+  event.preventDefault();
+  try {
+    await fetchJson('/api/config', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        kb_mode: el('kb-mode').value,
+      }),
+    });
+    notify('KB retrieval mode updated.');
+    await refresh();
+  } catch (error) {
+    notify(error.message, 'error');
+  }
+}
+
+function readMemoryAspectEditor() {
+  const aspectId = el('memory-aspect-id').value.trim();
+  const status = el('memory-aspect-status').value;
+  return {
+    aspect_id: aspectId,
+    file_name: el('memory-aspect-file-name').value.trim() || (aspectId ? `${aspectId}.sop` : ''),
+    status,
+    aspect_type: el('memory-aspect-type').value,
+    title: el('memory-aspect-title').value.trim(),
+    summary: el('memory-aspect-summary').value.trim(),
+    priority: Number(el('memory-aspect-priority').value || 0),
+    domains: splitCsv(el('memory-aspect-domains').value),
+    commands: splitCsv(el('memory-aspect-commands').value),
+    interpreters: splitCsv(el('memory-aspect-interpreters').value),
+    tags: splitCsv(el('memory-aspect-tags').value),
+    query_terms: splitCsv(el('memory-aspect-query-terms').value),
+    root_value: el('memory-aspect-root').value.trim(),
+    definition: el('memory-aspect-definition').value.trim(),
+    inclusion_criteria: el('memory-aspect-inclusion').value.trim(),
+    exclusion_criteria: el('memory-aspect-exclusion').value.trim(),
+    protocol: el('memory-aspect-protocol').value.trim(),
+    role_vocabulary: splitCsv(el('memory-aspect-role-vocabulary').value),
+  };
+}
+
+async function saveMemoryAspect(event) {
+  event.preventDefault();
+  try {
+    const payload = readMemoryAspectEditor();
+    if (!payload.aspect_id || !payload.title) {
+      notify('Aspect id and title are required.', 'error');
+      return;
+    }
+    await fetchJson('/api/kb/explainable-memory/aspects', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    state.selectedAspectId = payload.aspect_id;
+    notify('Aspect saved.');
+    await refresh();
+  } catch (error) {
+    notify(error.message, 'error');
+  }
+}
+
+async function approveMemoryAspect() {
+  try {
+    const aspectId = el('memory-aspect-id').value.trim();
+    if (!aspectId) {
+      notify('Select or enter an aspect id before approval.', 'error');
+      return;
+    }
+    await fetchJson(`/api/kb/explainable-memory/aspects/${encodeURIComponent(aspectId)}/approve`, {
+      method: 'POST',
+    });
+    state.selectedAspectId = aspectId;
+    notify('Aspect approved.');
+    await refresh();
+  } catch (error) {
+    notify(error.message, 'error');
+  }
+}
+
+async function reindexMemory() {
+  try {
+    await fetchJson('/api/kb/explainable-memory/reindex', {
+      method: 'POST',
+    });
+    notify('Explainable Memory reindexed.');
+    await refresh();
+  } catch (error) {
+    notify(error.message, 'error');
+  }
+}
+
 function showKeyModal(mode, payload = {}) {
   state.keyModal = {
     mode,
@@ -746,7 +840,16 @@ function attachHandlers() {
 
   el('model-settings').addEventListener('submit', saveModelSettings);
   el('interpreter-settings').addEventListener('submit', saveInterpreters);
+  el('memory-mode-settings').addEventListener('submit', saveMemoryMode);
+  el('memory-aspect-editor').addEventListener('submit', saveMemoryAspect);
+  el('memory-aspect-editor').addEventListener('input', () => syncAuthority());
   el('refresh-auth').addEventListener('click', () => refresh().catch((error) => notify(error.message, 'error')));
+  el('reindex-memory').addEventListener('click', () => reindexMemory().catch((error) => notify(error.message, 'error')));
+  el('approve-memory-aspect').addEventListener('click', () => approveMemoryAspect().catch((error) => notify(error.message, 'error')));
+  el('new-memory-aspect').addEventListener('click', () => {
+    state.selectedAspectId = '';
+    fillMemoryAspectEditor(emptyAspect());
+  });
   el('model-settings').addEventListener('change', (event) => {
     if (event.target.id === 'default-llm') {
       renderTagRail('default-llm-tags', el('default-llm').value);
@@ -773,6 +876,16 @@ function attachHandlers() {
       }
       return;
     }
+  });
+
+  el('memory-aspect-list').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-memory-aspect]');
+    if (!button) {
+      return;
+    }
+    state.selectedAspectId = button.dataset.memoryAspect;
+    renderMemoryPanel();
+    syncAuthority();
   });
 
   el('api-key-list').addEventListener('click', (event) => {

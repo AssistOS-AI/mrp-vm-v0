@@ -1244,6 +1244,27 @@ h4 { font-size: 0.85rem; }
   color: var(--accent-strong);
 }
 
+.memory-aspect-row {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.5rem 0.55rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.memory-aspect-row:hover,
+.memory-aspect-row.active {
+  background: var(--accent-soft);
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+#memory-aspect-editor textarea {
+  min-height: 84px;
+}
+
 .split {
   display: grid;
   gap: 0.5rem;
