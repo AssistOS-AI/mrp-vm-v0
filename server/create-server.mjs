@@ -521,9 +521,10 @@ async function loadKbCatalog(kbStore, sessionId = null) {
   return catalog;
 }
 
-function decorateKbCatalog(catalog) {
+function decorateKbCatalog(catalog, explainableMemoryStatus = null) {
   const scopeOrder = { default: 1, global: 2, session: 3 };
   const grouped = new Map();
+  const indexLookup = new Map((explainableMemoryStatus?.ku_records ?? []).map((record) => [record.kuId, record]));
   for (const entry of catalog) {
     const items = grouped.get(entry.kuId) ?? [];
     items.push(entry);
@@ -539,6 +540,7 @@ function decorateKbCatalog(catalog) {
     const winner = siblings[0];
     const higherScopeSibling = siblings.find((candidate) => scopeOrder[candidate.scope] > scopeOrder[entry.scope]);
     const higherRevSibling = siblings.find((candidate) => candidate.scope === entry.scope && Number(candidate.meta.rev ?? 0) > Number(entry.meta.rev ?? 0));
+    const indexState = indexLookup.get(entry.kuId);
     return {
       ku_id: entry.kuId,
       file_path: entry.filePath,
@@ -546,6 +548,19 @@ function decorateKbCatalog(catalog) {
       content: entry.content,
       source_text: entry.sourceText,
       meta: entry.meta,
+      index_state: indexState ? {
+        indexed: true,
+        indexed_at: indexState.indexedAt,
+        snapshot_version: explainableMemoryStatus?.snapshot_version ?? null,
+        lexical_document_id: indexState.lexicalDocumentId,
+        matched_aspects: (indexState.aspectSignals ?? []).map((signal) => signal.aspectId),
+      } : {
+        indexed: false,
+        indexed_at: null,
+        snapshot_version: explainableMemoryStatus?.snapshot_version ?? null,
+        lexical_document_id: null,
+        matched_aspects: [],
+      },
       flags: {
         active: winner.filePath === entry.filePath,
         shadowed: Boolean(higherScopeSibling),
@@ -588,6 +603,30 @@ function summarizeKbCatalog(items) {
     session_ku_count: items.filter((item) => item.scope === 'session').length,
     prompt_asset_count: items.filter((item) => item.meta.ku_type === 'prompt_asset').length,
     overridden_item_count: items.filter((item) => item.flags.shadowed || item.flags.superseded).length,
+    indexed_ku_count: items.filter((item) => item.index_state?.indexed).length,
+    unindexed_ku_count: items.filter((item) => !item.index_state?.indexed).length,
+    snapshot_version: items.find((item) => item.index_state?.snapshot_version)?.index_state?.snapshot_version ?? null,
+  };
+}
+
+async function buildKbCatalogResponse(runtime, kbStore, sessionId = null, searchParams = new URLSearchParams()) {
+  const [catalog, explainableMemory] = await Promise.all([
+    loadKbCatalog(kbStore, sessionId),
+    runtime.inspectExplainableMemory(sessionId),
+  ]);
+  const items = filterKbCatalog(
+    decorateKbCatalog(catalog, explainableMemory),
+    searchParams,
+  );
+  return {
+    items,
+    summary: summarizeKbCatalog(items),
+    explainable_memory: {
+      mode: explainableMemory.mode,
+      snapshot_version: explainableMemory.snapshot_version,
+      counts: explainableMemory.counts,
+      status: explainableMemory.status,
+    },
   };
 }
 
@@ -772,9 +811,11 @@ function buildModelRoutingTargets(config) {
 async function buildConfigView(runtime, policies, authStore, callerContext) {
   const config = runtime.runtimeConfig;
   const interpreters = createInterpreterSnapshot(runtime);
+  const explainableMemory = await runtime.inspectExplainableMemory(null);
   return {
     llm_adapter: config.llm.adapter,
     default_llm: config.llm.defaultModel,
+    kb_mode: config.kb?.mode ?? 'explainable_memory',
     llm_fallbacks: config.llm.fallbacks ?? { enabled: false },
     interpreter_mappings: Object.fromEntries(
       Object.entries(config.llm.profileBindings).map(([profile, binding]) => [profile, binding.model]),
@@ -798,6 +839,14 @@ async function buildConfigView(runtime, policies, authStore, callerContext) {
     model_routing_targets: buildModelRoutingTargets(config),
     model_candidates: buildModelCandidates(config),
     model_selection_heuristics: 'Model candidates are populated from AchillesAgentLib when available. Tag filters apply directly to that catalog.',
+    explainable_memory: {
+      mode: explainableMemory.mode,
+      snapshot_version: explainableMemory.snapshot_version,
+      counts: explainableMemory.counts,
+      status: explainableMemory.status,
+      approved_aspect_count: explainableMemory.approved_aspects?.length ?? 0,
+      candidate_aspect_count: explainableMemory.candidate_aspects?.length ?? 0,
+    },
     policies,
     auth: await authStore.getBootstrapStatus(),
     system_context: buildSystemContext(callerContext),
@@ -805,6 +854,12 @@ async function buildConfigView(runtime, policies, authStore, callerContext) {
 }
 
 function applyConfigPatch(runtime, policies, patch = {}) {
+  if (patch.kb_mode) {
+    runtime.runtimeConfig.kb = {
+      ...(runtime.runtimeConfig.kb ?? {}),
+      mode: patch.kb_mode === 'naive_symbolic' ? 'naive_symbolic' : 'explainable_memory',
+    };
+  }
   if (patch.default_llm) {
     runtime.runtimeConfig.llm.defaultModel = patch.default_llm;
   }
