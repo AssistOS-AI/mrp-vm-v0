@@ -65,13 +65,20 @@ The request-local file must record candidate items together with stop reason and
 
 The runtime and server must expose operator-facing cache controls for:
 
-1. inspecting request-local candidate capture,
-2. promoting a completed request's successful LLM calls into the shared cache,
-3. listing shared cache entries,
-4. inspecting a shared cache entry's request and response payloads,
-5. deleting a shared cache entry.
+1. inspecting request-local candidate capture for a known request,
+2. listing recent unpromoted request-local captures across visible sessions through a dedicated pending surface,
+3. promoting a completed request's successful LLM calls into the shared cache,
+4. promoting from the pending surface without requiring navigation back into the originating chat transcript,
+5. listing shared cache entries,
+6. inspecting a shared cache entry's request and response payloads,
+7. deleting a shared cache entry.
 
-The chat UI family of pages must expose a dedicated Cache page for this shared cache. Destructive mutation of the shared cache remains a privileged control surface even when read access is available more broadly.
+The chat UI family of pages must expose a dedicated Cache page that distinguishes:
+
+1. the promoted shared cache,
+2. the recent pending capture set that is waiting for explicit promotion.
+
+Showing pending captures does not weaken the promotion boundary. Those entries remain request-local until an explicit promotion action succeeds. Destructive mutation of the shared cache remains a privileged control surface even when read access is available more broadly.
 
 ### Evaluation use
 
@@ -94,6 +101,10 @@ Response: Request ids, epoch numbers, and event ordinals describe one execution 
 Question #4: Why does the shared cache store prompt assets and context package text instead of only the instruction and final answer?
 
 Response: MRP-VM's routed LLM work depends on more than the final instruction string. Prompt assets and bounded context packaging are part of the actual invocation contract defined by DS005 and DS013. Storing them makes the cache entry inspectable and makes reuse depend on the real execution inputs rather than on a misleading summary.
+
+Question #5: Why does DS032 require a pending-capture listing surface if promotion stays explicit?
+
+Response: Without a pending listing surface, operators cannot see that request-local capture is already working and may incorrectly conclude that the cache is broken whenever the promoted shared cache is empty. A dedicated pending view preserves DS032's explicit-promotion contract while making the two-layer model inspectable and operationally understandable.
 
 ## Conclusion
 

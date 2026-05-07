@@ -21,7 +21,7 @@ const state = {
   availableTags: [],
   modelFilter: '',
   memoryStatus: null,
-  memoryAspects: { approved: [], candidates: [] },
+  memoryAspects: { approved: [], candidates: [], proposed: [] },
   selectedAspectId: '',
   keyModal: {
     mode: null,
@@ -54,7 +54,11 @@ function splitCsv(value) {
 }
 
 function allAspects() {
-  return [...(state.memoryAspects.approved || []), ...(state.memoryAspects.candidates || [])];
+  return [
+    ...(state.memoryAspects.approved || []),
+    ...(state.memoryAspects.candidates || []),
+    ...(state.memoryAspects.proposed || []),
+  ];
 }
 
 function selectedAspect() {
@@ -391,7 +395,7 @@ function renderMemoryStatus() {
   el('kb-mode').value = state.config?.kb_mode || 'explainable_memory';
   el('memory-snapshot-version').value = status.snapshot_version || 'unavailable';
   el('memory-indexed-count').value = String(counts.indexed_ku_count || 0);
-  el('memory-aspect-counts').value = `${counts.approved_aspect_count || 0} / ${counts.candidate_aspect_count || 0}`;
+  el('memory-aspect-counts').value = `${counts.approved_aspect_count || 0} / ${counts.candidate_aspect_count || 0} / ${counts.proposed_aspect_count || 0}`;
   el('memory-status-strip').innerHTML = [
     `<span class="badge">${escapeHtml(`mode: ${state.config?.kb_mode || 'explainable_memory'}`)}</span>`,
     `<span class="badge ${persistence.status === 'ready' ? 'status-active' : ''}">${escapeHtml(`index: ${persistence.status || 'unknown'}`)}</span>`,
@@ -399,29 +403,48 @@ function renderMemoryStatus() {
   ].join('');
 }
 
+function memoryBucketLabel(bucket) {
+  return { approved: 'Approved', candidate: 'Candidate', proposed: 'Proposed' }[bucket] || bucket;
+}
+
 function renderMemoryAspectList() {
   const items = [
     ...(state.memoryAspects.approved || []).map((aspect) => ({ ...aspect, bucket: 'approved' })),
     ...(state.memoryAspects.candidates || []).map((aspect) => ({ ...aspect, bucket: 'candidate' })),
+    ...(state.memoryAspects.proposed || []).map((aspect) => ({ ...aspect, bucket: 'proposed' })),
   ];
+  el('memory-aspect-count-summary').textContent = `${items.length} aspect${items.length === 1 ? '' : 's'}`;
+  const orderedBuckets = ['approved', 'candidate', 'proposed'];
   el('memory-aspect-list').innerHTML = items.length
-    ? items.map((aspect) => {
-      const meta = aspect.meta || {};
-      const active = state.selectedAspectId === aspect.aspectId;
-      const badges = [
-        `<span class="badge ${aspect.bucket === 'approved' ? 'status-active' : ''}">${escapeHtml(aspect.bucket)}</span>`,
-        meta.aspect_type ? `<span class="badge">${escapeHtml(meta.aspect_type)}</span>` : '',
-        Number.isFinite(Number(meta.priority)) ? `<span class="badge">${escapeHtml(`priority ${meta.priority}`)}</span>` : '',
-      ].filter(Boolean).join('');
+    ? orderedBuckets.map((bucket) => {
+      const bucketItems = items.filter((aspect) => aspect.bucket === bucket);
+      if (bucketItems.length === 0) {
+        return '';
+      }
       return `
-        <button class="memory-aspect-row ${active ? 'active' : ''}" type="button" data-memory-aspect="${escapeHtml(aspect.aspectId)}">
-          <div class="stack compact">
-            <strong>${escapeHtml(meta.title || aspect.aspectId)}</strong>
-            <div class="muted small">${escapeHtml(aspect.aspectId)}</div>
-            <div class="muted small">${escapeHtml(meta.summary || '')}</div>
-          </div>
-          <div class="row wrap">${badges}</div>
-        </button>
+        <div class="stack compact">
+          <div class="muted small">${escapeHtml(memoryBucketLabel(bucket))}</div>
+          ${bucketItems.map((aspect) => {
+            const meta = aspect.meta || {};
+            const active = state.selectedAspectId === aspect.aspectId;
+            const badges = [
+              `<span class="badge ${aspect.bucket === 'approved' ? 'status-active' : aspect.bucket === 'proposed' ? 'status-partially_failed' : ''}">${escapeHtml(aspect.bucket)}</span>`,
+              meta.aspect_type ? `<span class="badge">${escapeHtml(meta.aspect_type)}</span>` : '',
+              Number.isFinite(Number(meta.priority)) ? `<span class="badge">${escapeHtml(`priority ${meta.priority}`)}</span>` : '',
+              meta.proposal_source ? `<span class="badge">${escapeHtml(meta.proposal_source)}</span>` : '',
+            ].filter(Boolean).join('');
+            return `
+              <button class="memory-aspect-row ${active ? 'active' : ''}" type="button" data-memory-aspect="${escapeHtml(aspect.aspectId)}">
+                <div class="stack compact">
+                  <strong>${escapeHtml(meta.title || aspect.aspectId)}</strong>
+                  <div class="muted small">${escapeHtml(aspect.aspectId)}</div>
+                  <div class="muted small">${escapeHtml(meta.summary || '')}</div>
+                </div>
+                <div class="row wrap">${badges}</div>
+              </button>
+            `;
+          }).join('')}
+        </div>
       `;
     }).join('')
     : '<div class="muted small">No aspects are available yet.</div>';
@@ -434,9 +457,9 @@ function fillMemoryAspectEditor(aspect) {
   el('memory-aspect-file-name').value = aspect.fileName || (aspect.aspectId ? `${aspect.aspectId}.sop` : '');
   el('memory-aspect-title').value = meta.title || '';
   el('memory-aspect-type').value = meta.aspect_type || 'operational';
-  el('memory-aspect-status').value = meta.status || 'candidate';
+  el('memory-aspect-status').value = meta.status || 'proposed';
   el('memory-aspect-priority').value = Number(meta.priority || 0);
-  el('memory-aspect-summary').value = meta.summary || '';
+  el('memory-aspect-summary-input').value = meta.summary || '';
   el('memory-aspect-domains').value = csvValue(meta.domains);
   el('memory-aspect-commands').value = csvValue(meta.commands);
   el('memory-aspect-interpreters').value = csvValue(meta.interpreters);
@@ -450,6 +473,35 @@ function fillMemoryAspectEditor(aspect) {
   el('memory-aspect-role-vocabulary').value = csvValue(aspect.roleVocabulary);
 }
 
+function renderMemoryAspectSummary(aspect) {
+  const meta = aspect.meta || {};
+  const badges = [
+    `<span class="badge ${meta.status === 'approved' ? 'status-active' : meta.status === 'proposed' ? 'status-partially_failed' : ''}">${escapeHtml(meta.status || 'candidate')}</span>`,
+    meta.aspect_type ? `<span class="badge">${escapeHtml(meta.aspect_type)}</span>` : '',
+    ...(meta.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`),
+  ];
+  const bindings = [
+    ...(meta.commands || []).map((value) => `<span class="badge dependency-pill">${escapeHtml(value)}</span>`),
+    ...(meta.interpreters || []).map((value) => `<span class="badge dependency-pill">${escapeHtml(value)}</span>`),
+  ];
+  const observed = [
+    meta.observed_request_count ? `Observed requests: ${meta.observed_request_count}` : '',
+    meta.observed_session_count ? `Observed sessions: ${meta.observed_session_count}` : '',
+  ].filter(Boolean).join(' · ');
+  el('memory-aspect-summary').innerHTML = `
+    <strong>${escapeHtml(meta.title || aspect.aspectId || 'New aspect')}</strong>
+    <div class="muted small">${escapeHtml(aspect.aspectId || 'Select an aspect from the list or create a new one.')}</div>
+    <div class="muted small">${escapeHtml(meta.summary || aspect.definition || '')}</div>
+    <div class="row wrap">${badges.join('')}</div>
+    ${bindings.length ? `<div class="row wrap">${bindings.join('')}</div>` : ''}
+    ${aspect.rootValue ? `<div class="inset-card stack compact"><div class="small muted">Root value</div><pre>${escapeHtml(aspect.rootValue)}</pre></div>` : ''}
+    ${observed ? `<div class="muted small">${escapeHtml(observed)}</div>` : ''}
+    ${Array.isArray(aspect.scanPreview) && aspect.scanPreview.length
+      ? `<div class="stack compact"><div class="small muted">Scan preview</div>${aspect.scanPreview.map((sample) => `<div class="memory-preview-item">${escapeHtml(sample)}</div>`).join('')}</div>`
+      : ''}
+  `;
+}
+
 function renderMemoryPanel() {
   const current = selectedAspect() || allAspects()[0] || emptyAspect();
   if (!state.selectedAspectId && current.aspectId) {
@@ -459,6 +511,7 @@ function renderMemoryPanel() {
   renderMemoryStatus();
   renderMemoryAspectList();
   fillMemoryAspectEditor(current);
+  renderMemoryAspectSummary(current);
 }
 
 function syncAuthority() {
@@ -472,6 +525,7 @@ function syncAuthority() {
   el('save-memory-aspect').disabled = !canEdit;
   el('approve-memory-aspect').disabled = !canEdit || !el('memory-aspect-id').value.trim() || (currentAspect?.meta?.status === 'approved');
   el('reindex-memory').disabled = !canEdit;
+  el('scan-memory-aspects').disabled = !canEdit;
   el('new-memory-aspect').disabled = !canEdit;
   el('default-llm').disabled = !canEdit;
   el('default-llm-tag-filter').disabled = !canEdit;
@@ -482,7 +536,7 @@ function syncAuthority() {
   el('memory-aspect-type').disabled = !canEdit;
   el('memory-aspect-status').disabled = !canEdit;
   el('memory-aspect-priority').disabled = !canEdit;
-  el('memory-aspect-summary').disabled = !canEdit;
+  el('memory-aspect-summary-input').disabled = !canEdit;
   el('memory-aspect-domains').disabled = !canEdit;
   el('memory-aspect-commands').disabled = !canEdit;
   el('memory-aspect-interpreters').disabled = !canEdit;
@@ -553,13 +607,14 @@ async function loadMemory() {
     state.memoryAspects = {
       approved: aspects.approved || [],
       candidates: aspects.candidates || [],
+      proposed: aspects.proposed || [],
     };
     if (state.selectedAspectId && !selectedAspect()) {
       state.selectedAspectId = '';
     }
   } catch {
     state.memoryStatus = null;
-    state.memoryAspects = { approved: [], candidates: [] };
+    state.memoryAspects = { approved: [], candidates: [], proposed: [] };
     state.selectedAspectId = '';
   }
 }
@@ -648,7 +703,7 @@ function readMemoryAspectEditor() {
     status,
     aspect_type: el('memory-aspect-type').value,
     title: el('memory-aspect-title').value.trim(),
-    summary: el('memory-aspect-summary').value.trim(),
+    summary: el('memory-aspect-summary-input').value.trim(),
     priority: Number(el('memory-aspect-priority').value || 0),
     domains: splitCsv(el('memory-aspect-domains').value),
     commands: splitCsv(el('memory-aspect-commands').value),
@@ -679,6 +734,20 @@ async function saveMemoryAspect(event) {
     });
     state.selectedAspectId = payload.aspect_id;
     notify('Aspect saved.');
+    await refresh();
+  } catch (error) {
+    notify(error.message, 'error');
+  }
+}
+
+async function scanMemoryAspects() {
+  try {
+    const payload = await fetchJson('/api/kb/explainable-memory/aspects/scan', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    notify(`Scanned recent logs and generated ${payload.generated_count || 0} proposal(s).`);
     await refresh();
   } catch (error) {
     notify(error.message, 'error');
@@ -847,10 +916,14 @@ function attachHandlers() {
   el('memory-aspect-editor').addEventListener('input', () => syncAuthority());
   el('refresh-auth').addEventListener('click', () => refresh().catch((error) => notify(error.message, 'error')));
   el('reindex-memory').addEventListener('click', () => reindexMemory().catch((error) => notify(error.message, 'error')));
+  el('scan-memory-aspects').addEventListener('click', () => scanMemoryAspects().catch((error) => notify(error.message, 'error')));
   el('approve-memory-aspect').addEventListener('click', () => approveMemoryAspect().catch((error) => notify(error.message, 'error')));
   el('new-memory-aspect').addEventListener('click', () => {
     state.selectedAspectId = '';
-    fillMemoryAspectEditor(emptyAspect());
+    const aspect = emptyAspect();
+    fillMemoryAspectEditor(aspect);
+    renderMemoryAspectSummary(aspect);
+    syncAuthority();
   });
   el('model-settings').addEventListener('change', (event) => {
     if (event.target.id === 'default-llm') {

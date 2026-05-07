@@ -55,36 +55,48 @@
         <section class="kb-editor-panel">
           <div class="kb-panel-header">
             <div class="stack compact">
-              <div class="eyebrow">Editor</div>
-              <h3>KU editor</h3>
+              <div class="eyebrow">Inspector</div>
+              <h3>KU workspace</h3>
               <div id="kb-permission-message" class="muted small"></div>
             </div>
           </div>
-          <div id="kb-details-body" class="stack compact"></div>
-          <form id="kb-editor" class="stack">
-            <div class="settings-form-grid">
+          <div class="tabs kb-editor-tabs">
+            <button class="secondary tab-button active" data-kb-tab="info" type="button">Info</button>
+            <button class="secondary tab-button" data-kb-tab="editor" type="button">Editor</button>
+            <button class="secondary tab-button" data-kb-tab="aspects" type="button">Aspect state</button>
+          </div>
+          <section id="kb-tab-info" class="tab-panel active stack">
+            <div id="kb-details-body" class="stack compact"></div>
+          </section>
+          <section id="kb-tab-editor" class="tab-panel stack">
+            <form id="kb-editor" class="stack">
+              <div class="settings-form-grid">
+                <label class="stack">
+                  <span class="small muted">Target scope</span>
+                  <select id="editor-scope">
+                    <option value="session">session</option>
+                    <option value="global">global</option>
+                  </select>
+                </label>
+                <label class="stack">
+                  <span class="small muted">File name</span>
+                  <input id="editor-file-name" placeholder="ku-guidance.sop">
+                </label>
+              </div>
               <label class="stack">
-                <span class="small muted">Target scope</span>
-                <select id="editor-scope">
-                  <option value="session">session</option>
-                  <option value="global">global</option>
-                </select>
+                <span class="small muted">SOP source</span>
+                <textarea id="editor-source"></textarea>
               </label>
-              <label class="stack">
-                <span class="small muted">File name</span>
-                <input id="editor-file-name" placeholder="ku-guidance.sop">
-              </label>
-            </div>
-            <label class="stack">
-              <span class="small muted">SOP source</span>
-              <textarea id="editor-source"></textarea>
-            </label>
-            <div class="muted small">Use session scope for personal overrides. Global scope requires admin authority.</div>
-            <div class="settings-inline-actions">
-              <button id="save-ku" type="submit">Save</button>
-              <button id="load-default-ku" class="secondary" type="button">Default</button>
-            </div>
-          </form>
+              <div class="muted small">Use session scope for personal overrides. Global scope requires admin authority.</div>
+              <div class="settings-inline-actions">
+                <button id="save-ku" type="submit">Save</button>
+                <button id="load-default-ku" class="secondary" type="button">Default</button>
+              </div>
+            </form>
+          </section>
+          <section id="kb-tab-aspects" class="tab-panel stack">
+            <div id="kb-aspect-state-body" class="stack compact"></div>
+          </section>
         </section>
       </div>
     </section>

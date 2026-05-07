@@ -554,12 +554,14 @@ function decorateKbCatalog(catalog, explainableMemoryStatus = null) {
         snapshot_version: explainableMemoryStatus?.snapshot_version ?? null,
         lexical_document_id: indexState.lexicalDocumentId,
         matched_aspects: (indexState.aspectSignals ?? []).map((signal) => signal.aspectId),
+        aspect_signals: indexState.aspectSignals ?? [],
       } : {
         indexed: false,
         indexed_at: null,
         snapshot_version: explainableMemoryStatus?.snapshot_version ?? null,
         lexical_document_id: null,
         matched_aspects: [],
+        aspect_signals: [],
       },
       flags: {
         active: winner.filePath === entry.filePath,
@@ -846,6 +848,7 @@ async function buildConfigView(runtime, policies, authStore, callerContext) {
       status: explainableMemory.status,
       approved_aspect_count: explainableMemory.approved_aspects?.length ?? 0,
       candidate_aspect_count: explainableMemory.candidate_aspects?.length ?? 0,
+      proposed_aspect_count: explainableMemory.proposed_aspects?.length ?? 0,
     },
     policies,
     auth: await authStore.getBootstrapStatus(),
@@ -1085,6 +1088,32 @@ export function createServer(options = {}) {
           summary: await runtime.getLlmCacheSummary(),
           items: entries.map(toCacheListItem),
         });
+        return;
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/cache/pending') {
+        if (!requireAdmin(response, callerContext)) {
+          return;
+        }
+        json(response, 200, await runtime.listPendingLlmCacheRequests({
+          sessionId: url.searchParams.get('session_id') || null,
+          query: url.searchParams.get('q') || '',
+          maxSessions: url.searchParams.get('max_sessions') || undefined,
+          maxRequestsPerSession: url.searchParams.get('max_requests_per_session') || undefined,
+        }));
+        return;
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/cache/pending/promote') {
+        if (!requireAdmin(response, callerContext)) {
+          return;
+        }
+        const body = await readJsonBody(request);
+        if (!body.session_id || !body.request_id) {
+          json(response, 400, { error: 'session_id_and_request_id_required' });
+          return;
+        }
+        json(response, 200, await runtime.promoteRequestCacheEntries(body.session_id, body.request_id));
         return;
       }
 
@@ -1496,6 +1525,20 @@ export function createServer(options = {}) {
         }
         const approved = await runtime.approveExplainableMemoryAspect(parts[4]);
         json(response, 200, { aspect: approved });
+        return;
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/kb/explainable-memory/aspects/scan') {
+        if (!requireAdmin(response, callerContext)) {
+          return;
+        }
+        const body = await readJsonBody(request);
+        json(response, 200, await runtime.scanExplainableMemoryAspects({
+          sessionId: body.session_id,
+          maxSessions: body.max_sessions,
+          maxRequestsPerSession: body.max_requests_per_session,
+          maxProposals: body.max_proposals,
+        }));
         return;
       }
 

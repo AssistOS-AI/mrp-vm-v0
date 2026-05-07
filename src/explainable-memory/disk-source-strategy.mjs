@@ -17,6 +17,13 @@ const DEFAULT_ASPECT_META = {
   query_terms: [],
 };
 
+function normalizeAspectStatus(value, fallback = 'candidate') {
+  if (value === 'approved' || value === 'candidate' || value === 'proposed') {
+    return value;
+  }
+  return fallback;
+}
+
 function firstRootId(entries) {
   return [...entries.keys()].find((key) => !key.includes(':')) ?? null;
 }
@@ -47,7 +54,10 @@ function parseAspectSource(filePath, sourceText) {
     ...DEFAULT_ASPECT_META,
     ...entries.get(`${aspectId}:meta`),
   };
-  meta.status = meta.status === 'approved' ? 'approved' : inferredStatus;
+  meta.status = normalizeAspectStatus(meta.status, inferredStatus);
+  if (inferredStatus === 'approved') {
+    meta.status = 'approved';
+  }
   meta.title = meta.title || aspectId;
   meta.query_terms = parseArrayValue(entries.get(`${aspectId}:query_terms`) ?? meta.query_terms);
   return {
@@ -80,7 +90,7 @@ function renderAspectEntries(input) {
   entries.set(`${aspectId}:meta`, {
     ...DEFAULT_ASPECT_META,
     ...input.meta,
-    status: input.meta?.status === 'approved' ? 'approved' : 'candidate',
+    status: normalizeAspectStatus(input.meta?.status, 'candidate'),
     title: input.meta?.title || aspectId,
     domains: parseArrayValue(input.meta?.domains),
     commands: parseArrayValue(input.meta?.commands),
@@ -130,6 +140,7 @@ export class DiskExplainableMemorySourceStrategy {
     ]);
     const approved = [];
     const candidates = [];
+    const proposed = [];
 
     for (const filePath of approvedFiles) {
       const sourceText = await readText(filePath, '');
@@ -137,18 +148,25 @@ export class DiskExplainableMemorySourceStrategy {
     }
     for (const filePath of candidateFiles) {
       const sourceText = await readText(filePath, '');
-      candidates.push(parseAspectSource(filePath, sourceText));
+      const parsed = parseAspectSource(filePath, sourceText);
+      if (parsed.meta.status === 'proposed') {
+        proposed.push(parsed);
+      } else {
+        candidates.push(parsed);
+      }
     }
 
     approved.sort((left, right) => left.aspectId.localeCompare(right.aspectId));
     candidates.sort((left, right) => left.aspectId.localeCompare(right.aspectId));
-    return { approved, candidates };
+    proposed.sort((left, right) => left.aspectId.localeCompare(right.aspectId));
+    return { approved, candidates, proposed };
   }
 
   async findAspect(aspectId) {
-    const { approved, candidates } = await this.listAspects();
+    const { approved, candidates, proposed } = await this.listAspects();
     return approved.find((entry) => entry.aspectId === aspectId)
       ?? candidates.find((entry) => entry.aspectId === aspectId)
+      ?? proposed.find((entry) => entry.aspectId === aspectId)
       ?? null;
   }
 
@@ -158,7 +176,7 @@ export class DiskExplainableMemorySourceStrategy {
       throw new Error('aspect_id is required.');
     }
     const existing = await this.findAspect(aspectId);
-    const status = input.meta?.status === 'approved' ? 'approved' : 'candidate';
+    const status = normalizeAspectStatus(input.meta?.status, 'candidate');
     const targetDir = status === 'approved' ? this.getApprovedAspectsDir() : this.getCandidateAspectsDir();
     const otherDir = status === 'approved' ? this.getCandidateAspectsDir() : this.getApprovedAspectsDir();
     const fileName = input.fileName || existing?.fileName || `${aspectId}.sop`;

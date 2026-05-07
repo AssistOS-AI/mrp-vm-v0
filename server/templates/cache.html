@@ -26,6 +26,10 @@
   <main class="page-shell page-shell--cache">
     <section class="cache-page stack">
       <div id="cache-summary" class="cache-summary-row"></div>
+      <div class="tabs">
+        <button id="cache-tab-shared" class="secondary tab-button active" data-cache-tab="shared" type="button">Shared cache</button>
+        <button id="cache-tab-pending" class="secondary tab-button" data-cache-tab="pending" type="button">Pending promotion</button>
+      </div>
       <div class="cache-filters">
         <input id="cache-search" placeholder="Search profile, instruction, response, request id, prompt asset...">
         <button id="cache-refresh" type="button">Refresh</button>
@@ -35,7 +39,7 @@
           <div class="kb-panel-header">
             <div class="stack compact">
               <div class="eyebrow">Cache</div>
-              <h3>Stored LLM calls</h3>
+              <h3 id="cache-list-title">Stored LLM calls</h3>
             </div>
             <div id="cache-filtered-count" class="muted small"></div>
           </div>

@@ -124,6 +124,95 @@ export class RuntimeHost {
     return this.createProbeExecutor().getLlmCacheSummary();
   }
 
+  async listPendingLlmCacheRequests(options = {}) {
+    const probe = this.createProbeExecutor();
+    let sessions = await probe.sessionManager.listSessions();
+    if (options.sessionId) {
+      sessions = sessions.filter((session) => session.session_id === options.sessionId);
+    }
+    sessions.sort((left, right) => {
+      const rightTime = Date.parse(right.updated_at ?? right.last_activity_at ?? right.created_at ?? 0);
+      const leftTime = Date.parse(left.updated_at ?? left.last_activity_at ?? left.created_at ?? 0);
+      return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
+    });
+
+    const query = String(options.query ?? '').trim().toLowerCase();
+    const maxSessions = Number.isFinite(Number(options.maxSessions)) ? Math.max(1, Math.floor(Number(options.maxSessions))) : 16;
+    const maxRequestsPerSession = Number.isFinite(Number(options.maxRequestsPerSession)) ? Math.max(1, Math.floor(Number(options.maxRequestsPerSession))) : 12;
+    const items = [];
+
+    for (const session of sessions.slice(0, maxSessions)) {
+      const summaries = await probe.sessionManager.readRequestSummaries(session.session_id);
+      summaries.sort((left, right) => {
+        const rightTime = Date.parse(right.created_at ?? 0);
+        const leftTime = Date.parse(left.created_at ?? 0);
+        return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
+      });
+      for (const summary of summaries.slice(0, maxRequestsPerSession)) {
+        const snapshot = await probe.sessionManager.loadRequestLlmCacheCandidates(session.session_id, summary.request_id);
+        if (!snapshot || !Array.isArray(snapshot.items) || snapshot.items.length === 0 || snapshot.promotion?.status === 'promoted') {
+          continue;
+        }
+        const outcome = await probe.sessionManager.loadRequestOutcome(session.session_id, summary.request_id);
+        const envelope = await probe.sessionManager.loadRequestEnvelope(session.session_id, summary.request_id);
+        const promotable = snapshot.items.filter((item) => item.source === 'provider' && item.response?.status === 'success');
+        const entry = {
+          session_id: session.session_id,
+          request_id: summary.request_id,
+          created_at: summary.created_at ?? envelope?.created_at ?? null,
+          updated_at: snapshot.updated_at ?? summary.created_at ?? null,
+          stop_reason: outcome?.stop_reason ?? snapshot.stop_reason ?? null,
+          request_text: envelope?.request_text ?? envelope?.requestText ?? summary.request_text ?? '',
+          response_preview: typeof outcome?.response === 'string' ? outcome.response : '',
+          promotion: snapshot.promotion ?? {
+            status: 'not_promoted',
+            promoted_at: null,
+            entry_ids: [],
+            promoted_count: 0,
+            skipped_count: 0,
+          },
+          candidate_count: snapshot.items.length,
+          provider_candidate_count: snapshot.items.filter((item) => item.source === 'provider').length,
+          promotable_count: promotable.length,
+          cache_hit_count: snapshot.items.filter((item) => item.source === 'cache').length,
+          profiles: [...new Set(snapshot.items.map((item) => item.profile).filter(Boolean))],
+          items: snapshot.items,
+          can_promote: (outcome?.stop_reason ?? snapshot.stop_reason) === 'completed' && promotable.length > 0,
+        };
+        if (query) {
+          const haystack = [
+            entry.session_id,
+            entry.request_id,
+            entry.request_text,
+            entry.response_preview,
+            ...entry.profiles,
+            ...entry.items.flatMap((item) => [item.instruction, item.context_package, item.response?.value]),
+          ].join(' ').toLowerCase();
+          if (!haystack.includes(query)) {
+            continue;
+          }
+        }
+        items.push(entry);
+      }
+    }
+
+    items.sort((left, right) => {
+      const rightTime = Date.parse(right.updated_at ?? right.created_at ?? 0);
+      const leftTime = Date.parse(left.updated_at ?? left.created_at ?? 0);
+      return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
+    });
+
+    return {
+      summary: {
+        pending_request_count: items.length,
+        promotable_request_count: items.filter((item) => item.can_promote).length,
+        pending_candidate_count: items.reduce((sum, item) => sum + Number(item.candidate_count ?? 0), 0),
+        promotable_candidate_count: items.reduce((sum, item) => sum + Number(item.promotable_count ?? 0), 0),
+      },
+      items,
+    };
+  }
+
   async inspectLlmCacheEntry(entryId) {
     return this.createProbeExecutor().inspectLlmCacheEntry(entryId);
   }
@@ -141,6 +230,10 @@ export class RuntimeHost {
 
   async listExplainableMemoryAspects() {
     return this.createProbeExecutor().listExplainableMemoryAspects();
+  }
+
+  async scanExplainableMemoryAspects(options = {}) {
+    return this.createProbeExecutor().scanExplainableMemoryAspects(options);
   }
 
   async upsertExplainableMemoryAspect(input) {

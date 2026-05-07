@@ -32,7 +32,7 @@ Executor caches must support eviction. When an executor leaves memory, the serve
 
 ### Admin boundary
 
-Admin operations such as session inspection, trace export, policy override, KU promotion, Explainable Memory aspect approval, Explainable Memory reindexing, or destructive cleanup must run under explicit admin capability profiles rather than under ordinary user request capabilities. The server layer must keep admin sessions and ordinary user sessions distinguishable in trace and policy handling.
+Admin operations such as session inspection, trace export, policy override, KU promotion, Explainable Memory aspect approval, Explainable Memory log scanning, Explainable Memory reindexing, pending-cache promotion across sessions, or destructive cleanup must run under explicit admin capability profiles rather than under ordinary user request capabilities. The server layer must keep admin sessions and ordinary user sessions distinguishable in trace and policy handling.
 
 At minimum, hosted sessions should persist `session_origin`, `auth_mode`, `effective_role`, and owner or key identity when applicable so audit, policy enforcement, and UI transparency do not depend on inferred state.
 
@@ -65,6 +65,10 @@ Response: Session inspection, trace export, cleanup, and policy override expose 
 Question #3: Why are aspect approval and KB reindexing classified as admin operations instead of ordinary KB editing?
 
 Response: Approved aspects and reindexed retrieval state change how future requests assemble context for many callers at once. That is broader than one session-local edit and therefore belongs on the governed admin side of the server boundary.
+
+Question #4: Why are cross-session pending-cache promotion and log-derived aspect scanning also treated as admin operations?
+
+Response: Both features inspect or mutate state derived from multiple sessions instead of from one caller's active request. That makes them repository- or deployment-level operational controls rather than session-local conveniences, so they belong behind the same governed admin boundary as other multi-session maintenance actions.
 ## Conclusion
 
 MRP-VM v0 may be embedded in servers and admin tools, but those surfaces must remain adapters around the SDK rather than substitutes for it.

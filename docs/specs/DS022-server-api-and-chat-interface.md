@@ -64,15 +64,18 @@ The server must expose a native programmatic API for full MRP-VM functionality. 
 | `GET` | `/api/sessions/:id/requests/:rid/trace` | Get trace events for this request, optionally filtered by event type. |
 | `GET` | `/api/sessions/:id/requests/:rid/cache` | Inspect request-local LLM cache candidates and promotion status. |
 | `POST` | `/api/sessions/:id/requests/:rid/cache/promote` | Promote the completed request's successful LLM calls into the shared cache (privileged control). |
+| `GET` | `/api/cache/pending` | List recent unpromoted request-local LLM cache captures across visible sessions. |
+| `POST` | `/api/cache/pending/promote` | Promote one pending request-local capture into the shared cache by session and request id (privileged control). |
 | `GET` | `/api/sessions/:id/requests/:rid/stream` | SSE or WebSocket stream of live trace events for the active request. |
 | `GET` | `/api/sessions/:id/kb` | List session-scoped KUs. |
 | `POST` | `/api/sessions/:id/kb` | Upsert a session KU (create, fork, or update). |
 | `POST` | `/api/kb/promote` | Promote a session KU to global scope (admin only). |
 | `GET` | `/api/kb/global` | List global KUs. |
-| `GET` | `/api/kb/catalog` | List merged KB items together with override flags and index-state summaries. |
+| `GET` | `/api/kb/catalog` | List merged KB items together with override flags, index-state summaries, and KU-side aspect-state details. |
 | `GET` | `/api/kb/explainable-memory` | Inspect Explainable Memory mode, snapshot status, and reindex metadata. |
-| `GET` | `/api/kb/explainable-memory/aspects` | List approved and candidate aspects. |
+| `GET` | `/api/kb/explainable-memory/aspects` | List approved, candidate, and proposed aspects. |
 | `POST` | `/api/kb/explainable-memory/aspects` | Create a candidate aspect or update an existing aspect definition. |
+| `POST` | `/api/kb/explainable-memory/aspects/scan` | Derive proposed aspects from recent bounded runtime logs (admin only). |
 | `POST` | `/api/kb/explainable-memory/aspects/:id/approve` | Approve an aspect and mark reanalysis required (admin only). |
 | `POST` | `/api/kb/explainable-memory/reindex` | Rebuild Explainable Memory derived state for the requested scope (admin only). |
 | `GET` | `/api/cache` | List shared LLM cache entries and summary state. |
@@ -169,26 +172,31 @@ The KB Browser must be a dedicated inspection and editing surface for default, g
 3. compact summary indicators for total, default, global, session, prompt-asset, and overridden counts,
 4. a closed-by-default multi-level tree rooted at `All KUs`,
 5. ordered scope branches for `Default KUs`, `Global KUs`, and `Session KUs`,
-6. a right-hand editor panel rather than a below-tree editor,
-7. action buttons such as `Save` and `Default` placed below the editor surface,
-8. direct editing and creation of session KUs,
-9. direct editing and creation of global KUs under admin authority.
+6. a right-hand tabbed panel rather than a below-tree editor,
+7. tabs named at least `Info`, `Editor`, and `Aspect State`,
+8. action buttons such as `Save` and `Default` placed below the editor surface,
+9. KU-side aspect-state inspection that shows aspect definitions, placement reasons, and stored evidence snippets when available,
+10. direct editing and creation of session KUs,
+11. direct editing and creation of global KUs under admin authority.
 
 ### Cache page
 
 The Cache page must be a dedicated inspection and management surface for the DS032 shared LLM cache. It must support:
 
-1. a compact summary row for entry count, hit count, and promoted-request count,
-2. search across profile, request text, response text, prompt assets, and source-request ids,
-3. a left searchable list of cache entries,
-4. a right detail view showing normalized request text, bounded context, response payload, prompt assets, and source-request history,
-5. deletion of shared cache entries through a privileged control rather than through hidden background mutation.
+1. a compact summary row for both promoted shared-cache state and pending request-local capture state,
+2. a `Shared cache` tab for promoted entries,
+3. a `Pending promotion` tab for recent unpromoted request-local captures,
+4. search across profile, request text, response text, prompt assets, and source-request ids,
+5. a left searchable list of entries or pending requests in the active tab,
+6. a right detail view showing normalized request text, bounded context, response payload, prompt assets, and source-request history,
+7. explicit promotion controls from the pending tab without requiring the operator to return to the originating chat transcript,
+8. deletion of shared cache entries through a privileged control rather than through hidden background mutation.
 
 ### Settings page
 
 Settings must remain separate from chat. The page must expose:
 
-1. tabbed sections for `Models`, `Interpreters`, and `Authentication`,
+1. tabbed sections for `Models`, `Interpreters`, `Memory`, and `Authentication`,
 2. a wide layout that uses the available horizontal space instead of a narrow centered column,
 3. default-model selection through select controls that show discovered model tags inline in the option labels,
 4. no separate runtime-overview tab and no redundant candidate-model gallery,
@@ -199,7 +207,10 @@ Settings must remain separate from chat. The page must expose:
 9. key creation performed through a popup flow rather than an inline creation form,
 10. no dedicated "Active API key" card, no full active-token rendering inside the page, and no header display of active key identity strings,
 11. clear permission messaging when controls are unavailable because the current authority context is not admin,
-12. a compact operator-facing toggle that enables or disables managed provider fallback from stronger tiers to lower-cost tiers after provider failures.
+12. a compact operator-facing toggle that enables or disables managed provider fallback from stronger tiers to lower-cost tiers after provider failures,
+13. on the `Memory` tab, a left-hand aspect list and a right-hand detail/editor panel,
+14. distinct list groupings or badges for approved, candidate, and proposed log-derived aspects,
+15. a `Scan logs` action that derives bounded proposed aspects under admin authority.
 
 ### Trace-to-UI mapping
 

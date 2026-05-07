@@ -35,6 +35,7 @@ Explainable Memory introduces these governed objects:
 | Knowledge Unit | The authoritative SOP-backed KU already defined by DS011. |
 | Approved aspect | An active relevance axis that ordinary retrieval may use. |
 | Candidate aspect | An editable aspect definition that is not yet active for ordinary retrieval. |
+| Proposed aspect | A scan-derived editable aspect definition inferred from bounded runtime logs and still inactive for ordinary retrieval. |
 | KU memory record | Derived state for one KU including summary, aspect positions, lexical text, and index metadata. |
 | Inverse aspect view | Derived mapping from approved aspects to the KUs positioned under them. |
 | Memory snapshot | One immutable version of the Explainable Memory state used for a request. |
@@ -47,12 +48,15 @@ The minimum Explainable Memory lifecycle surface is:
 
 1. `load` to read previously persisted derived state without scanning KUs or calling an LLM,
 2. `save` to persist the current derived state,
-3. `listAspects` to inspect approved and candidate aspects,
+3. `listAspects` to inspect approved, candidate, and proposed aspects,
 4. `reanalyse` to synchronize KU memory with the current authoritative KB source,
-5. `approveAspect` to move a candidate aspect into the approved set and trigger reanalysis for that coordinate,
-6. `queryRelevant` to produce the retrieval result used by ordinary `kb` work.
+5. `scanLogsForProposals` to derive bounded proposed aspects from recent runtime logs,
+6. `approveAspect` to move a candidate or proposed aspect into the approved set and trigger reanalysis for that coordinate,
+7. `queryRelevant` to produce the retrieval result used by ordinary `kb` work.
 
 `reanalyse` must be explicit. Boot must load the last saved derived state quickly. Reanalysis is what detects new, changed, or removed KUs and refreshes their aspect positions and lexical documents.
+
+Log scanning must stay bounded and inspectable. The first repository implementation may use only symbolic heuristics over recent request envelopes, trace events, responses, and request-local LLM cache capture. It must not silently call a provider-backed LLM unless a later DS extension introduces an explicit policy gate for that maintenance path.
 
 ### Ordinary retrieval contract
 
@@ -77,6 +81,15 @@ Each selected KU must carry:
 9. score or rank metadata sufficient for audit.
 
 Ordinary `queryRelevant` must remain symbolic and inspectable. It must not hide provider-backed dense retrieval, opaque reranking, or hidden LLM selection behind the Explainable Memory name. LLM assistance is allowed only for explicitly governed maintenance paths when repository policy enables it.
+
+KU memory records and server-facing catalog inspection must also preserve enough aspect-state detail for operator review. At minimum, a KU's aspect-state surface must expose:
+
+1. the matched aspect id,
+2. the matched aspect title,
+3. the matched aspect definition or root value,
+4. the symbolic reasons that produced the placement,
+5. any KU-side evidence snippets captured during reanalysis,
+6. the stored score for that aspect coordinate.
 
 ### Mode selection and defaults
 
@@ -108,14 +121,25 @@ Reindex status must remain inspectable and must record at least:
 5. last successful snapshot version,
 6. last error message when a rebuild failed.
 
+When proposed aspects are inferred from log scanning, the stored proposal must also preserve bounded provenance such as:
+
+1. whether it was scan-derived,
+2. the recent request count that contributed to the proposal,
+3. the recent commands or interpreters that co-occurred with it,
+4. the scan timestamp.
+
 ### Server and UI administration
 
 The server and UI must expose an operator-facing administration surface for Explainable Memory through the existing hosted routes. The minimum contract is:
 
 1. Settings exposes a `Memory` tab for KB mode selection, aspect inspection, aspect editing, aspect approval, and reindex control.
-2. KB Browser exposes index-state visibility for the loaded catalog and for the selected KU.
-3. The native API exposes JSON endpoints for Explainable Memory status, aspect listing and editing, aspect approval, and reindex requests.
-4. Non-admin callers may inspect only the surfaces allowed by current server policy and may not approve aspects, switch global mode, or trigger global reindexing.
+2. The `Memory` tab uses a master-detail layout with a left aspect list and a right detail/editor panel.
+3. The left aspect list keeps approved, candidate, and proposed aspects visibly distinguishable.
+4. The `Memory` tab exposes a bounded `Scan logs` action that derives proposed aspects from recent runtime logs.
+5. KB Browser exposes index-state visibility for the loaded catalog and for the selected KU, including KU-side aspect-state detail.
+6. The native API exposes JSON endpoints for Explainable Memory status, aspect listing and editing, log-scan proposal generation, aspect approval, and reindex requests.
+7. KB Browser inspection must surface not only which aspects matched a KU but also the stored aspect definition text and KU-side evidence captured for that aspect.
+8. Non-admin callers may inspect only the surfaces allowed by current server policy and may not approve aspects, trigger log scanning, switch global mode, or trigger global reindexing.
 
 The admin surface must allow editing the aspect definition, inclusion criteria, exclusion criteria, interpretation protocol text, and role vocabulary surfaces without mutating derived state directly. The authoritative edit target is the SOP aspect asset, followed by explicit reindexing.
 
@@ -140,6 +164,14 @@ Response: Without request-scoped snapshot versions, reindexing or aspect edits c
 Question #5: Why does the admin surface edit SOP aspect assets instead of editing the derived index state directly?
 
 Response: The derived state is rebuildable and secondary. Editing it directly would blur the source-of-truth boundary and make later reindexing overwrite operator intent. SOP aspect assets keep the governed definition explicit and revision-aware.
+
+Question #6: Why does DS033 introduce `proposed` instead of treating every scan-derived suggestion as an ordinary candidate?
+
+Response: Scan-derived suggestions are noisier and less intentional than manually authored candidates. Giving them a distinct `proposed` status lets operators triage them separately, refine them before approval, and distinguish deliberate candidate drafting from heuristic suggestion output.
+
+Question #7: Why does DS033 require KU-side aspect evidence instead of showing only aspect ids?
+
+Response: Aspect ids alone explain classification too weakly for operators who are reviewing retrieval quality. Showing the aspect definition and KU-side evidence keeps Explainable Memory explainable at the point where KB Browser is used to inspect concrete KUs rather than only the aspect catalog.
 
 ## Conclusion
 

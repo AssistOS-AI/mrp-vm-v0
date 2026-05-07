@@ -29,6 +29,7 @@ import { executeDocumentScalePlanner } from '../interpreters/document-scale-plan
 import { DiskExplainableMemorySourceStrategy } from '../explainable-memory/disk-source-strategy.mjs';
 import { DiskExplainableMemoryPersistenceStrategy } from '../explainable-memory/disk-persistence-strategy.mjs';
 import { ExplainableMemory } from '../explainable-memory/explainable-memory.mjs';
+import { ExplainableMemoryLogProposalScanner } from '../explainable-memory/log-proposal-scanner.mjs';
 
 function cloneBudgets(budgets = {}) {
   return {
@@ -281,6 +282,11 @@ export class MRPVM {
       persistenceStrategy: this.explainableMemoryPersistence,
     });
     this.traceStore = new TraceStore(rootDir);
+    this.explainableMemoryLogScanner = new ExplainableMemoryLogProposalScanner({
+      sessionManager: this.sessionManager,
+      traceStore: this.traceStore,
+      sourceStrategy: this.explainableMemorySource,
+    });
     this.analyticStore = new AnalyticStore(rootDir);
     this.llmCacheStore = new LlmCacheStore(this.runtimeConfig, this.tools);
     const llmAdapter = options.llmAdapter
@@ -401,6 +407,10 @@ export class MRPVM {
 
   async listExplainableMemoryAspects() {
     return this.explainableMemory.listAspects();
+  }
+
+  async scanExplainableMemoryAspects(options = {}) {
+    return this.explainableMemoryLogScanner.scanAndPersist(options);
   }
 
   async upsertExplainableMemoryAspect(input) {

@@ -90,6 +90,7 @@ export class DiskExplainableMemoryPersistenceStrategy {
       indexed_ku_count: snapshot.counts?.indexed_ku_count ?? 0,
       approved_aspect_count: snapshot.counts?.approved_aspect_count ?? 0,
       candidate_aspect_count: snapshot.counts?.candidate_aspect_count ?? 0,
+      proposed_aspect_count: snapshot.counts?.proposed_aspect_count ?? 0,
     };
     await ensureDir(this.getBaseDir(sessionId));
     await writeJson(this.getStatusPath(sessionId), next);

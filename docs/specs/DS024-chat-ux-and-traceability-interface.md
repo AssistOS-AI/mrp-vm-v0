@@ -123,10 +123,12 @@ Within those scope branches, the UI may add deeper levels such as KU type groups
 
 The right side contains:
 
-1. inspector details for the selected KU,
-2. the editable SOP source,
-3. action buttons including `Save` and `Default` placed below the editor body,
-4. visible Explainable Memory index state for the selected KU and for the currently loaded catalog snapshot.
+1. tabs named `Info`, `Editor`, and `Aspect State`,
+2. on `Info`, inspector details for the selected KU together with Explainable Memory index-state summary,
+3. on `Editor`, the editable SOP source,
+4. action buttons including `Save` and `Default` placed below the editor body,
+5. on `Aspect State`, the selected KU's aspect placements including the matched aspect title, stored definition or root value, score, symbolic reasons, and stored KU-side evidence text when available,
+6. visible Explainable Memory index state for the selected KU and for the currently loaded catalog snapshot.
 
 The editor must remain to the right of the tree on wide screens rather than collapsing below it unnecessarily.
 On wide screens the tree rail should use a conservative default width rather than consuming roughly one third of the screen, and the UI may expose a drag handle so operators can resize that rail when deeper nesting needs more room.
@@ -136,8 +138,9 @@ On wide screens the tree rail should use a conservative default width rather tha
 The Cache page uses:
 
 1. a summary row,
-2. a filter row,
-3. a two-column main area with cache-entry list on the left and cache-entry detail on the right.
+2. one local tab bar with `Shared cache` and `Pending promotion`,
+3. a filter row,
+4. a two-column main area with list on the left and detail on the right.
 
 The detail view must expose:
 
@@ -147,6 +150,13 @@ The detail view must expose:
 4. prompt-asset details,
 5. source-request history,
 6. a delete action that is visibly disabled when the current authority context cannot mutate the shared cache.
+
+The `Pending promotion` tab must also expose:
+
+1. recent request-local capture groups with session and request identifiers,
+2. promotion status and promotable candidate counts,
+3. a promote action for the selected pending request when authority permits it,
+4. empty-state copy that explains the difference between pending capture and promoted shared cache.
 
 ### Settings page
 
@@ -180,11 +190,13 @@ The memory tab is the operator-facing Explainable Memory control surface. It mus
 
 1. expose the active KB retrieval mode with `explainable_memory` selected by default and `naive_symbolic` available as an explicit fallback,
 2. show the current Explainable Memory status summary, including last reindex outcome, snapshot or index version, indexed KU counts, and candidate-aspect counts,
-3. list approved and candidate aspects in a compact admin-friendly table or list,
-4. allow editing the aspect definition, inclusion criteria, exclusion criteria, interpretation protocol text, and role vocabulary surfaces,
-5. allow approving a candidate aspect under admin authority,
-6. expose a reindex action that rebuilds the Explainable Memory state after aspect or KU changes,
-7. show clear permission messaging when the current authority context cannot mutate global memory state.
+3. use a master-detail layout with the aspect list on the left and the selected aspect details/editor on the right,
+4. list approved, candidate, and proposed aspects with visibly distinct grouping or badges,
+5. allow editing the aspect definition, inclusion criteria, exclusion criteria, interpretation protocol text, and role vocabulary surfaces,
+6. allow approving a candidate or proposed aspect under admin authority,
+7. expose a bounded `Scan logs` action that derives proposed aspects from recent runtime logs,
+8. expose a reindex action that rebuilds the Explainable Memory state after aspect or KU changes,
+9. show clear permission messaging when the current authority context cannot mutate global memory state.
 
 #### Authentication tab
 

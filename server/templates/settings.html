@@ -125,13 +125,14 @@
                 <input id="memory-indexed-count" readonly>
               </label>
               <label class="stack">
-                <span class="small muted">Approved / candidate aspects</span>
+                <span class="small muted">Approved / candidate / proposed</span>
                 <input id="memory-aspect-counts" readonly>
               </label>
             </div>
             <div id="memory-status-strip" class="row wrap"></div>
             <div class="settings-inline-actions">
               <button id="reindex-memory" type="button">Reindex KB</button>
+              <button id="scan-memory-aspects" class="secondary" type="button">Scan logs</button>
             </div>
           </section>
         </form>
@@ -140,115 +141,138 @@
           <div class="between">
             <div class="stack compact">
               <div class="eyebrow">Aspects</div>
-              <h3>Approved and candidate aspects</h3>
-            </div>
-            <button id="new-memory-aspect" class="secondary" type="button">New aspect</button>
-          </div>
-          <section class="inset-card stack">
-            <div id="memory-aspect-list" class="stack"></div>
-          </section>
-        </section>
-
-        <form id="memory-aspect-editor" class="settings-section stack">
-          <div class="between">
-            <div class="stack compact">
-              <div class="eyebrow">Editor</div>
-              <h3>Aspect editor</h3>
-              <div id="memory-permission-message" class="muted small"></div>
+              <h3>Aspect administration</h3>
             </div>
             <div class="settings-inline-actions">
-              <button id="save-memory-aspect" type="submit">Save aspect</button>
-              <button id="approve-memory-aspect" class="secondary" type="button">Approve aspect</button>
+              <button id="new-memory-aspect" class="secondary" type="button">New aspect</button>
             </div>
           </div>
-          <section class="inset-card stack">
-            <div class="settings-form-grid">
-              <label class="stack">
-                <span class="small muted">Aspect id</span>
-                <input id="memory-aspect-id" placeholder="aspect_execution_guidance">
-              </label>
-              <label class="stack">
-                <span class="small muted">File name</span>
-                <input id="memory-aspect-file-name" placeholder="aspect_execution_guidance.sop">
-              </label>
-              <label class="stack">
-                <span class="small muted">Title</span>
-                <input id="memory-aspect-title" placeholder="Execution guidance">
-              </label>
-              <label class="stack">
-                <span class="small muted">Aspect type</span>
-                <select id="memory-aspect-type">
-                  <option value="ontological">ontological</option>
-                  <option value="epistemological">epistemological</option>
-                  <option value="axiological">axiological</option>
-                  <option value="operational">operational</option>
-                  <option value="bias_oriented">bias_oriented</option>
-                </select>
-              </label>
-              <label class="stack">
-                <span class="small muted">Status</span>
-                <select id="memory-aspect-status">
-                  <option value="candidate">candidate</option>
-                  <option value="approved">approved</option>
-                </select>
-              </label>
-              <label class="stack">
-                <span class="small muted">Priority</span>
-                <input id="memory-aspect-priority" type="number" value="0">
-              </label>
+          <div class="memory-management-shell">
+            <section class="inset-card stack memory-aspect-list-panel">
+              <div class="between">
+                <div class="stack compact">
+                  <div class="eyebrow">Catalog</div>
+                  <h4>Approved, candidate, and proposed aspects</h4>
+                </div>
+                <div id="memory-aspect-count-summary" class="muted small"></div>
+              </div>
+              <div id="memory-aspect-list" class="stack"></div>
+            </section>
+            <div class="memory-aspect-detail-panel stack">
+              <section class="inset-card stack">
+                <div class="between">
+                  <div class="stack compact">
+                    <div class="eyebrow">Selection</div>
+                    <h4>Aspect details</h4>
+                    <div id="memory-permission-message" class="muted small"></div>
+                  </div>
+                </div>
+                <div id="memory-aspect-summary" class="stack compact"></div>
+              </section>
+
+              <form id="memory-aspect-editor" class="stack">
+                <div class="between">
+                  <div class="stack compact">
+                    <div class="eyebrow">Editor</div>
+                    <h4>Aspect editor</h4>
+                  </div>
+                  <div class="settings-inline-actions">
+                    <button id="save-memory-aspect" type="submit">Save aspect</button>
+                    <button id="approve-memory-aspect" class="secondary" type="button">Approve aspect</button>
+                  </div>
+                </div>
+                <section class="inset-card stack">
+                  <div class="settings-form-grid">
+                    <label class="stack">
+                      <span class="small muted">Aspect id</span>
+                      <input id="memory-aspect-id" placeholder="aspect_execution_guidance">
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">File name</span>
+                      <input id="memory-aspect-file-name" placeholder="aspect_execution_guidance.sop">
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Title</span>
+                      <input id="memory-aspect-title" placeholder="Execution guidance">
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Aspect type</span>
+                      <select id="memory-aspect-type">
+                        <option value="ontological">ontological</option>
+                        <option value="epistemological">epistemological</option>
+                        <option value="axiological">axiological</option>
+                        <option value="operational">operational</option>
+                        <option value="bias_oriented">bias_oriented</option>
+                      </select>
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Status</span>
+                      <select id="memory-aspect-status">
+                        <option value="proposed">proposed</option>
+                        <option value="candidate">candidate</option>
+                        <option value="approved">approved</option>
+                      </select>
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Priority</span>
+                      <input id="memory-aspect-priority" type="number" value="0">
+                    </label>
+                  </div>
+                  <div class="settings-form-grid">
+                    <label class="stack">
+                      <span class="small muted">Summary</span>
+                      <input id="memory-aspect-summary-input">
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Domains (comma-separated)</span>
+                      <input id="memory-aspect-domains">
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Commands (comma-separated)</span>
+                      <input id="memory-aspect-commands">
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Interpreters (comma-separated)</span>
+                      <input id="memory-aspect-interpreters">
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Tags (comma-separated)</span>
+                      <input id="memory-aspect-tags">
+                    </label>
+                    <label class="stack">
+                      <span class="small muted">Query terms (comma-separated)</span>
+                      <input id="memory-aspect-query-terms">
+                    </label>
+                  </div>
+                  <label class="stack">
+                    <span class="small muted">Root value</span>
+                    <textarea id="memory-aspect-root"></textarea>
+                  </label>
+                  <label class="stack">
+                    <span class="small muted">Definition</span>
+                    <textarea id="memory-aspect-definition"></textarea>
+                  </label>
+                  <label class="stack">
+                    <span class="small muted">Inclusion criteria</span>
+                    <textarea id="memory-aspect-inclusion"></textarea>
+                  </label>
+                  <label class="stack">
+                    <span class="small muted">Exclusion criteria</span>
+                    <textarea id="memory-aspect-exclusion"></textarea>
+                  </label>
+                  <label class="stack">
+                    <span class="small muted">Interpretation protocol</span>
+                    <textarea id="memory-aspect-protocol"></textarea>
+                  </label>
+                  <label class="stack">
+                    <span class="small muted">Role vocabulary (comma-separated)</span>
+                    <input id="memory-aspect-role-vocabulary">
+                  </label>
+                </section>
+              </form>
             </div>
-            <div class="settings-form-grid">
-              <label class="stack">
-                <span class="small muted">Summary</span>
-                <input id="memory-aspect-summary">
-              </label>
-              <label class="stack">
-                <span class="small muted">Domains (comma-separated)</span>
-                <input id="memory-aspect-domains">
-              </label>
-              <label class="stack">
-                <span class="small muted">Commands (comma-separated)</span>
-                <input id="memory-aspect-commands">
-              </label>
-              <label class="stack">
-                <span class="small muted">Interpreters (comma-separated)</span>
-                <input id="memory-aspect-interpreters">
-              </label>
-              <label class="stack">
-                <span class="small muted">Tags (comma-separated)</span>
-                <input id="memory-aspect-tags">
-              </label>
-              <label class="stack">
-                <span class="small muted">Query terms (comma-separated)</span>
-                <input id="memory-aspect-query-terms">
-              </label>
-            </div>
-            <label class="stack">
-              <span class="small muted">Root value</span>
-              <textarea id="memory-aspect-root"></textarea>
-            </label>
-            <label class="stack">
-              <span class="small muted">Definition</span>
-              <textarea id="memory-aspect-definition"></textarea>
-            </label>
-            <label class="stack">
-              <span class="small muted">Inclusion criteria</span>
-              <textarea id="memory-aspect-inclusion"></textarea>
-            </label>
-            <label class="stack">
-              <span class="small muted">Exclusion criteria</span>
-              <textarea id="memory-aspect-exclusion"></textarea>
-            </label>
-            <label class="stack">
-              <span class="small muted">Interpretation protocol</span>
-              <textarea id="memory-aspect-protocol"></textarea>
-            </label>
-            <label class="stack">
-              <span class="small muted">Role vocabulary (comma-separated)</span>
-              <input id="memory-aspect-role-vocabulary">
-            </label>
-          </section>
-        </form>
+          </div>
+        </section>
       </section>
 
       <section id="settings-auth-tab" class="tab-panel stack">

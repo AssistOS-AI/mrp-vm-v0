@@ -44,14 +44,70 @@ function entryTokens(entry) {
   ].join(' '));
 }
 
+function excerptForToken(text, token) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!value) {
+    return '';
+  }
+  const lower = value.toLowerCase();
+  const index = lower.indexOf(token.toLowerCase());
+  if (index < 0) {
+    return value.length <= 180 ? value : `${value.slice(0, 177)}...`;
+  }
+  const start = Math.max(0, index - 60);
+  const end = Math.min(value.length, index + token.length + 60);
+  const snippet = value.slice(start, end).trim();
+  const prefix = start > 0 ? '...' : '';
+  const suffix = end < value.length ? '...' : '';
+  return `${prefix}${snippet}${suffix}`;
+}
+
+function collectAspectEvidence(aspect, entry, matchedTokens = []) {
+  const interestingTokens = [...new Set((matchedTokens ?? []).filter((token) => token.length >= 4))];
+  if (interestingTokens.length === 0) {
+    return [];
+  }
+  const evidence = [];
+  const candidates = [
+    { source: 'title', text: entry.meta?.title ?? '' },
+    { source: 'summary', text: entry.meta?.summary ?? '' },
+    { source: 'content', text: entry.content ?? '' },
+    ...((entry.helpers ?? []).map((helper) => ({
+      source: helper.key,
+      text: canonicalText(helper.value),
+    }))),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate.text) {
+      continue;
+    }
+    const localMatches = interestingTokens.filter((token) => candidate.text.toLowerCase().includes(token.toLowerCase()));
+    if (localMatches.length === 0) {
+      continue;
+    }
+    evidence.push({
+      source: candidate.source,
+      matched_tokens: localMatches.slice(0, 6),
+      excerpt: excerptForToken(candidate.text, localMatches[0]),
+      aspect_title: aspect.meta?.title ?? aspect.aspectId,
+    });
+    if (evidence.length >= 4) {
+      break;
+    }
+  }
+  return evidence;
+}
+
 function scoreAspectForEntry(aspect, entry) {
   const tokens = new Set(entryTokens(entry));
   const aTokens = aspectTokens(aspect);
   let score = 0;
   const reasons = [];
+  const matchedTokens = [];
   for (const token of aTokens) {
     if (tokens.has(token)) {
       score += 2;
+      matchedTokens.push(token);
     }
   }
   if (score > 0) {
@@ -83,6 +139,8 @@ function scoreAspectForEntry(aspect, entry) {
   return {
     score,
     reasons,
+    matchedTokens: uniqueStrings(matchedTokens),
+    evidence: collectAspectEvidence(aspect, entry, matchedTokens),
   };
 }
 
@@ -166,7 +224,7 @@ function versionDigest(catalog, aspects, sessionId = null) {
       status: entry.meta?.status ?? 'active',
       contentHash: hashText(entry.content),
     })),
-    aspects: [...aspects.approved, ...aspects.candidates].map((aspect) => ({
+    aspects: [...aspects.approved, ...aspects.candidates, ...(aspects.proposed ?? [])].map((aspect) => ({
       aspectId: aspect.aspectId,
       status: aspect.meta?.status,
       rev: aspect.meta?.rev ?? 0,
@@ -272,8 +330,13 @@ export class ExplainableMemory {
           return {
             aspectId: aspect.aspectId,
             aspectType: aspect.meta?.aspect_type ?? 'operational',
+            title: aspect.meta?.title ?? aspect.aspectId,
+            rootValue: aspect.rootValue ?? '',
+            definition: aspect.definition ?? '',
             score: signal.score,
             reasons: signal.reasons,
+            matchedTokens: signal.matchedTokens,
+            evidence: signal.evidence,
           };
         }).filter((signal) => signal.score > 0);
         return {
@@ -305,10 +368,12 @@ export class ExplainableMemory {
           indexed_ku_count: kuRecords.length,
           approved_aspect_count: aspects.approved.length,
           candidate_aspect_count: aspects.candidates.length,
+          proposed_aspect_count: aspects.proposed?.length ?? 0,
         },
         approvedAspects: aspects.approved.map((aspect) => ({
           aspectId: aspect.aspectId,
           meta: aspect.meta,
+          rootValue: aspect.rootValue,
           definition: aspect.definition,
           inclusionCriteria: aspect.inclusionCriteria,
           exclusionCriteria: aspect.exclusionCriteria,
@@ -322,6 +387,21 @@ export class ExplainableMemory {
         candidateAspects: aspects.candidates.map((aspect) => ({
           aspectId: aspect.aspectId,
           meta: aspect.meta,
+          rootValue: aspect.rootValue,
+          definition: aspect.definition,
+          inclusionCriteria: aspect.inclusionCriteria,
+          exclusionCriteria: aspect.exclusionCriteria,
+          protocol: aspect.protocol,
+          roleVocabulary: aspect.roleVocabulary,
+          queryTerms: aspect.queryTerms,
+          fileName: aspect.fileName,
+          filePath: aspect.filePath,
+          sourceText: aspect.sourceText,
+        })),
+        proposedAspects: (aspects.proposed ?? []).map((aspect) => ({
+          aspectId: aspect.aspectId,
+          meta: aspect.meta,
+          rootValue: aspect.rootValue,
           definition: aspect.definition,
           inclusionCriteria: aspect.inclusionCriteria,
           exclusionCriteria: aspect.exclusionCriteria,
@@ -360,6 +440,7 @@ export class ExplainableMemory {
       status,
       approved_aspects: snapshot.approvedAspects,
       candidate_aspects: snapshot.candidateAspects,
+      proposed_aspects: snapshot.proposedAspects ?? [],
       ku_records: snapshot.kuRecords,
     };
   }
