@@ -100,11 +100,28 @@ test('server exposes native session and request APIs plus /chat', async () => {
     assert.equal(config.default_llm, 'write');
     assert.equal(config.llm_adapter, 'fake');
     assert.equal(config.llm_fallbacks.enabled, false);
+    assert.equal(config.kb_mode, 'explainable_memory');
+    assert.equal(config.explainable_memory.mode, 'explainable_memory');
     assert.equal(config.interpreter_mappings.plannerLLM, 'plan');
     assert.ok(config.model_routing_targets.some((entry) => entry.name === 'logicGeneratorLLM'));
     assert.ok(config.model_routing_targets.some((entry) => entry.name === 'formatterLLM'));
     assert.ok(config.interpreters.some((entry) => entry.name === 'logic-eval' && entry.component_type === 'Internal predefined command'));
     assert.ok(config.interpreters.some((entry) => entry.name === 'planning' && entry.disableable === false));
+
+    const explainableMemory = await fetch(`${baseUrl}/api/kb/explainable-memory`).then((response) => response.json());
+    assert.equal(explainableMemory.mode, 'explainable_memory');
+    assert.ok(explainableMemory.counts.approved_aspect_count >= 1);
+
+    const explainableAspects = await fetch(`${baseUrl}/api/kb/explainable-memory/aspects`).then((response) => response.json());
+    assert.ok(explainableAspects.approved.length >= 1);
+
+    const kbCatalog = await fetch(`${baseUrl}/api/kb/catalog?session_id=${session.session_id}`, {
+      headers: { 'x-session-id': session.session_id },
+    }).then((response) => response.json());
+    const indexedSessionNote = kbCatalog.items.find((item) => item.ku_id === 'ku_session_note');
+    assert.equal(kbCatalog.explainable_memory.mode, 'explainable_memory');
+    assert.equal(indexedSessionNote.index_state.indexed, true);
+    assert.equal(typeof indexedSessionNote.index_state.snapshot_version, 'string');
 
     const updatedConfig = await fetch(`${baseUrl}/api/config`, {
       method: 'PUT',
@@ -123,10 +140,12 @@ test('server exposes native session and request APIs plus /chat', async () => {
           logicGeneratorLLM: 'deep',
           formatterLLM: 'write',
         },
+        kb_mode: 'naive_symbolic',
       }),
     }).then((response) => response.json());
     assert.equal(updatedConfig.default_llm, 'deep');
     assert.equal(updatedConfig.llm_fallbacks.enabled, true);
+    assert.equal(updatedConfig.kb_mode, 'naive_symbolic');
     assert.equal(updatedConfig.interpreter_mappings.plannerLLM, 'deep');
     assert.equal(updatedConfig.profile_bindings.writerLLM.model, 'fast');
     assert.equal(updatedConfig.profile_bindings.logicGeneratorLLM.model, 'deep');
@@ -168,6 +187,8 @@ test('server exposes native session and request APIs plus /chat', async () => {
     assert.match(chatPage, /Traceability/);
     assert.match(chatPage, /Cache/);
     assert.match(chatPage, /KB Browser/);
+    const settingsPage = await fetch(`${baseUrl}/settings`).then((response) => response.text());
+    assert.match(settingsPage, /Explainable Memory/);
   } finally {
     server.close();
     await once(server, 'close');

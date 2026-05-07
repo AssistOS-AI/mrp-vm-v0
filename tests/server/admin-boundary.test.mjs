@@ -66,6 +66,32 @@ test('admin-only server endpoints enforce bootstrap-admin and user boundaries', 
     });
     assert.equal(rejectedPromotion.status, 403);
 
+    const rejectedAspectSave = await fetch(`${baseUrl}/api/kb/explainable-memory/aspects`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': userSession.session_id,
+      },
+      body: JSON.stringify({
+        aspect_id: 'aspect_test_user',
+        file_name: 'aspect_test_user.sop',
+        title: 'User attempt',
+        status: 'candidate',
+        aspect_type: 'operational',
+      }),
+    });
+    assert.equal(rejectedAspectSave.status, 403);
+
+    const rejectedReindex = await fetch(`${baseUrl}/api/kb/explainable-memory/reindex`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': userSession.session_id,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(rejectedReindex.status, 403);
+
     const accepted = await fetch(`${baseUrl}/api/config`, {
       method: 'PUT',
       headers: {
@@ -91,6 +117,52 @@ test('admin-only server endpoints enforce bootstrap-admin and user boundaries', 
       }),
     });
     assert.equal(acceptedPromotion.status, 200);
+
+    const createdAspect = await fetch(`${baseUrl}/api/kb/explainable-memory/aspects`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': adminSession.session_id,
+      },
+      body: JSON.stringify({
+        aspect_id: 'aspect_test_admin',
+        file_name: 'aspect_test_admin.sop',
+        title: 'Admin test aspect',
+        summary: 'Admin-managed candidate aspect',
+        status: 'candidate',
+        aspect_type: 'operational',
+        commands: ['kb'],
+        domains: ['runtime'],
+        query_terms: ['admin-test'],
+        root_value: 'Operational guidance',
+        definition: 'Used by tests.',
+        inclusion_criteria: 'When admin test retrieval is requested.',
+        exclusion_criteria: 'Do not use outside tests.',
+        protocol: 'Prefer explicit operational evidence.',
+        role_vocabulary: ['operator'],
+      }),
+    });
+    assert.equal(createdAspect.status, 201);
+    const createdPayload = await createdAspect.json();
+    assert.equal(createdPayload.aspect.aspectId, 'aspect_test_admin');
+
+    const approvedAspect = await fetch(`${baseUrl}/api/kb/explainable-memory/aspects/aspect_test_admin/approve`, {
+      method: 'POST',
+      headers: {
+        'x-session-id': adminSession.session_id,
+      },
+    });
+    assert.equal(approvedAspect.status, 200);
+
+    const acceptedReindex = await fetch(`${baseUrl}/api/kb/explainable-memory/reindex`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-session-id': adminSession.session_id,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(acceptedReindex.status, 200);
   } finally {
     server.close();
     await once(server, 'close');
