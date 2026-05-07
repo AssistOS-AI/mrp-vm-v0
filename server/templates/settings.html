@@ -36,6 +36,7 @@
       <div class="tabs tabs--settings">
         <button class="secondary tab-button active" data-tab="settings-models-tab" type="button">Models</button>
         <button class="secondary tab-button" data-tab="settings-interpreters-tab" type="button">Interpreters</button>
+        <button class="secondary tab-button" data-tab="settings-memory-tab" type="button">Memory</button>
         <button class="secondary tab-button" data-tab="settings-auth-tab" type="button">Authentication</button>
       </div>
 
@@ -93,6 +94,160 @@
             <button id="save-interpreters" type="submit">Save</button>
           </div>
           <div id="interpreter-list" class="stack"></div>
+        </form>
+      </section>
+
+      <section id="settings-memory-tab" class="tab-panel stack">
+        <form id="memory-mode-settings" class="settings-section stack">
+          <div class="between">
+            <div class="stack compact">
+              <div class="eyebrow">Knowledge</div>
+              <h3>Explainable Memory</h3>
+            </div>
+            <button id="save-memory-mode" type="submit">Save mode</button>
+          </div>
+          <section class="inset-card stack">
+            <div class="muted small">Use Explainable Memory by default for governed KB retrieval, or fall back to the naive symbolic mode when you need the compatibility path.</div>
+            <div class="settings-form-grid">
+              <label class="stack">
+                <span class="small muted">KB retrieval mode</span>
+                <select id="kb-mode">
+                  <option value="explainable_memory">explainable_memory</option>
+                  <option value="naive_symbolic">naive_symbolic</option>
+                </select>
+              </label>
+              <label class="stack">
+                <span class="small muted">Snapshot version</span>
+                <input id="memory-snapshot-version" readonly>
+              </label>
+              <label class="stack">
+                <span class="small muted">Indexed KUs</span>
+                <input id="memory-indexed-count" readonly>
+              </label>
+              <label class="stack">
+                <span class="small muted">Approved / candidate aspects</span>
+                <input id="memory-aspect-counts" readonly>
+              </label>
+            </div>
+            <div id="memory-status-strip" class="row wrap"></div>
+            <div class="settings-inline-actions">
+              <button id="reindex-memory" type="button">Reindex KB</button>
+            </div>
+          </section>
+        </form>
+
+        <section class="settings-section stack">
+          <div class="between">
+            <div class="stack compact">
+              <div class="eyebrow">Aspects</div>
+              <h3>Approved and candidate aspects</h3>
+            </div>
+            <button id="new-memory-aspect" class="secondary" type="button">New aspect</button>
+          </div>
+          <section class="inset-card stack">
+            <div id="memory-aspect-list" class="stack"></div>
+          </section>
+        </section>
+
+        <form id="memory-aspect-editor" class="settings-section stack">
+          <div class="between">
+            <div class="stack compact">
+              <div class="eyebrow">Editor</div>
+              <h3>Aspect editor</h3>
+              <div id="memory-permission-message" class="muted small"></div>
+            </div>
+            <div class="settings-inline-actions">
+              <button id="save-memory-aspect" type="submit">Save aspect</button>
+              <button id="approve-memory-aspect" class="secondary" type="button">Approve aspect</button>
+            </div>
+          </div>
+          <section class="inset-card stack">
+            <div class="settings-form-grid">
+              <label class="stack">
+                <span class="small muted">Aspect id</span>
+                <input id="memory-aspect-id" placeholder="aspect_execution_guidance">
+              </label>
+              <label class="stack">
+                <span class="small muted">File name</span>
+                <input id="memory-aspect-file-name" placeholder="aspect_execution_guidance.sop">
+              </label>
+              <label class="stack">
+                <span class="small muted">Title</span>
+                <input id="memory-aspect-title" placeholder="Execution guidance">
+              </label>
+              <label class="stack">
+                <span class="small muted">Aspect type</span>
+                <select id="memory-aspect-type">
+                  <option value="ontological">ontological</option>
+                  <option value="epistemological">epistemological</option>
+                  <option value="axiological">axiological</option>
+                  <option value="operational">operational</option>
+                  <option value="bias_oriented">bias_oriented</option>
+                </select>
+              </label>
+              <label class="stack">
+                <span class="small muted">Status</span>
+                <select id="memory-aspect-status">
+                  <option value="candidate">candidate</option>
+                  <option value="approved">approved</option>
+                </select>
+              </label>
+              <label class="stack">
+                <span class="small muted">Priority</span>
+                <input id="memory-aspect-priority" type="number" value="0">
+              </label>
+            </div>
+            <div class="settings-form-grid">
+              <label class="stack">
+                <span class="small muted">Summary</span>
+                <input id="memory-aspect-summary">
+              </label>
+              <label class="stack">
+                <span class="small muted">Domains (comma-separated)</span>
+                <input id="memory-aspect-domains">
+              </label>
+              <label class="stack">
+                <span class="small muted">Commands (comma-separated)</span>
+                <input id="memory-aspect-commands">
+              </label>
+              <label class="stack">
+                <span class="small muted">Interpreters (comma-separated)</span>
+                <input id="memory-aspect-interpreters">
+              </label>
+              <label class="stack">
+                <span class="small muted">Tags (comma-separated)</span>
+                <input id="memory-aspect-tags">
+              </label>
+              <label class="stack">
+                <span class="small muted">Query terms (comma-separated)</span>
+                <input id="memory-aspect-query-terms">
+              </label>
+            </div>
+            <label class="stack">
+              <span class="small muted">Root value</span>
+              <textarea id="memory-aspect-root"></textarea>
+            </label>
+            <label class="stack">
+              <span class="small muted">Definition</span>
+              <textarea id="memory-aspect-definition"></textarea>
+            </label>
+            <label class="stack">
+              <span class="small muted">Inclusion criteria</span>
+              <textarea id="memory-aspect-inclusion"></textarea>
+            </label>
+            <label class="stack">
+              <span class="small muted">Exclusion criteria</span>
+              <textarea id="memory-aspect-exclusion"></textarea>
+            </label>
+            <label class="stack">
+              <span class="small muted">Interpretation protocol</span>
+              <textarea id="memory-aspect-protocol"></textarea>
+            </label>
+            <label class="stack">
+              <span class="small muted">Role vocabulary (comma-separated)</span>
+              <input id="memory-aspect-role-vocabulary">
+            </label>
+          </section>
         </form>
       </section>
 

@@ -20,6 +20,9 @@ const state = {
   models: [],
   availableTags: [],
   modelFilter: '',
+  memoryStatus: null,
+  memoryAspects: { approved: [], candidates: [] },
+  selectedAspectId: '',
   keyModal: {
     mode: null,
     token: '',
@@ -37,6 +40,51 @@ function normalizeText(value) {
 
 function unique(items) {
   return [...new Set(items.filter(Boolean))];
+}
+
+function csvValue(items = []) {
+  return unique(items.map((item) => String(item).trim())).join(', ');
+}
+
+function splitCsv(value) {
+  return unique(String(value || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean));
+}
+
+function allAspects() {
+  return [...(state.memoryAspects.approved || []), ...(state.memoryAspects.candidates || [])];
+}
+
+function selectedAspect() {
+  return allAspects().find((aspect) => aspect.aspectId === state.selectedAspectId) || null;
+}
+
+function emptyAspect() {
+  return {
+    aspectId: '',
+    fileName: '',
+    meta: {
+      status: 'candidate',
+      aspect_type: 'operational',
+      title: '',
+      summary: '',
+      priority: 0,
+      domains: [],
+      commands: [],
+      interpreters: [],
+      tags: [],
+      query_terms: [],
+    },
+    rootValue: '',
+    definition: '',
+    inclusionCriteria: '',
+    exclusionCriteria: '',
+    protocol: '',
+    roleVocabulary: [],
+    queryTerms: [],
+  };
 }
 
 function modelTags(model) {
@@ -133,6 +181,12 @@ function renderPermissionMessage() {
   el('settings-permission-message').textContent = canEditGlobalState()
     ? 'Admin authority is active. Global model defaults, interpreters, and API keys are writable.'
     : 'Non-admin mode: settings are read-only until you authenticate with an admin API key.';
+}
+
+function renderMemoryPermissionMessage() {
+  el('memory-permission-message').textContent = canEditGlobalState()
+    ? 'Admin authority is active. You can edit aspects, approve candidates, and trigger KB reindexing.'
+    : 'Non-admin mode: Explainable Memory is visible but global mutations are disabled.';
 }
 
 function renderModels() {
@@ -329,14 +383,116 @@ function renderAuthPanel() {
   renderAuthCreateCard();
 }
 
+function renderMemoryStatus() {
+  const status = state.memoryStatus || {};
+  const counts = status.aspect_counts || { approved: 0, candidate: 0 };
+  const indexState = status.index_state || {};
+  const lastReanalysis = status.last_reanalysis_at ? new Date(status.last_reanalysis_at).toLocaleString() : 'never';
+  el('kb-mode').value = state.config?.kb_mode || 'explainable_memory';
+  el('memory-snapshot-version').value = status.snapshot_version || 'unavailable';
+  el('memory-indexed-count').value = String(status.ku_count || 0);
+  el('memory-aspect-counts').value = `${counts.approved || 0} / ${counts.candidate || 0}`;
+  el('memory-status-strip').innerHTML = [
+    `<span class="badge">${escapeHtml(`mode: ${state.config?.kb_mode || 'explainable_memory'}`)}</span>`,
+    `<span class="badge ${indexState.state === 'ready' ? 'status-active' : ''}">${escapeHtml(`index: ${indexState.state || 'unknown'}`)}</span>`,
+    `<span class="badge">${escapeHtml(`last reanalysis: ${lastReanalysis}`)}</span>`,
+  ].join('');
+}
+
+function renderMemoryAspectList() {
+  const items = [
+    ...(state.memoryAspects.approved || []).map((aspect) => ({ ...aspect, bucket: 'approved' })),
+    ...(state.memoryAspects.candidates || []).map((aspect) => ({ ...aspect, bucket: 'candidate' })),
+  ];
+  el('memory-aspect-list').innerHTML = items.length
+    ? items.map((aspect) => {
+      const meta = aspect.meta || {};
+      const active = state.selectedAspectId === aspect.aspectId;
+      const badges = [
+        `<span class="badge ${aspect.bucket === 'approved' ? 'status-active' : ''}">${escapeHtml(aspect.bucket)}</span>`,
+        meta.aspect_type ? `<span class="badge">${escapeHtml(meta.aspect_type)}</span>` : '',
+        Number.isFinite(Number(meta.priority)) ? `<span class="badge">${escapeHtml(`priority ${meta.priority}`)}</span>` : '',
+      ].filter(Boolean).join('');
+      return `
+        <button class="memory-aspect-row ${active ? 'active' : ''}" type="button" data-memory-aspect="${escapeHtml(aspect.aspectId)}">
+          <div class="stack compact">
+            <strong>${escapeHtml(meta.title || aspect.aspectId)}</strong>
+            <div class="muted small">${escapeHtml(aspect.aspectId)}</div>
+            <div class="muted small">${escapeHtml(meta.summary || '')}</div>
+          </div>
+          <div class="row wrap">${badges}</div>
+        </button>
+      `;
+    }).join('')
+    : '<div class="muted small">No aspects are available yet.</div>';
+}
+
+function fillMemoryAspectEditor(aspect) {
+  const meta = aspect.meta || {};
+  const resolvedQueryTerms = aspect.queryTerms?.length ? aspect.queryTerms : meta.query_terms;
+  el('memory-aspect-id').value = aspect.aspectId || '';
+  el('memory-aspect-file-name').value = aspect.fileName || (aspect.aspectId ? `${aspect.aspectId}.sop` : '');
+  el('memory-aspect-title').value = meta.title || '';
+  el('memory-aspect-type').value = meta.aspect_type || 'operational';
+  el('memory-aspect-status').value = meta.status || 'candidate';
+  el('memory-aspect-priority').value = Number(meta.priority || 0);
+  el('memory-aspect-summary').value = meta.summary || '';
+  el('memory-aspect-domains').value = csvValue(meta.domains);
+  el('memory-aspect-commands').value = csvValue(meta.commands);
+  el('memory-aspect-interpreters').value = csvValue(meta.interpreters);
+  el('memory-aspect-tags').value = csvValue(meta.tags);
+  el('memory-aspect-query-terms').value = csvValue(resolvedQueryTerms);
+  el('memory-aspect-root').value = aspect.rootValue || '';
+  el('memory-aspect-definition').value = aspect.definition || '';
+  el('memory-aspect-inclusion').value = aspect.inclusionCriteria || '';
+  el('memory-aspect-exclusion').value = aspect.exclusionCriteria || '';
+  el('memory-aspect-protocol').value = aspect.protocol || '';
+  el('memory-aspect-role-vocabulary').value = csvValue(aspect.roleVocabulary);
+}
+
+function renderMemoryPanel() {
+  const current = selectedAspect() || allAspects()[0] || emptyAspect();
+  if (!state.selectedAspectId && current.aspectId) {
+    state.selectedAspectId = current.aspectId;
+  }
+  renderMemoryPermissionMessage();
+  renderMemoryStatus();
+  renderMemoryAspectList();
+  fillMemoryAspectEditor(current);
+}
+
 function syncAuthority() {
   const canEdit = canEditGlobalState();
   const auth = state.config?.auth || {};
   const canBootstrap = !auth.has_api_keys && auth.bootstrap_admin_available;
   el('save-model-settings').disabled = !canEdit;
   el('save-interpreters').disabled = !canEdit;
+  el('save-memory-mode').disabled = !canEdit;
+  el('save-memory-aspect').disabled = !canEdit;
+  el('approve-memory-aspect').disabled = !canEdit;
+  el('reindex-memory').disabled = !canEdit;
+  el('new-memory-aspect').disabled = !canEdit;
   el('default-llm').disabled = !canEdit;
   el('default-llm-tag-filter').disabled = !canEdit;
+  el('kb-mode').disabled = !canEdit;
+  el('memory-aspect-id').disabled = !canEdit;
+  el('memory-aspect-file-name').disabled = !canEdit;
+  el('memory-aspect-title').disabled = !canEdit;
+  el('memory-aspect-type').disabled = !canEdit;
+  el('memory-aspect-status').disabled = !canEdit;
+  el('memory-aspect-priority').disabled = !canEdit;
+  el('memory-aspect-summary').disabled = !canEdit;
+  el('memory-aspect-domains').disabled = !canEdit;
+  el('memory-aspect-commands').disabled = !canEdit;
+  el('memory-aspect-interpreters').disabled = !canEdit;
+  el('memory-aspect-tags').disabled = !canEdit;
+  el('memory-aspect-query-terms').disabled = !canEdit;
+  el('memory-aspect-root').disabled = !canEdit;
+  el('memory-aspect-definition').disabled = !canEdit;
+  el('memory-aspect-inclusion').disabled = !canEdit;
+  el('memory-aspect-exclusion').disabled = !canEdit;
+  el('memory-aspect-protocol').disabled = !canEdit;
+  el('memory-aspect-role-vocabulary').disabled = !canEdit;
   if (el('llm-fallback-enabled')) {
     el('llm-fallback-enabled').disabled = !canEdit;
   }
@@ -386,14 +542,36 @@ async function loadModels() {
   }
 }
 
+async function loadMemory() {
+  try {
+    const [status, aspects] = await Promise.all([
+      fetchJson('/api/kb/explainable-memory'),
+      fetchJson('/api/kb/explainable-memory/aspects'),
+    ]);
+    state.memoryStatus = status;
+    state.memoryAspects = {
+      approved: aspects.approved || [],
+      candidates: aspects.candidates || [],
+    };
+    if (state.selectedAspectId && !selectedAspect()) {
+      state.selectedAspectId = '';
+    }
+  } catch {
+    state.memoryStatus = null;
+    state.memoryAspects = { approved: [], candidates: [] };
+    state.selectedAspectId = '';
+  }
+}
+
 async function refresh() {
   clearNotice();
   state.config = await fetchJson('/api/config');
-  await Promise.all([loadKeys(), loadModels()]);
+  await Promise.all([loadKeys(), loadModels(), loadMemory()]);
   renderAuthorityStrip();
   renderPermissionMessage();
   renderModels();
   renderInterpreters();
+  renderMemoryPanel();
   renderAuthPanel();
   syncAuthority();
   maybePromptBootstrap();
