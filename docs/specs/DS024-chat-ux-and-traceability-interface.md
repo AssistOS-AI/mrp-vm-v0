@@ -125,7 +125,8 @@ The right side contains:
 
 1. inspector details for the selected KU,
 2. the editable SOP source,
-3. action buttons including `Save` and `Default` placed below the editor body.
+3. action buttons including `Save` and `Default` placed below the editor body,
+4. visible Explainable Memory index state for the selected KU and for the currently loaded catalog snapshot.
 
 The editor must remain to the right of the tree on wide screens rather than collapsing below it unnecessarily.
 On wide screens the tree rail should use a conservative default width rather than consuming roughly one third of the screen, and the UI may expose a drag handle so operators can resize that rail when deeper nesting needs more room.
@@ -149,11 +150,12 @@ The detail view must expose:
 
 ### Settings page
 
-The settings page uses exactly three tabs:
+The settings page uses exactly four tabs:
 
 1. `Models`
 2. `Interpreters`
-3. `Authentication`
+3. `Memory`
+4. `Authentication`
 
 There is no separate runtime-overview tab.
 
@@ -171,6 +173,18 @@ The models tab uses compact select controls for the default model and the routed
 #### Interpreters tab
 
 The interpreters tab shows one compact row per runtime component. Status, purpose, cost class, component type, and enabled toggle should fit naturally in one row on desktop rather than being stretched vertically without need. Internal predefined commands and external interpreters must both appear here. `planning` remains visible but cannot be disabled.
+
+#### Memory tab
+
+The memory tab is the operator-facing Explainable Memory control surface. It must:
+
+1. expose the active KB retrieval mode with `explainable_memory` selected by default and `naive_symbolic` available as an explicit fallback,
+2. show the current Explainable Memory status summary, including last reindex outcome, snapshot or index version, indexed KU counts, and candidate-aspect counts,
+3. list approved and candidate aspects in a compact admin-friendly table or list,
+4. allow editing the aspect definition, inclusion criteria, exclusion criteria, interpretation protocol text, and role vocabulary surfaces,
+5. allow approving a candidate aspect under admin authority,
+6. expose a reindex action that rebuilds the Explainable Memory state after aspect or KU changes,
+7. show clear permission messaging when the current authority context cannot mutate global memory state.
 
 #### Authentication tab
 
@@ -208,6 +222,10 @@ Response: Execution order and dependency shape are architectural facts, not inci
 Question #4: Why should cache inspection and shared-cache deletion live on a dedicated Cache page instead of inside the chat transcript?
 
 Response: Cache inspection is operationally useful but structurally different from ordinary conversation review. Keeping it on a dedicated page preserves a lightweight transcript while still giving operators full visibility into request and response payloads, prompt assets, and privileged destructive actions.
+
+Question #5: Why should Explainable Memory administration live on a dedicated Settings tab instead of inside the chat transcript or as a sixth top-level route?
+
+Response: Aspect approval, prompt editing, and reindexing are operator controls rather than conversation artifacts. A dedicated Settings tab keeps them easy to find for administrators without expanding the global route set or cluttering the transcript-first chat surface.
 
 ## Conclusion
 

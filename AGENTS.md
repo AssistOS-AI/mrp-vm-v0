@@ -19,9 +19,10 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 9. `docs/specs/DS030-document-scale-planner.md`
 10. `docs/specs/DS031-document-scale-planner-guidance-and-coverage.md`
 11. `docs/specs/DS032-controlled-successful-request-llm-cache.md`
-12. `docs/index.html`
-13. `docs/runtime-architecture.html`
-14. `docs/specsLoader.html?spec=matrix.md`
+12. `docs/specs/DS033-explainable-memory-and-aspect-administration.md`
+13. `docs/index.html`
+14. `docs/runtime-architecture.html`
+15. `docs/specsLoader.html?spec=matrix.md`
 
 ## Current Skill Catalog
 
@@ -44,6 +45,7 @@ The Design Specifications under `docs/specs/` remain the authoritative contract 
 ## Runtime Defaults
 
 - Keep ordinary `kb` retrieval symbolic and inspectable; do not assume hidden LLM retrieval.
+- Treat `explainable_memory` as the default `kb` retrieval mode, with `naive_symbolic` retained as an explicit compatibility fallback.
 - Treat `analytic-memory` as the canonical aggregation command name for the planned runtime.
 - Treat the normalized concrete-variable output contract as the authoritative interpreter result model.
 - Treat direct SOP declaration insertion as the authoritative structural-effect contract.
