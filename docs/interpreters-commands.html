@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MRP-VM v0 Documentation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div data-include="partials/header.html"></div>
+  <main class="page">
+    <div class="page__panel">
+      <nav class="breadcrumbs"><a href="index.html">Home</a> / Interpreters &amp; Commands</nav>
+      <section class="hero">
+        <p class="kicker">Runtime execution surfaces</p>
+        <h1>Interpreters &amp; Commands</h1>
+        <p class="lede">MRP-VM v0 executes work through two distinct surfaces: <strong>external interpreters</strong> that behave as independent execution regimes with their own contracts and routing identities, and <strong>internal (native) commands</strong> that form the built-in procedural core of the runtime. Together they implement the full range of planning, reasoning, transformation, knowledge retrieval, aggregation, and credibility assessment that the system supports.</p>
+      </section>
+
+      <section class="section">
+        <h2>How execution works</h2>
+        <p>Every request enters the runtime as natural language. The <code>planning</code> command compiles it into a graph of SOP Lang declarations. Each declaration names a command or interpreter to execute, declares its dependencies on earlier results, and declares the family into which its output will be placed. The runtime then walks the graph in topological order, invoking commands through the internal registry and interpreters through the external interpreter registry. Results flow through the family system, where <code>credibility</code> resolves ambiguity when multiple candidates exist for the same family.</p>
+        <div class="callout">
+          <strong>Key distinction:</strong> native commands are always available as part of the runtime core. External interpreters are registered separately and have their own input contracts, output shapes, and routing guidance that planning consults when deciding how to delegate work.
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>External Interpreters</h2>
+        <p>External interpreters are independent execution surfaces. Each one has its own contract, its own guidance assets stored in the knowledge base, and its own routing identity that the planner can discover and choose deliberately. They are not just "another command" -- they behave like distinct subsystems that the runtime calls into when the nature of the work matches their specialty.</p>
+
+        <h3>LLM Wrapper Profiles</h3>
+        <p>The runtime maintains five LLM wrapper profiles, each tuned for a different kind of language model work. All five share a single managed adapter that controls provider access, model routing, caching, and trace capture. The profiles differ in what models they reach for, what output modes they allow, and what kinds of tasks they are meant to handle.</p>
+
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th>Profile</th>
+              <th>What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>fastLLM</code></td>
+              <td>Lightweight extraction, matching, metadata induction, and quick synthesis. This is the cheap path when the task does not need heavy reasoning -- things like classifying a snippet, extracting a field, or generating a short summary.</td>
+            </tr>
+            <tr>
+              <td><code>deepLLM</code></td>
+              <td>Stronger model routing when the task justifies escalation. Used when the work needs more careful analysis than <code>fastLLM</code> can provide but does not yet warrant a full reasoning interpreter.</td>
+            </tr>
+            <tr>
+              <td><code>codeGeneratorLLM</code></td>
+              <td>Code generation and transformation tasks. When the output needs to be executable code, a structured patch, or a programmatic transformation rather than prose.</td>
+            </tr>
+            <tr>
+              <td><code>writerLLM</code></td>
+              <td>Fluent prose generation when deterministic templates are not enough. Used for chunk-level semantic work, narrative writing, or any output where natural language quality matters more than structural precision.</td>
+            </tr>
+            <tr>
+              <td><code>plannerLLM</code></td>
+              <td>Planning proposals and executable SOP Lang generation. This is the only wrapper profile that may insert new declarations into the running graph. It works under the authority of the native <code>planning</code> command, which validates every proposal before it becomes part of the execution graph.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>All wrapper profiles route through the managed LLM adapter, which enforces a shared contract for token accounting, caching behavior, failure taxonomy, and trace payloads. The adapter respects the controlled cache boundary: successful completions are captured as request-local candidates first, and only explicitly promoted entries enter the shared cache.</p>
+
+        <h3>HumanLikeReasoner</h3>
+        <p><code>HumanLikeReasoner</code> solves bounded human-scale reasoning tasks. It is designed for problems where the task can be represented explicitly enough to justify local symbolic work -- things like constraint satisfaction, graph reachability, small search spaces, rule-based deduction, or bounded numeric reasoning -- but where the decomposition still benefits from an LLM-generated orchestration program.</p>
+
+        <p>The interpreter works in three phases. First, it normalizes the input into a bounded reasoning task. Second, it asks the managed LLM adapter to generate a JavaScript reasoning program that combines the appropriate solver classes. Third, it validates that program through static analysis and executes it inside a restricted sandbox with a 500ms timeout.</p>
+
+        <p>The generated program has access to five reasoning classes, each covering a different problem type:</p>
+        <ul>
+          <li><strong>RuleProblem</strong> -- finite rule closure and deduction</li>
+          <li><strong>ConstraintProblem</strong> -- finite assignment and exclusion</li>
+          <li><strong>GraphProblem</strong> -- paths, reachability, and topological ordering</li>
+          <li><strong>SearchProblem</strong> -- small bounded state-space planning</li>
+          <li><strong>NumericProblem</strong> -- bounded integer reasoning</li>
+        </ul>
+
+        <p>The program must create an <code>ExecutionContext</code> and emit its final answer through <code>ctx.emit(...)</code>. The result enters the family system as an ordinary variant, with metadata recording that it came from <code>HumanLikeReasoner</code> so trace and evaluation can distinguish it from wrapper prose. The interpreter does not allow arbitrary scripting -- no imports, no file access, no network, no unbounded loops.</p>
+
+        <p>Planning should route directly to <code>HumanLikeReasoner</code> when it recognizes a finite closed-world reasoning task. When the task is reasoning-heavy but needs help sharpening the next step, planning inserts a <code>logic-eval</code> step first, whose structured brief then feeds into the reasoner.</p>
+
+        <h3>AdvancedReasoner</h3>
+        <p><code>AdvancedReasoner</code> handles bounded advanced reasoning tasks where the runtime should make uncertainty, evidence quality, review boundaries, and engine escalation explicit. Unlike <code>HumanLikeReasoner</code>, which assumes the problem is a closed-world solver task, <code>AdvancedReasoner</code> acknowledges that many real problems live in open worlds where the local pass may be useful but partial.</p>
+
+        <p>The execution flow mirrors <code>HumanLikeReasoner</code> -- normalize, generate a JavaScript program, validate, execute -- but the exit surface is fundamentally different. Instead of emitting a single family value, the program terminates by returning a typed bounded response through <code>ctx.returnResponse(ReasonerResponse.*(...))</code>. That response carries one of eight statuses:</p>
+        <ul>
+          <li><code>reasoned</code> -- local analysis completed</li>
+          <li><code>solved</code> -- the problem was resolved locally</li>
+          <li><code>partial</code> -- useful but incomplete</li>
+          <li><code>needs_clarification</code> -- the task needs more input</li>
+          <li><code>needs_engine</code> -- should escalate to a specialized external engine</li>
+          <li><code>needs_review</code> -- human review recommended</li>
+          <li><code>inconclusive</code> -- no decisive outcome</li>
+          <li><code>error</code> -- execution failed</li>
+        </ul>
+
+        <p>The interpreter renders the response into multiple surfaces: the main family value, plus companion surfaces for metadata, open questions, engine requirements, assumptions, results, and trace. This keeps the advanced reasoning pass fully inspectable without pretending every task ends in one exact answer.</p>
+
+        <p><code>AdvancedReasoner</code> ships with fourteen typed reasoning problem classes covering abduction, probabilistic reasoning, causal triage, argumentation, belief revision, legal reasoning, scientific synthesis, optimization, formal proof routing, SMT fragments, pragmatic interpretation, analogical reasoning, ethical deliberation, and creative evaluation. The sandbox timeout is 800ms, reflecting the heavier analysis scope.</p>
+
+        <h3>DocumentScalePlanner</h3>
+        <p><code>DocumentScalePlanner</code> is not a reasoning interpreter. It is a structural planning surface that converts a bounded document-analysis request over explicit Markdown or JSON input into an inspectable SOP Lang workflow. Its job is to break a large document into manageable chunks, generate a plan for processing each chunk, and insert that plan into the running graph.</p>
+
+        <p>The interpreter works entirely deterministically -- it does not use the LLM adapter. It parses the document, chooses a granularity (chapter, section, paragraph, table, or JSON record), splits the document into chunks, and generates SOP declarations for: chunk materialization, per-chunk semantic processing (delegated to existing interpreters like <code>writerLLM</code>), group rollups, a global rollup, coverage validation, and a final template-assembly step that bridges the result back into the planner's target family.</p>
+
+        <p>The interpreter validates the plan size against a configured declaration budget (default 48). If the requested plan would exceed the limit, it returns a <code>too_large</code> response recommending a coarser strategy rather than silently over-expanding. This keeps document-scale work bounded and visible.</p>
+
+        <p>The inserted plan is executable with the current runtime catalog -- it uses only already-shipped surfaces like <code>js-eval</code>, <code>writerLLM</code>, and <code>template-eval</code>. It does not invent hidden document stores or undocumented commands. Planning should route to <code>DocumentScalePlanner</code> when it recognizes a bounded Markdown or JSON chunk workflow, and should not route through <code>logic-eval</code> for this purpose.</p>
+      </section>
+
+      <section class="section">
+        <h2>Internal (Native) Commands</h2>
+        <p>Native commands are the built-in procedural core of the runtime. They are always available, registered in the command registry, and invoked by name from SOP Lang declarations. Each command has a deterministic or LLM-assisted execution path, a defined input contract, and one or more output shapes.</p>
+
+        <h3>planning</h3>
+        <p><code>planning</code> is the orchestration core of MRP-VM v0. It compiles natural language requests into executable SOP Lang graphs. It operates in three modes: bootstrapping a new session, continuing an existing session, or repairing a blocked execution after an error.</p>
+
+        <p>Planning receives a normalized context package containing the user request, the current graph snapshot, family state, session summary, remaining budgets, and the full catalog of available commands and interpreters. It invokes <code>plannerLLM</code> with KU-managed prompt assets to generate a proposed plan, then validates that plan against runtime policy: the graph must be connected, <code>@response</code> must exist and be final, and there must be no orphan declarations. If validation fails, planning retries up to three times with feedback. Only accepted plans become part of the execution graph.</p>
+
+        <p>Planning is the only command that cannot be disabled. It is the entry point for every request and the repair path for every failure.</p>
+
+        <h3>js-eval</h3>
+        <p><code>js-eval</code> is the main procedural command of the runtime. It executes deterministic JavaScript for bounded local orchestration, transformation, calculation, and comparison. It is the tool to reach for when the work is exact and algorithmic rather than interpretive.</p>
+
+        <p>Before execution, the runtime rewrites the source: <code>$x</code> references resolve to the current text of family <code>x</code>, while <code>~x</code> references become family-scoped proxy handles that can read, write, emit, withdraw, and inspect metadata. The script runs in a sandboxed VM with a 1000ms timeout and a narrow helper surface (<code>sop.ref()</code>, <code>sop.emit()</code>, <code>sop.fail()</code>, <code>sop.insertDeclarations()</code>, <code>sop.now()</code>). No host APIs, no filesystem, no network.</p>
+
+        <p>When a <code>js-eval</code> step is meant to populate its target family directly, the preferred form is an explicit final <code>return</code> statement. The script may also call <code>sop.emit()</code> or <code>~family.set()</code> for more complex output patterns.</p>
+
+        <h3>logic-eval</h3>
+        <p><code>logic-eval</code> is a rewrite-orchestration command. It does not solve reasoning problems directly. Its job is to help planning sharpen a logic-heavy request into a structured reasoning brief that an external reasoning interpreter can consume.</p>
+
+        <p>The command accepts a natural-language problem or a JSON envelope, identifies which reasoning interpreters are enabled, and produces a brief containing: the rewritten problem, preferred interpreters, decomposition hints, answer requirements, and a planner hint. Planning can then pass this brief directly to <code>HumanLikeReasoner</code> or <code>AdvancedReasoner</code>.</p>
+
+        <p>Planning should use <code>logic-eval</code> only when the task is reasoning-heavy but needs help sharpening the next step. When the planner already recognizes a finite bounded reasoning task clearly, it should route directly to the appropriate reasoner and skip <code>logic-eval</code> entirely.</p>
+
+        <h3>template-eval</h3>
+        <p><code>template-eval</code> is the deterministic composition command. It assembles structured text from known values using a Handlebars-like syntax with conditionals, loops, and formatting helpers. Its purpose is control, not creativity -- it keeps rendering reproducible and makes prompt assembly inspectable without paying for another inference step.</p>
+
+        <p>The syntax supports <code>$expr</code> and <code>${expr}</code> for simple placeholder expansion, <code>{{#if}}</code> / <code>{{#each}}</code> for control flow, and helpers like <code>join</code>, <code>default</code>, <code>truncate</code>, <code>formatDate</code>, and <code>formatNumber</code>. When a placeholder references a family, the current representative is used. Missing required values fail visibly -- the command does not silently erase sections or swallow type errors.</p>
+
+        <p><code>template-eval</code> is the preferred final step for assembling responses from intermediate results produced by other commands and interpreters. When the structure is known but the wording needs fluency, planning should delegate to <code>writerLLM</code> instead.</p>
+
+        <h3>analytic-memory</h3>
+        <p><code>analytic-memory</code> is the canonical aggregation and analysis substrate of the runtime. It holds structured observations, performs rollups and derived calculations, and exports only the aggregates that the rest of the graph actually needs.</p>
+
+        <p>The command manages hierarchical keys like <code>chapter.3.paragraph.12.sentiment</code> or <code>book.summary.coverage</code>. It accepts instructions in a deterministic operator form: <code>store</code>, <code>append</code>, <code>merge</code>, <code>derive</code> (with aggregates like count, sum, average, min, max), <code>rollup</code>, and <code>export</code>. Only exported results become ordinary runtime variants; the internal analytic state persists for replay and auditability but does not pollute the family namespace.</p>
+
+        <p>This command is the right choice when the work involves accumulating observations across many items, computing summaries, or exporting structured aggregates. It is not a text generator and not a general expression engine.</p>
+
+        <h3>kb</h3>
+        <p>The <code>kb</code> command is the authoritative knowledge-management mechanism of the runtime. It retrieves and inspects knowledge units -- content KUs, prompt assets, caller profiles, session overlays, and aspect governance records -- using deterministic scope and ranking rules.</p>
+
+        <p>The default retrieval mode uses Explainable Memory: symbolic, inspectable retrieval with explicit aspect and lexical evidence. The naive symbolic path remains available as a compatibility fallback. LLMs are reserved for governed induction and maintenance tasks, not for ordinary retrieval.</p>
+
+        <p>Knowledge units are stored as declaration-style SOP Lang files with metadata embedded in companion variables. The bootstrap sequence loads default KUs first, then layers global and session overlays. Retrieval respects scope precedence (session over global over default) and returns selected KUs with their identifiers, summaries, content, usage guidance, aspect IDs, and index state.</p>
+
+        <h3>credibility</h3>
+        <p><code>credibility</code> compares candidate values independently of the commands that produced them. Its purpose is architectural separation between production and comparative judgment -- the component that generates an answer should not also be the sole judge of its quality.</p>
+
+        <p>The command runs automatically whenever execution first touches a family with more than one usable variant. It scores each candidate using local heuristics, trust signals (canonical variants get a 20-point bonus, trusted variants get 10), metadata priority, and length signals. It updates metadata with scores and reasons, withdraws the losers, and selects the winner as the active representative.</p>
+
+        <p>If credibility cannot judge honestly from the current candidate set, it may insert new declarations to gather missing evidence or trigger planning review for a larger repair. This closes the current epoch and lets the graph adapt rather than forcing a weak choice.</p>
+      </section>
+
+      <section class="section">
+        <h2>How the pieces fit together</h2>
+        <p>The execution model is deliberately layered. Planning decides what work needs to be done and in what order. Native commands handle the deterministic procedural core: JavaScript evaluation, template assembly, aggregation, knowledge retrieval, and credibility assessment. External interpreters handle the interpretive regimes that need their own contracts: LLM-powered synthesis at different capability levels, bounded symbolic reasoning, bounded advanced reasoning with uncertainty awareness, and document-scale chunk planning.</p>
+
+        <div class="grid">
+          <article class="card">
+            <h3>When to use native commands</h3>
+            <p>Use <code>js-eval</code> for exact calculation and transformation. Use <code>template-eval</code> for deterministic assembly. Use <code>analytic-memory</code> for aggregation. Use <code>kb</code> for knowledge retrieval. Use <code>credibility</code> for comparing candidates. Use <code>logic-eval</code> only when a reasoning brief is still needed.</p>
+          </article>
+          <article class="card">
+            <h3>When to use external interpreters</h3>
+            <p>Use LLM wrapper profiles for language model work at the appropriate capability level. Use <code>HumanLikeReasoner</code> for bounded symbolic reasoning with solver classes. Use <code>AdvancedReasoner</code> for reasoning with uncertainty and escalation awareness. Use <code>DocumentScalePlanner</code> for chunk-oriented document workflows.</p>
+          </article>
+          <article class="card">
+            <h3>What planning decides</h3>
+            <p>Planning chooses the execution route for each sub-task. It consults KU guidance to distinguish when <code>js-eval</code> is the right tool instead of <code>logic-eval</code> or an LLM wrapper. It prefers direct routing to reasoning interpreters when the task is clear, and uses <code>logic-eval</code> only as a sharpening step when the task is heavy but unclear.</p>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div data-include="partials/footer.html"></div>
+  <script src="partials-loader.js"></script>
+</body>
+</html>

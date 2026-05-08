@@ -26,14 +26,12 @@ const state = {
   activeGraphLayerDrag: null,
 };
 
-const GRAPH_LAYER_MIN_WIDTH = 148;
-const GRAPH_LAYER_MAX_WIDTH = 340;
+const GRAPH_NODE_WIDTH = 148;
+const GRAPH_LAYER_MIN_WIDTH = GRAPH_NODE_WIDTH;
 const GRAPH_DIVIDER_WIDTH = 32;
 const GRAPH_NODE_FAMILY_LABEL_LENGTH = 22;
 const GRAPH_NODE_COMMAND_LABEL_LENGTH = 22;
 const GRAPH_NODE_NOTE_LABEL_LENGTH = 34;
-const GRAPH_NODE_CHAR_WIDTH_PX = 7.2;
-const GRAPH_NODE_HORIZONTAL_PADDING_PX = 20;
 
 function humanizeStatus(status) {
   return String(status || 'unknown').replace(/_/g, ' ');
@@ -318,7 +316,12 @@ function truncateNodeLabel(value, length = 22) {
 
 function getGraphViewportWidth() {
   const scroll = document.querySelector('#graph-tab .execution-graph-scroll');
-  return Math.max(0, (scroll?.clientWidth ?? 0) - 32);
+  if (!scroll) {
+    return 0;
+  }
+  const style = window.getComputedStyle(scroll);
+  const padding = Number.parseFloat(style.paddingLeft || '0') + Number.parseFloat(style.paddingRight || '0');
+  return Math.max(0, Math.floor(scroll.clientWidth - padding));
 }
 
 function drawGraphEdges() {
@@ -338,23 +341,36 @@ function drawGraphEdges() {
     : viewportWidth;
   let maxRight = Math.max(
     viewportWidth,
-    layersWidth + 12,
+    layersWidth,
   );
   let maxBottom = Math.max(inner.clientHeight, layersRect.bottom - innerRect.top + 24);
   for (const node of nodes.values()) {
     const rect = node.getBoundingClientRect();
-    maxRight = Math.max(maxRight, rect.right - innerRect.left + 28);
+    maxRight = Math.max(maxRight, rect.right - innerRect.left);
     maxBottom = Math.max(maxBottom, rect.bottom - innerRect.top + 32);
   }
-  const width = Math.max(maxRight, viewportWidth);
-  const height = Math.max(inner.scrollHeight, inner.clientHeight, maxBottom);
-  inner.style.width = width <= viewportWidth ? '100%' : `${width}px`;
+  const width = Math.ceil(Math.max(maxRight, viewportWidth));
+  const height = Math.ceil(Math.max(inner.scrollHeight, inner.clientHeight, maxBottom));
+  const fitsViewport = width <= viewportWidth + 1;
+  const renderWidth = fitsViewport ? viewportWidth : width;
+  inner.style.width = fitsViewport ? '100%' : `${renderWidth}px`;
   inner.style.minHeight = `${height}px`;
-  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.setAttribute('width', String(width));
+  svg.setAttribute('viewBox', `0 0 ${renderWidth} ${height}`);
+  svg.setAttribute('width', String(renderWidth));
   svg.setAttribute('height', String(height));
 
-  const edgeMarkup = (state.payload?.execution_graph?.edges || []).map((edge) => {
+  const uniqueEdges = [];
+  const seenEdges = new Set();
+  for (const edge of state.payload?.execution_graph?.edges || []) {
+    const key = `${edge.from}->${edge.to}`;
+    if (seenEdges.has(key)) {
+      continue;
+    }
+    seenEdges.add(key);
+    uniqueEdges.push(edge);
+  }
+
+  const edgeMarkup = uniqueEdges.map((edge) => {
     const fromNode = nodes.get(edge.from);
     const toNode = nodes.get(edge.to);
     if (!fromNode || !toNode) {
@@ -366,7 +382,8 @@ function drawGraphEdges() {
     const y1 = fromRect.top - innerRect.top + fromRect.height / 2;
     const x2 = toRect.left - innerRect.left;
     const y2 = toRect.top - innerRect.top + toRect.height / 2;
-    const dx = Math.max(96, (x2 - x1) / 2);
+    const gap = Math.max(0, x2 - x1);
+    const dx = Math.max(10, Math.min(72, gap / 2));
     return `<path d="M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}" class="graph-edge-path"></path>`;
   }).join('');
 
@@ -398,6 +415,11 @@ function setGraphLayerWidths(widths = []) {
   });
 }
 
+function graphLayerTotalWidth(widths = []) {
+  const dividerWidth = Math.max(0, widths.length - 1) * GRAPH_DIVIDER_WIDTH;
+  return widths.reduce((sum, width) => sum + width, 0) + dividerWidth;
+}
+
 function hasStoredGraphLayerWidths(layerCount) {
   if (layerCount <= 0) {
     return false;
@@ -410,42 +432,32 @@ function hasStoredGraphLayerWidths(layerCount) {
   return true;
 }
 
-function estimateGraphLayerWidth(layer = {}, nodesById = new Map()) {
-  const longestVisibleLabel = Math.max(0, ...(layer.node_ids || []).map((nodeId) => {
-    const node = nodesById.get(nodeId);
-    if (!node) {
-      return 0;
-    }
-    const familyLength = truncateNodeLabel(node.target_family, GRAPH_NODE_FAMILY_LABEL_LENGTH).length;
-    const commandLength = truncateNodeLabel((node.commands || []).join(', '), GRAPH_NODE_COMMAND_LABEL_LENGTH).length;
-    return Math.max(familyLength, commandLength);
-  }));
-  return Math.max(
-    GRAPH_LAYER_MIN_WIDTH,
-    Math.min(
-      GRAPH_LAYER_MAX_WIDTH,
-      Math.round((Math.max(longestVisibleLabel, 11) * GRAPH_NODE_CHAR_WIDTH_PX) + GRAPH_NODE_HORIZONTAL_PADDING_PX),
-    ),
-  );
+function estimateGraphLayerWidth() {
+  return GRAPH_LAYER_MIN_WIDTH;
 }
 
 function computeDefaultGraphLayerWidths(strata = []) {
   if (!Array.isArray(strata) || strata.length <= 0) {
     return [];
   }
-  const nodesById = new Map((state.payload?.execution_graph?.nodes || []).map((node) => [node.id, node]));
-  const contentWidths = strata.map((layer) => estimateGraphLayerWidth(layer, nodesById));
-  const layerCount = contentWidths.length;
+  const minimumWidths = strata.map(() => estimateGraphLayerWidth());
+  const layerCount = minimumWidths.length;
   const viewportWidth = getGraphViewportWidth();
   if (viewportWidth <= 0) {
-    return contentWidths;
+    return minimumWidths;
   }
   const totalDividerWidth = Math.max(0, layerCount - 1) * GRAPH_DIVIDER_WIDTH;
   const availableForLayers = Math.max(0, viewportWidth - totalDividerWidth);
-  const equalShare = Math.floor(availableForLayers / layerCount);
-  return contentWidths.map((contentWidth) => {
-    const targetWidth = Math.max(contentWidth, equalShare);
-    return Math.max(GRAPH_LAYER_MIN_WIDTH, Math.min(GRAPH_LAYER_MAX_WIDTH, Math.round(targetWidth)));
+  const minimumTotal = minimumWidths.reduce((sum, width) => sum + width, 0);
+  if (availableForLayers <= minimumTotal) {
+    return minimumWidths;
+  }
+  let remainingExtra = availableForLayers - minimumTotal;
+  return minimumWidths.map((minimumWidth, index) => {
+    const remainingLayers = layerCount - index;
+    const extra = Math.floor(remainingExtra / remainingLayers);
+    remainingExtra -= extra;
+    return Math.max(GRAPH_LAYER_MIN_WIDTH, Math.round(minimumWidth + extra));
   });
 }
 
@@ -467,12 +479,18 @@ function applyGraphLayerWidths(options = {}) {
     const width = widths[index] ?? GRAPH_LAYER_MIN_WIDTH;
     node.style.width = `${width}px`;
     node.style.flexBasis = `${width}px`;
+    node.style.flexGrow = '0';
+    node.style.flexShrink = '0';
   });
   if (layers) {
-    const totalDividerWidth = Math.max(0, layerNodes.length - 1) * GRAPH_DIVIDER_WIDTH;
-    const totalLayerWidth = widths.reduce((sum, width) => sum + width, 0) + totalDividerWidth;
+    const totalLayerWidth = graphLayerTotalWidth(widths);
     const availableWidth = getGraphViewportWidth();
-    layers.style.width = `${Math.max(totalLayerWidth, availableWidth)}px`;
+    const fitsViewport = totalLayerWidth <= availableWidth + 1;
+    layers.style.width = fitsViewport ? '100%' : `${totalLayerWidth}px`;
+    const scroll = layers.closest('.execution-graph-scroll');
+    if (scroll) {
+      scroll.style.overflowX = fitsViewport ? 'hidden' : 'auto';
+    }
   }
 }
 
@@ -484,29 +502,29 @@ function startGraphLayerDrag(event) {
   if (!label) {
     return false;
   }
-  const index = Number(label.dataset.layerDragIndex);
   const layerNodes = [...document.querySelectorAll('#graph-tab .execution-graph-layer[data-layer-index]')];
-  if (layerNodes.length < 2) {
+  const layer = label.closest('.execution-graph-layer[data-layer-index]');
+  const index = layerNodes.indexOf(layer);
+  if (index < 0) {
     return false;
   }
-  const pair = index >= layerNodes.length - 1
-    ? { leftIndex: layerNodes.length - 2, rightIndex: layerNodes.length - 1, anchor: 'right' }
-    : { leftIndex: index, rightIndex: index + 1, anchor: 'left' };
-  const leftLayer = layerNodes[pair.leftIndex];
-  const rightLayer = layerNodes[pair.rightIndex];
-  if (!leftLayer || !rightLayer) {
-    return false;
-  }
+  const startWidths = layerNodes.map((node, widthIndex) => getGraphLayerWidth(widthIndex) ?? node.getBoundingClientRect().width ?? GRAPH_LAYER_MIN_WIDTH);
   state.activeGraphLayerDrag = {
     label,
     pointerId: event.pointerId,
-    leftIndex: pair.leftIndex,
-    rightIndex: pair.rightIndex,
-    anchor: pair.anchor,
+    layerIndex: index,
     startX: event.clientX,
-    leftWidth: leftLayer.getBoundingClientRect().width,
-    rightWidth: rightLayer.getBoundingClientRect().width,
+    startWidth: startWidths[index] ?? GRAPH_LAYER_MIN_WIDTH,
+    startWidths,
   };
+  const moveHandler = (moveEvent) => updateGraphLayerDrag(moveEvent);
+  const stopHandler = (stopEvent) => stopGraphLayerDrag(stopEvent);
+  state.activeGraphLayerDrag.moveHandler = moveHandler;
+  state.activeGraphLayerDrag.stopHandler = stopHandler;
+  document.addEventListener('pointermove', moveHandler);
+  document.addEventListener('pointerup', stopHandler);
+  document.addEventListener('pointercancel', stopHandler);
+  label.setPointerCapture?.(event.pointerId);
   label.classList.add('dragging');
   document.body.classList.add('is-resizing');
   state.graphManualLayerLayouts.add(graphRequestLayoutKey());
@@ -519,18 +537,11 @@ function updateGraphLayerDrag(event) {
   if (!drag || drag.pointerId !== event.pointerId) {
     return;
   }
-  const totalWidth = drag.leftWidth + drag.rightWidth;
-  const rawDeltaX = event.clientX - drag.startX;
-  const deltaX = drag.anchor === 'right' ? -rawDeltaX : rawDeltaX;
-  const nextLeftWidth = Math.min(
-    totalWidth - GRAPH_LAYER_MIN_WIDTH,
-    Math.max(GRAPH_LAYER_MIN_WIDTH, drag.leftWidth + deltaX),
-  );
-  const nextRightWidth = totalWidth - nextLeftWidth;
   const layerNodes = [...document.querySelectorAll('#graph-tab .execution-graph-layer[data-layer-index]')];
-  const widths = layerNodes.map((_, index) => getGraphLayerWidth(index) ?? GRAPH_LAYER_MIN_WIDTH);
-  widths[drag.leftIndex] = nextLeftWidth;
-  widths[drag.rightIndex] = nextRightWidth;
+  const widths = drag.startWidths.length === layerNodes.length
+    ? [...drag.startWidths]
+    : layerNodes.map((node, index) => getGraphLayerWidth(index) ?? node.getBoundingClientRect().width ?? GRAPH_LAYER_MIN_WIDTH);
+  widths[drag.layerIndex] = Math.max(GRAPH_LAYER_MIN_WIDTH, drag.startWidth + event.clientX - drag.startX);
   setGraphLayerWidths(widths);
   applyGraphLayerWidths();
   requestAnimationFrame(drawGraphEdges);
@@ -541,6 +552,12 @@ function stopGraphLayerDrag(event) {
   if (!drag || drag.pointerId !== event.pointerId) {
     return;
   }
+  if (drag.label.hasPointerCapture?.(event.pointerId)) {
+    drag.label.releasePointerCapture(event.pointerId);
+  }
+  document.removeEventListener('pointermove', drag.moveHandler);
+  document.removeEventListener('pointerup', drag.stopHandler);
+  document.removeEventListener('pointercancel', drag.stopHandler);
   drag.label.classList.remove('dragging');
   document.body.classList.remove('is-resizing');
   state.activeGraphLayerDrag = null;
@@ -967,15 +984,6 @@ function attachHandlers() {
   });
   el('graph-tab').addEventListener('pointerdown', (event) => {
     startGraphLayerDrag(event);
-  });
-  window.addEventListener('pointermove', (event) => {
-    updateGraphLayerDrag(event);
-  });
-  window.addEventListener('pointerup', (event) => {
-    stopGraphLayerDrag(event);
-  });
-  window.addEventListener('pointercancel', (event) => {
-    stopGraphLayerDrag(event);
   });
   window.addEventListener('resize', () => {
     if (!state.graphManualLayerLayouts.has(graphRequestLayoutKey())) {

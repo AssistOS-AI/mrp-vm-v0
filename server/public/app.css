@@ -1986,7 +1986,7 @@ body {
 .execution-graph-inner {
   position: relative;
   min-width: 100%;
-  padding: 0.2rem 0.2rem 0.55rem;
+  padding: 0.2rem 0 0.55rem;
 }
 
 .execution-graph-svg {
@@ -2010,16 +2010,18 @@ body {
   display: grid;
   gap: 0.25rem;
   min-width: 148px;
+  flex: 0 0 auto;
   align-content: start;
 }
 
 .execution-graph-layer::before {
   content: '';
   position: absolute;
-  left: 0.5rem;
+  left: 50%;
   top: 0.44rem;
   bottom: 0.4rem;
   width: 2px;
+  transform: translateX(-50%);
   background: repeating-linear-gradient(
     to bottom,
     rgba(37, 99, 235, 0.28) 0 4px,
@@ -2029,14 +2031,20 @@ body {
 }
 
 .execution-graph-layer-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 148px;
   font-size: 0.64rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
-  justify-self: start;
-  text-align: left;
-  padding: 0 0.28rem 0 0;
+  justify-self: center;
+  text-align: center;
+  min-height: 1.15rem;
+  padding: 0.08rem 0.4rem;
   background: rgba(247, 248, 250, 0.92);
   position: relative;
   z-index: 1;
@@ -2044,6 +2052,26 @@ body {
   user-select: none;
   touch-action: none;
   border-radius: 999px;
+}
+
+.execution-graph-layer-label::before {
+  content: '↔';
+  display: inline-block;
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  line-height: 1;
+  color: rgba(37, 99, 235, 0.55);
+}
+
+.execution-graph-layer-label:hover {
+  background: rgba(219, 234, 254, 0.78);
+  color: #1d4ed8;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+}
+
+.execution-graph-layer-label:hover::before,
+.execution-graph-layer-label.dragging::before {
+  color: #1d4ed8;
 }
 
 .execution-graph-layer-label.dragging {
@@ -2054,12 +2082,14 @@ body {
 .execution-graph-column {
   display: grid;
   gap: 0.25rem;
-  justify-items: stretch;
+  justify-items: center;
   min-height: 100%;
 }
 
 .execution-graph-node {
-  width: 100%;
+  width: 148px;
+  min-width: 148px;
+  max-width: 148px;
   min-height: 0;
   display: grid;
   gap: 0.06rem;

@@ -2,11 +2,12 @@
   "target_scope": "global",
   "session_id": null,
   "status": "running",
-  "last_started_at": "2026-05-07T11:58:41.531Z",
-  "last_completed_at": "2026-05-07T11:53:17.872Z",
-  "snapshot_version": "5d6807e5f47fefd122eea05639b5c87e1dc7dbfd",
+  "last_started_at": "2026-05-08T09:11:21.624Z",
+  "last_completed_at": "2026-05-08T09:11:21.586Z",
+  "snapshot_version": "08ac488cdbe948a2fa11e1fab5a79ceeac45902a",
   "error_message": null,
   "indexed_ku_count": 36,
   "approved_aspect_count": 5,
-  "candidate_aspect_count": 0
+  "candidate_aspect_count": 0,
+  "proposed_aspect_count": 0
 }
