@@ -1,7 +1,7 @@
 ---
 id: DS024
 title: Chat UX and Traceability Interface
-status: proposed
+status: implemented
 owner: ui
 summary: Defines the detailed UX specification for the chat surface, request traceability workspace, nested KB tree browser, and authentication-aware settings page.
 ---
